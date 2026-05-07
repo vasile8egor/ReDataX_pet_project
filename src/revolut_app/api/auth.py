@@ -19,7 +19,8 @@ def main():
 
     missing = [k for k, v in client_params.items() if not v]
     if missing:
-        raise ValueError(f"Missing required ENV variables: {', '.join(missing)}")
+        raise ValueError(
+            f"Missing required ENV variables: {', '.join(missing)}")
 
     client = RevolutClient(**client_params)
 
@@ -32,19 +33,21 @@ def main():
     url = client.get_authorization_url(consent_id)
     print(f"\n1. Open this URL in your browser:\n{url}\n")
 
-    code = input("2. Enter the 'code' parameter from the redirect URL: ").strip()
+    code = input(
+        "2. Enter the 'code' parameter from the redirect URL: ").strip()
     if not code:
         print("Error: Code is required.")
         return
-    
+
     tokens = client.exchange_code(code)
     refresh_token = tokens.get("refresh_token")
 
     if refresh_token:
         set_key(str(env_path), "REVOLUT_REFRESH_TOKEN", refresh_token)
-        print(f"Success! REVOLUT_REFRESH_TOKEN saved")
+        print(f"Success: REVOLUT_REFRESH_TOKEN saved")
     else:
         print("Error: Did not receive refresh_token.")
+
 
 if __name__ == "__main__":
     main()

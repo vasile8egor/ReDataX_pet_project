@@ -19,18 +19,18 @@ with DAG(
 
     start_pipeline = EmptyOperator(task_id='start_pipeline')
 
-    trigger_extract = TriggerDagRunOperator(
-        task_id='trigger_extract_api',
-        trigger_dag_id='revolut_extract_api_v2',
-        wait_for_completion=True,
-        poke_interval=30,
-        reset_dag_run=True,
-        execution_date="{{ execution_date }}"
-    )
+    # trigger_extract = TriggerDagRunOperator(
+    #     task_id='trigger_extract_api',
+    #     trigger_dag_id='revolut_extract_api',
+    #     wait_for_completion=True,
+    #     poke_interval=30,
+    #     reset_dag_run=True,
+    #     execution_date="{{ execution_date }}"
+    # )
 
     trigger_gen_accounts = TriggerDagRunOperator(
         task_id='trigger_generate_accounts',
-        trigger_dag_id='revolut_generate_new_accounts_v2',
+        trigger_dag_id='revolut_generate_new_accounts',
         wait_for_completion=True,
         poke_interval=30,
         reset_dag_run=True,
@@ -39,7 +39,7 @@ with DAG(
 
     trigger_gen_transactions = TriggerDagRunOperator(
         task_id='trigger_generate_transactions',
-        trigger_dag_id='revolut_generate_transactions_v2',
+        trigger_dag_id='revolut_generate_transactions',
         wait_for_completion=True,
         poke_interval=30,
         reset_dag_run=True,
@@ -48,7 +48,7 @@ with DAG(
 
     trigger_load_gold = TriggerDagRunOperator(
         task_id='trigger_load_gold',
-        trigger_dag_id='revolut_load_gold_v2',
+        trigger_dag_id='revolut_load_gold',
         wait_for_completion=True,
         poke_interval=30,
         reset_dag_run=True,
@@ -57,4 +57,4 @@ with DAG(
 
     end_pipeline = EmptyOperator(task_id='end_pipeline')
 
-    start_pipeline >> trigger_extract >> trigger_gen_accounts >> trigger_gen_transactions >> trigger_load_gold >> end_pipeline
+    start_pipeline >> trigger_gen_accounts >> trigger_gen_transactions >> trigger_load_gold >> end_pipeline

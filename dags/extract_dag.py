@@ -18,22 +18,35 @@ with DAG(
 ) as dag:
 
     def get_client_instance():
-        """
-        Фабрика для создания клиента. 
-        Импортируем RevolutClient только в момент выполнения таски.
-        """
         import os
         from revolut_app.api import RevolutClient
         from airflow.models import Variable
-        
-        # Секреты храним в Airflow Variables (Admin -> Variables)
+
         return RevolutClient(
-            client_id=Variable.get("REVOLUT_CLIENT_ID", default_var=os.getenv("REVOLUT_CLIENT_ID")),
-            financial_id=Variable.get("REVOLUT_FINANCIAL_ID", default_var=os.getenv("REVOLUT_FINANCIAL_ID")),
-            private_key_path=Variable.get("REVOLUT_PRIVATE_KEY_PATH", "/opt/airflow/certs/private.key"),
-            transport_cert_path=Variable.get("REVOLUT_TRANSPORT_CERT_PATH", "/opt/airflow/certs/transport.pem"),
-            kid=Variable.get("REVOLUT_KID", default_var=os.getenv("REVOLUT_KID")),
-            redirect_url=Variable.get("REVOLUT_REDIRECT_URL", default_var=os.getenv("REVOLUT_REDIRECT_URL"))
+            client_id=Variable.get(
+                "REVOLUT_CLIENT_ID",
+                default_var=os.getenv("REVOLUT_CLIENT_ID")
+            ),
+            financial_id=Variable.get(
+                "REVOLUT_FINANCIAL_ID",
+                default_var=os.getenv("REVOLUT_FINANCIAL_ID")
+            ),
+            private_key_path=Variable.get(
+                "REVOLUT_PRIVATE_KEY_PATH",
+                "/opt/airflow/certs/private.key"
+            ),
+            transport_cert_path=Variable.get(
+                "REVOLUT_TRANSPORT_CERT_PATH",
+                "/opt/airflow/certs/transport.pem"
+            ),
+            kid=Variable.get(
+                "REVOLUT_KID",
+                default_var=os.getenv("REVOLUT_KID")
+            ),
+            redirect_url=Variable.get(
+                "REVOLUT_REDIRECT_URL",
+                default_var=os.getenv("REVOLUT_REDIRECT_URL")
+            )
         )
 
     def extract_accounts(**context):
@@ -43,19 +56,19 @@ with DAG(
         from airflow.models import Variable
         from revolut_app.core.constants import BUCKET_RAW
 
-        # 1. Инициализация
-        refresh_token = Variable.get("REVOLUT_REFRESH_TOKEN", default_var=os.getenv("REVOLUT_REFRESH_TOKEN"))
+        refresh_token = Variable.get(
+            "REVOLUT_REFRESH_TOKEN",
+            default_var=os.getenv("REVOLUT_REFRESH_TOKEN")
+        )
         client = get_client_instance()
         client.refresh_token = refresh_token
-        
-        # 2. Запрос
+
         accounts = client.get_accounts()
-        
-        # 3. Загрузка в MinIO
+
         s3 = S3Hook(aws_conn_id='minio_conn')
-        execution_date = context['ds'] 
+        execution_date = context['ds']
         object_name = f"accounts/{execution_date}/accounts.json"
-        
+
         s3.load_string(
             string_data=json.dumps(accounts),
             key=object_name,
@@ -70,14 +83,12 @@ with DAG(
         from airflow.models import Variable
         from revolut_app.core.constants import BUCKET_RAW
 
-        # Тянем путь к файлу из XCom
         accounts_path = context['ti'].xcom_pull(task_ids='extract_accounts')
-        
+
         s3 = S3Hook(aws_conn_id='minio_conn')
         client = get_client_instance()
         client.refresh_token = Variable.get("REVOLUT_REFRESH_TOKEN")
 
-        # Читаем аккаунты
         content = s3.read_key(accounts_path, bucket_name=BUCKET_RAW)
         account_list = json.loads(content).get("Data", {}).get("Account", [])
 
@@ -86,10 +97,8 @@ with DAG(
         for acc in account_list:
             acc_id = acc['AccountId']
             try:
-                # ВАЖНО: Тут можно добавить проверку на существование файла,
-                # чтобы сделать таску идемпотентной (не качать дважды)
                 transactions = client.get_transactions(acc_id)
-                
+
                 s3.load_string(
                     string_data=json.dumps(transactions),
                     key=f"transactions/{execution_date}/{acc_id}.json",
@@ -97,9 +106,9 @@ with DAG(
                     replace=True
                 )
             except Exception as e:
-                dag.log.error(f"Failed to extract transactions for {acc_id}: {e}")
+                dag.log.error(
+                    f"Failed to extract transactions for {acc_id}: {e}")
 
-    # Задачи
     task_accounts = PythonOperator(
         task_id='extract_accounts',
         python_callable=extract_accounts

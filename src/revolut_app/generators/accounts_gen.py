@@ -1,28 +1,30 @@
 import random
 import uuid
-import json
 from datetime import datetime
 from faker import Faker
 
 from revolut_app.core.config import (
-    POSTGRES_HOST, POSTGRES_PORT, POSTGRES_DB, 
-    POSTGRES_USER, POSTGRES_PASSWORD
+    POSTGRES_HOST,
+    POSTGRES_PORT,
+    POSTGRES_DB,
+    POSTGRES_USER,
+    POSTGRES_PASSWORD
 )
 from revolut_app.core.constants import (
-    LOCATIONS, NUM_ACCOUNTS_STARTPACK, 
-    CURRENCIES, ACCOUNT_TYPES
+    LOCATIONS,
+    NUM_ACCOUNTS_STARTPACK,
+    CURRENCIES,
+    ACCOUNT_TYPES
 )
+
 
 class AccountGenerator:
     def __init__(self):
-        # Инициализируем Faker один раз при создании экземпляра класса
         self.fake = Faker(random.choice(LOCATIONS))
 
     def get_weighted_choice(self, choices_dict):
-        """Универсальный выбор с учетом весов"""
         items = list(choices_dict.keys())
         weights = list(choices_dict.values())
-        # random.choices возвращает список, берем [0] элемент
         return random.choices(items, weights=weights, k=1)[0]
 
     def generate_account_id(self):
@@ -32,9 +34,9 @@ class AccountGenerator:
         account_id = self.generate_account_id()
         currency = self.get_weighted_choice(CURRENCIES)
         acc_type = self.get_weighted_choice(ACCOUNT_TYPES)
-        
+
         name = f"{self.fake.first_name()} {self.fake.last_name()}"
-        
+
         return {
             "AccountId": account_id,
             "Currency": currency,
@@ -48,7 +50,7 @@ class AccountGenerator:
                 },
                 {
                     "SchemeName": "UK.OBIE.SortCodeAccountNumber",
-                    "Identification": f"{random.randint(10,99)}-{random.randint(10,99)}-{random.randint(10,99)}/{random.randint(10000000, 99999999)}",
+                    "Identification": f"{random.randint(10, 99)}-{random.randint(10, 99)}-{random.randint(10, 99)}/{random.randint(10000000, 99999999)}",
                     "Name": name
                 }
             ]
@@ -57,7 +59,7 @@ class AccountGenerator:
     def generate_batch(self, num_accounts=NUM_ACCOUNTS_STARTPACK):
         """Генерирует финальный JSON в формате Revolut"""
         accounts = [self.generate_account_data() for _ in range(num_accounts)]
-        
+
         return {
             "Data": {"Account": accounts},
             "Links": {"Self": "https://sandbox-oba-auth.revolut.com/accounts"},

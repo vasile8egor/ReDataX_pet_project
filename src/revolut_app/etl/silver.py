@@ -1,4 +1,3 @@
-import json
 import pandas as pd
 from datetime import datetime
 from sqlalchemy import create_engine
@@ -7,19 +6,14 @@ from revolut_app.core.config import (
     get_postgres_jdbc_url, POSTGRES_USER, POSTGRES_PASSWORD
 )
 
+
 def get_db_engine():
-    """Создает engine для SQLAlchemy вместо JDBC"""
-    # Нам нужно преобразовать JDBC URL в обычный SQL Alchemy URL
-    # jdbc:postgresql://localhost:5432/postgres -> postgresql://user:pass@localhost:5432/postgres
     from revolut_app.core.config import POSTGRES_HOST, POSTGRES_PORT, POSTGRES_DB
     url = f"postgresql://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}"
     return create_engine(url)
 
-def load_accounts_to_silver(s3_path: str):
-    """Трансформация данных без Spark с использованием Pandas"""
-    
-    print(f"Reading data from {s3_path}...")
 
+def load_accounts_to_silver(s3_path: str):
     storage_options = {
         "key": MINIO_ACCESS_KEY,
         "secret": MINIO_SECRET_KEY,
@@ -35,7 +29,7 @@ def load_accounts_to_silver(s3_path: str):
     df_silver = df_accounts[[
         'AccountId', 'Currency', 'AccountType', 'AccountSubType'
     ]].copy()
-    
+
     df_silver.columns = [
         'account_id', 'currency', 'account_type', 'account_sub_type'
     ]
@@ -61,8 +55,6 @@ def load_accounts_to_silver(s3_path: str):
 
     print('Successfully loaded accounts into silver.dim_accounts')
 
+
 if __name__ == "__main__":
-    # Для теста можно вызвать локально
-    # path = "s3a://raw/accounts/2026-04-02_15-10/accounts.json"
-    # load_accounts_to_silver(path)
     pass

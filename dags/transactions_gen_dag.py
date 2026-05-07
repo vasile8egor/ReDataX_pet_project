@@ -2,15 +2,14 @@ from datetime import datetime
 from airflow import DAG
 from airflow.operators.python import PythonOperator
 
-default_args = {
-    'owner': 'airflow',
-    'start_date': datetime(2025, 1, 1),
-    'retries': 1,
-}
+from src.revolut_app.core.constants import (
+    TRANSACTIONS_DB_FIELDS,
+    DEFAULT_ARGS_W_RETRIES
+)
 
 with DAG(
-    dag_id='revolut_generate_transactions_v2',
-    default_args=default_args,
+    dag_id='revolut_generate_transactions',
+    default_args=DEFAULT_ARGS_W_RETRIES,
     schedule_interval=None,
     catchup=False,
     max_active_runs=1
@@ -19,15 +18,16 @@ with DAG(
     def generate_and_load(**context):
         from airflow.providers.postgres.hooks.postgres import PostgresHook
         from revolut_app.generators.transactions_gen import MetropolisTransactionGenerator
-        
+
         pg_hook = PostgresHook(postgres_conn_id='postgres_main')
-        
+
         target_date = context['ds']
         target_dt = datetime.strptime(target_date, '%Y-%m-%d').date()
-        
-        records = pg_hook.get_records("SELECT account_id FROM silver.dim_accounts")
+
+        records = pg_hook.get_records(
+            "SELECT account_id FROM silver.dim_accounts")
         account_ids = [r[0] for r in records]
-        
+
         if not account_ids:
             dag.log.info("No accounts found in silver.dim_accounts")
             return
@@ -36,22 +36,16 @@ with DAG(
         gen.run_mcmc()
 
         all_tx = []
-        target_fields = [
-            'transaction_id', 'account_id', 'booking_datetime', 
-            'value_datetime', 'amount', 'currency', 
-            'credit_debit_indicator', 'status', 
-            'transaction_information', 'merchant_name'
-        ]
 
         for acc_id in account_ids:
             for tx in gen.generate_for_account(acc_id, target_dt):
-                all_tx.append([tx[f] for f in target_fields])
-                
+                all_tx.append([tx[f] for f in TRANSACTIONS_DB_FIELDS])
+
                 if len(all_tx) >= 500:
                     pg_hook.insert_rows(
                         table='silver.fact_transactions',
                         rows=all_tx,
-                        target_fields=target_fields,
+                        target_fields=TRANSACTIONS_DB_FIELDS,
                         replace=True,
                         replace_index=['transaction_id']
                     )
@@ -59,9 +53,9 @@ with DAG(
 
         if all_tx:
             pg_hook.insert_rows(
-                table='silver.fact_transactions', 
-                rows=all_tx, 
-                target_fields=target_fields,
+                table='silver.fact_transactions',
+                rows=all_tx,
+                target_fields=TRANSACTIONS_DB_FIELDS,
                 replace=True,
                 replace_index=['transaction_id']
             )

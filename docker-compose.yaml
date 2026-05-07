@@ -30,7 +30,7 @@ services:
       POSTGRES_DB: airflow
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./init_silver.sql:/docker-entrypoint-initdb.d/init_silver.sql
+      - ./scripts/init_silver.sql:/docker-entrypoint-initdb.d/init_silver.sql
     ports:
       - "5432:5432"
     healthcheck:
@@ -54,11 +54,15 @@ services:
     deploy:
       resources:
         limits:
-          memory: 1G
+          memory: 3G
     restart: always
     depends_on:
       postgres_main:
         condition: service_healthy
+      airflow-init:
+        condition: service_completed_successfully
+      clickhouse-init:
+        condition: service_completed_successfully
 
   airflow-scheduler:
     <<: *airflow-common
@@ -68,6 +72,10 @@ services:
     depends_on:
       postgres_main:
         condition: service_healthy
+      airflow-init:
+        condition: service_completed_successfully
+      clickhouse-init:
+        condition: service_completed_successfully
 
   airflow-init:
     <<: *airflow-common
@@ -107,14 +115,35 @@ services:
   clickhouse:
     image: clickhouse/clickhouse-server:23.12-alpine
     container_name: clickhouse
-    ports:
-      - "8123:8123"
-    deploy:
-      resources:
-        limits:
-          memory: 1G
+    environment:
+      - CLICKHOUSE_USER=default
+      - CLICKHOUSE_PASSWORD=''
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
     networks:
       - revolut_network
+    healthcheck:
+      test: ["CMD", "clickhouse-client", "--query", "SELECT 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  clickhouse-init:
+    image: clickhouse/clickhouse-server:23.12-alpine
+    container_name: clickhouse_init
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+    volumes:
+      - ./scripts/init_gold.sql:/init/init_gold.sql
+    networks:
+      - revolut_network
+    entrypoint: >
+      /bin/sh -c "
+      echo 'Running DDL scripts...';
+      clickhouse-client --host clickhouse --multiquery < /init/init_gold.sql;
+      echo 'DDL applied successfully.';
+      "
   
   # metabase:
   #   image: metabase/metabase:latest
@@ -130,306 +159,8 @@ services:
 volumes:
   postgres_data:
   minio_data:
+  clickhouse_data:
 
 networks:
   revolut_network:
     driver: bridge
-
-
-
-
-
-
-
-
-
-
-
-
-# x-airflow-common:
-#   &airflow-common
-#   build: .
-#   env_file:
-#     - .env
-#   environment:
-#     &airflow-common-env
-#     PYTHONPATH: /opt/airflow:/opt/airflow/src
-#     AIRFLOW__CORE__EXECUTOR: CeleryExecutor
-#     AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
-#     AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://airflow:airflow@postgres/airflow
-#     AIRFLOW__CELERY__BROKER_URL: redis://:@redis:6379/0
-#     AIRFLOW__CORE__FERNET_KEY: ''
-#     AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
-#     AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
-#     AIRFLOW__API__AUTH_BACKENDS: 'airflow.api.auth.backend.basic_auth,airflow.api.auth.backend.session'
-#     AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK: 'true'
-#     AIRFLOW_CONN_POSTGRES_DWH: 'postgres://postgres:postgres@postgres_dwh:5432/silver'
-#     AIRFLOW_CONN_MINIO_CONN: 'aws://minio_access_key:minio_secret_key@?endpoint_url=http%3A%2F%2Fminio%3A9000'
-#     _PIP_ADDITIONAL_REQUIREMENTS: ${_PIP_ADDITIONAL_REQUIREMENTS:-}
-#     REVOLUT_PRIVATE_KEY_PATH: /opt/airflow/certs/private.key
-#     REVOLUT_TRANSPORT_CERT_PATH: /opt/airflow/certs/transport.pem
-#     REVOLUT_KID: ${REVOLUT_KID}
-#     REVOLUT_CLIENT_ID: ${REVOLUT_CLIENT_ID}
-#     REVOLUT_FINANCIAL_ID: ${REVOLUT_FINANCIAL_ID}
-#     REVOLUT_REDIRECT_URL: ${REVOLUT_REDIRECT_URL}
-#     REVOLUT_JWKS_URL: ${REVOLUT_JWKS_URL}
-#   volumes:
-#     - ${AIRFLOW_PROJ_DIR:-.}/dags:/opt/airflow/dags
-#     - ${AIRFLOW_PROJ_DIR:-.}/src:/opt/airflow/src
-#     - ${AIRFLOW_PROJ_DIR:-.}/logs:/opt/airflow/logs
-#     - ${AIRFLOW_PROJ_DIR:-.}/config:/opt/airflow/config
-#     - ${AIRFLOW_PROJ_DIR:-.}/plugins:/opt/airflow/plugins
-#     - ${AIRFLOW_PROJ_DIR:-.}/certs:/opt/airflow/certs
-#     - ${AIRFLOW_PROJ_DIR:-.}/requirements.txt:/requirements.txt
-#   user: "${AIRFLOW_UID:-50000}:0"
-#   depends_on:
-#     &airflow-common-depends-on
-#     redis:
-#       condition: service_healthy
-#     postgres:
-#       condition: service_healthy
-
-# services:
-
-#   clickhouse:
-#     image: clickhouse/clickhouse-server:23.12.3
-#     container_name: clickhouse
-#     hostname: clickhouse
-#     ports:
-#       - "8123:8123"
-#       - "9003:9000"
-#     volumes:
-#       - clickhouse_data:/var/lib/clickhouse
-#       - clickhouse_logs:/var/log/clickhouse-server
-#     environment:
-#       CLICKHOUSE_DB: gold
-#       CLICKHOUSE_USER: clickhouse
-#       CLICKHOUSE_PASSWORD: clickhouse
-#       CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
-#     healthcheck:
-#       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8123/ping"]
-#       interval: 10s
-#       timeout: 5s
-#       retries: 10
-#       start_period: 30s
-#     restart: unless-stopped
-#     networks:
-#       - default
-
-#   postgres_dwh:
-#     image: postgres:15
-#     container_name: postgres_dwh
-#     environment:
-#       POSTGRES_USER: postgres
-#       POSTGRES_PASSWORD: postgres
-#       POSTGRES_DB: silver
-#     restart: always
-#     ports:
-#       - "5432:5432"
-#     volumes:
-#       - postgres_dwh_data:/var/lib/postgresql/data
-#       - ./init_silver.sql:/docker-entrypoint-initdb.d/init_silver.sql
-#     healthcheck:
-#       test: ["CMD-SHELL", "pg_isready -U postgres -d silver"]
-#       interval: 10s
-#       timeout: 5s
-#       retries: 5
-#     networks:
-#       - default
-
-#   minio:
-#     image: minio/minio:RELEASE.2025-02-18T16-25-55Z
-#     container_name: minio
-#     restart: always
-#     volumes:
-#       - minio_data:/data
-#     environment:
-#       MINIO_ROOT_USER: minioadmin
-#       MINIO_ROOT_PASSWORD: minioadmin
-#     command: server /data --console-address ":9001"
-#     ports:
-#       - "9000:9000"
-#       - "9001:9001"
-#     healthcheck:
-#       test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
-#       interval: 30s
-#       timeout: 20s
-#       retries: 3
-#     networks:
-#       - default
-  
-#   metabase:
-#     image: metabase/metabase:latest
-#     container_name: metabase
-#     ports:
-#       - "3001:3000"
-#     environment:
-#       MB_DB_TYPE: h2
-#     volumes:
-#       - ./metabase-data:/metabase-data
-#     restart: always
-
-#   postgres:
-#     image: postgres:13
-#     container_name: airflow_postgres
-#     environment:
-#       POSTGRES_USER: airflow
-#       POSTGRES_PASSWORD: airflow
-#       POSTGRES_DB: airflow
-#     volumes:
-#       - postgres_airflow_data:/var/lib/postgresql/data
-#     healthcheck:
-#       test: ["CMD", "pg_isready", "-U", "airflow"]
-#       interval: 10s
-#       retries: 5
-#       start_period: 5s
-#     restart: always
-#     networks:
-#       - default
-
-#   redis:
-#     image: redis:7.2-bookworm
-#     container_name: redis
-#     expose:
-#       - 6379
-#     healthcheck:
-#       test: ["CMD", "redis-cli", "ping"]
-#       interval: 10s
-#       timeout: 30s
-#       retries: 50
-#       start_period: 30s
-#     restart: always
-#     networks:
-#       - default
-
-#   airflow-webserver:
-#     <<: *airflow-common
-#     container_name: airflow_webserver
-#     command: webserver
-#     ports:
-#       - "8080:8080"
-#     healthcheck:
-#       test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
-#       interval: 30s
-#       timeout: 10s
-#       retries: 5
-#       start_period: 30s
-#     restart: always
-#     depends_on:
-#       <<: *airflow-common-depends-on
-#       airflow-init:
-#         condition: service_completed_successfully
-#     networks:
-#       - default
-
-#   airflow-scheduler:
-#     <<: *airflow-common
-#     container_name: airflow_scheduler
-#     command: scheduler
-#     healthcheck:
-#       test: ["CMD", "curl", "--fail", "http://localhost:8974/health"]
-#       interval: 30s
-#       timeout: 10s
-#       retries: 5
-#       start_period: 30s
-#     restart: always
-#     depends_on:
-#       <<: *airflow-common-depends-on
-#       airflow-init:
-#         condition: service_completed_successfully
-#     networks:
-#       - default
-
-#   airflow-worker:
-#     <<: *airflow-common
-#     container_name: airflow_worker
-#     command: celery worker
-#     healthcheck:
-#       test:
-#         - "CMD-SHELL"
-#         - 'celery --app airflow.providers.celery.executors.celery_executor.app inspect ping -d "celery@$${HOSTNAME}" || celery --app airflow.executors.celery_executor.app inspect ping -d "celery@$${HOSTNAME}"'
-#       interval: 30s
-#       timeout: 10s
-#       retries: 5
-#       start_period: 30s
-#     environment:
-#       <<: *airflow-common-env
-#       DUMB_INIT_SETSID: "0"
-#     restart: always
-#     depends_on:
-#       <<: *airflow-common-depends-on
-#       airflow-init:
-#         condition: service_completed_successfully
-
-#   airflow-triggerer:
-#     <<: *airflow-common
-#     container_name: airflow_triggerer
-#     command: triggerer
-#     healthcheck:
-#       test: ["CMD-SHELL", 'airflow jobs check --job-type TriggererJob --hostname "$${HOSTNAME}"']
-#       interval: 30s
-#       timeout: 10s
-#       retries: 5
-#       start_period: 30s
-#     restart: always
-#     depends_on:
-#       <<: *airflow-common-depends-on
-#       airflow-init:
-#         condition: service_completed_successfully
-
-#   airflow-init:
-#     <<: *airflow-common
-#     container_name: airflow_init
-#     entrypoint: /bin/bash
-#     command:
-#       - -c
-#       - |
-#         mkdir -p /sources/logs /sources/dags /sources/plugins
-#         chown -R "${AIRFLOW_UID}:0" /sources/{logs,dags,plugins}
-
-#         /entrypoint airflow db migrate
-#         /entrypoint airflow version
-
-#         airflow users create \
-#             --username "${_AIRFLOW_WWW_USER_USERNAME:-airflow}" \
-#             --password "${_AIRFLOW_WWW_USER_PASSWORD:-airflow}" \
-#             --firstname Airflow \
-#             --lastname Admin \
-#             --role Admin \
-#             --email admin@example.com || true
-
-#         airflow variables set REVOLUT_REFRESH_TOKEN "${REVOLUT_REFRESH_TOKEN}"
-#         airflow variables set REVOLUT_CLIENT_ID "${REVOLUT_CLIENT_ID}"
-#         airflow variables set REVOLUT_PRIVATE_KEY_PATH "/opt/airflow/certs/private.key"
-#         airflow variables set REVOLUT_TRANSPORT_CERT_PATH "/opt/airflow/certs/transport.pem"
-#     environment:
-#       <<: *airflow-common-env
-#       _AIRFLOW_DB_MIGRATE: 'true'
-#       _AIRFLOW_WWW_USER_CREATE: 'true'
-#       _AIRFLOW_WWW_USER_USERNAME: ${_AIRFLOW_WWW_USER_USERNAME:-airflow}
-#       _AIRFLOW_WWW_USER_PASSWORD: ${_AIRFLOW_WWW_USER_PASSWORD:-airflow}
-#       _PIP_ADDITIONAL_REQUIREMENTS: ''
-#     user: "0:0"
-#     volumes:
-#       - ${AIRFLOW_PROJ_DIR:-.}:/sources
-#     networks:
-#       - default
-
-# volumes:
-#   clickhouse_data:
-#     driver: local
-#   clickhouse_logs:
-#     driver: local
-#   postgres_dwh_data:
-#     driver: local
-#   minio_data:
-#     driver: local
-#   metabase_data:
-#     driver: local
-#   postgres_airflow_data:
-#     driver: local
-  
-# networks:
-#   default:
-#     name: revolut_network
-#     driver: bridge

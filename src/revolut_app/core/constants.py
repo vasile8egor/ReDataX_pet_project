@@ -1,4 +1,5 @@
-# Бизнес-логика для генерации транзакций (MCMC / Metropolis)
+from datetime import datetime
+
 ACTIVITY_DISTRIBUTION = [
     0.05, 0.03, 0.02, 0.01, 0.01, 0.02,
     0.10, 0.25, 0.55, 0.85, 0.90, 0.80,
@@ -7,7 +8,6 @@ ACTIVITY_DISTRIBUTION = [
 ]
 ITERATIONS_QUANTITY = 8000
 
-# Настройки Faker для локаций
 LOCATIONS = [
     'az_AZ', 'bg_BG', 'bn_BD', 'cs_CZ', 'da_DK', 'de_AT', 'de_CH', 'de_DE',
     'el_GR', 'en_PH', 'en_US', 'es_CL', 'es_ES', 'es_MX', 'fa_IR', 'fi_FI',
@@ -17,7 +17,6 @@ LOCATIONS = [
     'vi_VN', 'zh_CN', 'zh_TW'
 ]
 
-# Профили клиентов для Startpack
 CUSTOMER_CATEGORIES = {
     'organic': {
         'name': 'Organic Search',
@@ -42,21 +41,47 @@ CUSTOMER_CATEGORIES = {
     }
 }
 
-# Банковские настройки
-CURRENCIES = {'GBP': 0.70, 'EUR': 0.20, 'USD': 0.10}
-ACCOUNT_TYPES = {'Personal': 0.7, 'Business': 0.15, 'Premium': 0.10, 'Metal': 0.05}
+SCORING_CONFIG = {
+    'churn_risk': {
+        'Low': 0.10,
+        'Medium': 0.50,
+        'High': 0.90
+    },
+    'lifetime_value': {
+        'Low': 100.0,
+        'Medium': 500.0,
+        'High': 1000.0
+    }
+}
+
+CURRENCIES = {
+    'GBP': 0.70,
+    'EUR': 0.20,
+    'USD': 0.10
+}
+
+ACCOUNT_TYPES = {
+    'Personal': 0.7,
+    'Business': 0.15,
+    'Premium': 0.10,
+    'Metal': 0.05
+}
 
 BANK_NAMES = [
     'Barclays', 'HSBC', 'Lloyds', 'NatWest', 'Santander',
     'Nationwide', 'RBS', 'Standard Chartered', 'Monzo', 'Starling'
 ]
 
-# Параметры экстракции
 BUCKET_RAW = 'raw'
+
 NUM_ACCOUNTS_STARTPACK = 500
 
-DOMAINS = ["gmail.com", "outlook.com", "yahoo.com", "revolut.com", "protonmail.com"]
+DOMAINS = [
+    "gmail.com", "outlook.com", "yahoo.com", "revolut.com", "protonmail.com"
+]
+
 MIN_AGE_CLIENT = 18
+
 MAX_AGE_CLIENT = 75
 
 DOMAINS = ["gmail.com", "outlook.com", "revolut.com"]
@@ -65,3 +90,45 @@ INITIAL_MERCHANTS = [
     "Starbucks", "Amazon", "Apple", "Uber", "Netflix", 
     "Tesco", "Sainsbury's", "McDonald's", "Zara"
 ]
+
+ACCOUNTS_DB_FIELDS = [
+    'account_id',
+    'first_name',
+    'last_name',
+    'email',
+    'phone',
+    'date_of_birth',
+    'currency',
+    'account_type',
+    'account_sub_type',
+    'acquisition_channel',
+    'acquisition_channel_name',
+    'initial_deposit',
+    'registration_datetime',
+    'updated_at'
+]
+
+TRANSACTIONS_DB_FIELDS = [
+    'transaction_id',
+    'account_id',
+    'booking_datetime',
+    'value_datetime',
+    'amount',
+    'currency',
+    'credit_debit_indicator',
+    'status',
+    'transaction_information',
+    'merchant_name',
+    'load_ts'
+]
+
+DEFAULT_ARGS_W_RETRIES = {
+    'owner': 'airflow',
+    'start_date': datetime(2025, 1, 1),
+    'retries': 1,
+}
+
+DEFAULT_ARGS = {
+    'owner': 'airflow',
+    'start_date': datetime(2025, 1, 1),
+}

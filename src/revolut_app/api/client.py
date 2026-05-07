@@ -9,10 +9,10 @@ from typing import Dict, Optional
 
 class RevolutClient:
     def __init__(
-        self, 
-        client_id: str, 
-        financial_id: str, 
-        private_key_path: str, 
+        self,
+        client_id: str,
+        financial_id: str,
+        private_key_path: str,
         transport_cert_path: str,
         kid: str,
         redirect_url: str
@@ -141,16 +141,16 @@ class RevolutClient:
         self.refresh_token = td.get("refresh_token")
         self.token_expires_at = time.time() + td.get("expires_in", 300) - 60
         return td
-    
+
     def refresh_tokens(self):
         """Обновляет access_token, используя существующий refresh_token"""
         if not self.refresh_token:
-            # Если токена нет в памяти, пробуем взять его из переменной окружения
             import os
             self.refresh_token = os.getenv("REVOLUT_REFRESH_TOKEN")
-        
+
         if not self.refresh_token:
-            raise ValueError("Refresh token is missing. Please run auth.py first.")
+            raise ValueError(
+                "Refresh token is missing. Please run auth.py first.")
 
         resp = requests.post(
             self.auth_url,
@@ -165,19 +165,19 @@ class RevolutClient:
         )
         resp.raise_for_status()
         td = resp.json()
-        
+
         self.access_token = td["access_token"]
         # Иногда Revolut выдает новый refresh_token, обновим его, если он пришел
         if "refresh_token" in td:
             self.refresh_token = td["refresh_token"]
-            
+
         self.token_expires_at = time.time() + td.get("expires_in", 300) - 60
         return td
 
     def _build_headers(self) -> Dict:
         if not self.access_token or time.time() > self.token_expires_at:
             self.refresh_tokens()
-            
+
         return {
             "Accept": "application/json",
             "Authorization": f"Bearer {self.access_token}",
