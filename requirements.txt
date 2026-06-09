@@ -1,8 +1,5 @@
 # Критически важные версии для совместимости с Airflow 2.10
 sqlalchemy>=1.4.36,<2.0
-pandas==2.2.2
-fsspec==2024.10.0
-s3fs==2024.10.0
 
 # Работа с API и безопасностью
 cryptography==44.0.0
@@ -14,8 +11,8 @@ urllib3==2.2.3
 
 # Базы данных и файлы
 psycopg2-binary==2.9.10
-SQLAlchemy-Utils==0.41.2
-minio==7.2.10
+clickhouse-driver==0.2.9
+apache-airflow-providers-amazon==9.0.0
 
 # Генерация данных и математика
 numpy==1.26.4
@@ -26,6 +23,3 @@ python-dotenv==1.0.1
 cffi==1.17.1
 packaging==24.2
 typing_extensions==4.12.2
-
-# Аналитика
-clickhouse-driver==0.2.9

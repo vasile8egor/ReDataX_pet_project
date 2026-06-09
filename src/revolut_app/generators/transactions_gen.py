@@ -1,6 +1,5 @@
 import numpy as np
 import random
-import uuid
 from datetime import datetime
 from faker import Faker
 from revolut_app.core.constants import (
@@ -41,22 +40,41 @@ class MetropolisTransactionGenerator:
 
         for i, hour in enumerate(hours):
             tx_time = datetime(
-                target_date.year, target_date.month, target_date.day,
-                hour, random.randint(0, 59), random.randint(0, 59)
+                target_date.year,
+                target_date.month,
+                target_date.day,
+                hour,
+                random.randint(0, 59),
+                random.randint(0, 59)
             )
             tx_type = random.choices(
-                ['Debit', 'Credit'], weights=[0.73, 0.27])[0]
+                ['Debit', 'Credit'],
+                weights=[0.73, 0.27]
+            )[0]
 
             yield {
                 'transaction_id': f"{account_id}_{target_date.strftime('%Y%m%d')}_{i+1:06d}",
-                'account_id': account_id,
-                'booking_datetime': tx_time,
-                'value_datetime': tx_time,
-                'amount': round(np.random.lognormal(mean=np.log(55), sigma=0.85), 2),
+                'account_id': str(account_id),
+                'amount': float(round(np.random.lognormal(mean=np.log(55), sigma=0.85), 2)),
                 'currency': 'GBP',
-                'credit_debit_indicator': tx_type,
-                'status': 'Completed',
-                'transaction_information': f"Synthetic {tx_type} transaction",
-                'merchant_name': self.fake.company() if tx_type == 'Debit' else None,
-                'load_ts': datetime.now()
+                'created_at': tx_time.isoformat()
             }
+
+            # yield {
+            #     'transaction_id': f"{account_id}_{target_date.strftime('%Y%m%d')}_{i+1:06d}",
+            #     'account_id': account_id,
+            #     'booking_datetime': tx_time,
+            #     'value_datetime': tx_time,
+            #     'amount': round(np.random.lognormal(mean=np.log(55), sigma=0.85), 2),
+            #     'currency': 'GBP',
+            #     'credit_debit_indicator': tx_type,
+            #     'status': 'Completed',
+            #     'transaction_information': f"Synthetic {tx_type} transaction",
+            #     'merchant_name': self.fake.company() if tx_type == 'Debit' else None,
+            #     'load_ts': datetime.now()
+            # }
+    def generate_all(self, account_ids: list, target_date):
+        all_transactions = []
+        for acc_id in account_ids:
+            all_transactions.extend(list(self.generate_for_account(acc_id, target_date)))
+        return all_transactions

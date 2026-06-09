@@ -19,15 +19,6 @@ with DAG(
 
     start_pipeline = EmptyOperator(task_id='start_pipeline')
 
-    # trigger_extract = TriggerDagRunOperator(
-    #     task_id='trigger_extract_api',
-    #     trigger_dag_id='revolut_extract_api',
-    #     wait_for_completion=True,
-    #     poke_interval=30,
-    #     reset_dag_run=True,
-    #     execution_date="{{ execution_date }}"
-    # )
-
     trigger_gen_accounts = TriggerDagRunOperator(
         task_id='trigger_generate_accounts',
         trigger_dag_id='revolut_generate_new_accounts',

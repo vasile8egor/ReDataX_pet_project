@@ -9,20 +9,23 @@ x-airflow-common: &airflow-common
     AIRFLOW__CORE__FERNET_KEY: ''
     AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
     AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK: 'true'
+    AIRFLOW__CORE__PLUGINS_FOLDER: /opt/airflow/plugins
+    AIRFLOW_PYTHONPATH: /opt/airflow/src:/opt/airflow/dags
     AIRFLOW_CONN_POSTGRES_MAIN: 'postgres://airflow:airflow@postgres_main:5432/airflow'
     AIRFLOW_CONN_MINIO_CONN: 'aws://minioadmin:minioadmin@?endpoint_url=http%3A%2F%2Fminio%3A9000'
   volumes:
     - ./dags:/opt/airflow/dags
     - ./src:/opt/airflow/src
+    - ./sql:/opt/airflow/sql
     - ./logs:/opt/airflow/logs
-    - ./plugins:/opt/airflow/plugins
+    # - ./plugins:/opt/airflow/plugins
   user: "${AIRFLOW_UID:-50000}:0"
   networks:
     - revolut_network
 
 services:
   postgres_main:
-    image: postgres:15-alpine
+    image: postgres:15
     container_name: postgres_main
     environment:
       POSTGRES_USER: airflow
@@ -30,7 +33,6 @@ services:
       POSTGRES_DB: airflow
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./scripts/init_silver.sql:/docker-entrypoint-initdb.d/init_silver.sql
     ports:
       - "5432:5432"
     healthcheck:
@@ -61,8 +63,8 @@ services:
         condition: service_healthy
       airflow-init:
         condition: service_completed_successfully
-      clickhouse-init:
-        condition: service_completed_successfully
+      clickhouse:
+        condition: service_healthy
 
   airflow-scheduler:
     <<: *airflow-common
@@ -74,8 +76,8 @@ services:
         condition: service_healthy
       airflow-init:
         condition: service_completed_successfully
-      clickhouse-init:
-        condition: service_completed_successfully
+      clickhouse:
+        condition: service_healthy
 
   airflow-init:
     <<: *airflow-common
@@ -91,7 +93,6 @@ services:
       _AIRFLOW_DB_MIGRATE: 'true'
     user: "0:0"
 
-  # МИНИО (Хранилище)
   minio:
     image: minio/minio:RELEASE.2024-01-11T07-46-16Z
     container_name: minio
@@ -102,7 +103,7 @@ services:
       MINIO_ROOT_PASSWORD: minioadmin
     command: server /data --console-address ":9001"
     ports:
-      - "9000:9000"
+      - "9002:9002"
       - "9001:9001"
     deploy:
       resources:
@@ -111,50 +112,29 @@ services:
     networks:
       - revolut_network
 
-  # CLICKHOUSE (Аналитика)
   clickhouse:
-    image: clickhouse/clickhouse-server:23.12-alpine
+    image: clickhouse/clickhouse-server
     container_name: clickhouse
+    hostname: clickhouse
     environment:
       - CLICKHOUSE_USER=default
-      - CLICKHOUSE_PASSWORD=''
+      - CLICKHOUSE_PASSWORD=default
+      - CLICKHOUSE_DB=gold
     volumes:
+      - ./sql/clickhouse/init_gold.sql:/docker-entrypoint-initdb.d/init_gold.sql
       - clickhouse_data:/var/lib/clickhouse
+    ports:
+      - "8123:8123"
+      - "9000:9000"
+    depends_on:
+      - postgres_main
     networks:
       - revolut_network
     healthcheck:
-      test: ["CMD", "clickhouse-client", "--query", "SELECT 1"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
-
-  clickhouse-init:
-    image: clickhouse/clickhouse-server:23.12-alpine
-    container_name: clickhouse_init
-    depends_on:
-      clickhouse:
-        condition: service_healthy
-    volumes:
-      - ./scripts/init_gold.sql:/init/init_gold.sql
-    networks:
-      - revolut_network
-    entrypoint: >
-      /bin/sh -c "
-      echo 'Running DDL scripts...';
-      clickhouse-client --host clickhouse --multiquery < /init/init_gold.sql;
-      echo 'DDL applied successfully.';
-      "
-  
-  # metabase:
-  #   image: metabase/metabase:latest
-  #   container_name: metabase
-  #   ports:
-  #     - "3001:3000"
-  #   environment:
-  #     MB_DB_TYPE: h2
-  #   volumes:
-  #     - ./metabase-data:/metabase-data
-  #   restart: always
+      test: ["CMD", "wget", "--spider", "-q", "localhost:8123/ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 volumes:
   postgres_data:
