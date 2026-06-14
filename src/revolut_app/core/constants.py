@@ -115,6 +115,17 @@ ACTIVITY_DISTRIBUTION = [
 
 ITERATIONS_QUANTITY = 8000
 
+TRANSACTION_TYPES = {
+    'card_payment': 0.45,
+    'internal_transfer': 0.20,
+    'bank_transfer_out': 0.12,
+    'bank_transfer_in': 0.10,
+    'salary': 0.05,
+    'cash_withdrawal': 0.04,
+    'fee': 0.02,
+    'refund': 0.02,
+}
+
 
 # legacy generated-row constants: kept for backward-compatible imports only.
 BANK_NAMES = [
