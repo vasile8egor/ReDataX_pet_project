@@ -12,5 +12,8 @@ with DAG(
     PythonOperator(
         task_id='load_gold_transactions',
         python_callable=run_gold_transactions_load,
-        op_kwargs={'target_date_str': '{{ ds }}'},
+        op_kwargs={
+            'target_date_str': '{{ ds }}',
+            'load_mode': '{{ dag_run.conf.get("load_mode", "full") }}',
+        },
     )

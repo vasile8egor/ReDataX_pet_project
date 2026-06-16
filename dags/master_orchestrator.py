@@ -43,6 +43,7 @@ with DAG(
         wait_for_completion=True,
         poke_interval=30,
         reset_dag_run=True,
+        conf={'load_mode': 'daily'},
         execution_date="{{ execution_date }}"
     )
 

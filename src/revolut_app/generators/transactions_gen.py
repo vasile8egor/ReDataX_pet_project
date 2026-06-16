@@ -4,6 +4,7 @@ from datetime import date, datetime
 from faker import Faker
 from revolut_app.core.constants import (
     ACTIVITY_DISTRIBUTION,
+    INITIAL_MERCHANTS,
     LOCATIONS,
     ITERATIONS_QUANTITY
 )
@@ -20,6 +21,9 @@ TRANSACTION_TYPES = {
     "refund": 0.02,
 }
 
+TRANSACTION_TYPE_NAMES = list(TRANSACTION_TYPES.keys())
+TRANSACTION_TYPE_PROBABILITIES = list(TRANSACTION_TYPES.values())
+
 CARD_CATEGORIES = [
     "groceries",
     "transport",
@@ -29,6 +33,12 @@ CARD_CATEGORIES = [
     "entertainment",
     "health",
 ]
+
+
+def _sample_minute(hour: int) -> int:
+    if hour == 18:
+        return random.randint(30, 59)
+    return random.randint(0, 59)
 
 
 class MetropolisTransactionGenerator:
@@ -137,28 +147,34 @@ class MetropolisTransactionGenerator:
         if target_date is None:
             target_date = all_account_ids
             all_account_ids = [str(account_id)]
+        else:
+            all_account_ids = [str(item) for item in all_account_ids]
 
         daily_n = max(10, int(np.random.poisson(self.base_lambda)))
         hours = np.random.choice(24, size=daily_n, p=self.current_intensity)
+        transaction_types = np.random.choice(
+            TRANSACTION_TYPE_NAMES,
+            size=daily_n,
+            p=TRANSACTION_TYPE_PROBABILITIES
+        )
 
-        for i, hour in enumerate(hours):
+        for i, (hour, transaction_type) in enumerate(
+            zip(hours, transaction_types)
+        ):
+            hour = int(hour)
             tx_time = datetime(
                 target_date.year,
                 target_date.month,
                 target_date.day,
                 hour,
-                random.randint(0, 59),
+                _sample_minute(hour),
                 random.randint(0, 59)
             )
-            transaction_type = random.choices(
-                list(TRANSACTION_TYPES.keys()),
-                weights=list(TRANSACTION_TYPES.values())
-            )[0]
 
             yield self.generate_transaction_by_type(
                 transaction_type=transaction_type,
                 account_id=str(account_id),
-                all_account_ids=list(all_account_ids),
+                all_account_ids=all_account_ids,
                 target_date=target_date,
                 tx_time=tx_time,
                 index=i,
@@ -180,6 +196,7 @@ class MetropolisTransactionGenerator:
         direction = "outgoing"
         merchant_name = None
         category = None
+        counterparty_suffix = f"{random.getrandbits(64):016x}"
 
         if transaction_type == "internal_transfer":
             target_account_id = self.choose_internal_target(
@@ -188,29 +205,29 @@ class MetropolisTransactionGenerator:
             )
             counterparty_type = "internal_account"
         elif transaction_type == "card_payment":
-            external_counterparty_id = f"merchant_{self.fake.uuid4()}"
+            external_counterparty_id = f"merchant_{counterparty_suffix}"
             counterparty_type = "merchant"
-            merchant_name = self.fake.company()
+            merchant_name = random.choice(INITIAL_MERCHANTS)
             category = random.choice(CARD_CATEGORIES)
         elif transaction_type == "bank_transfer_out":
-            external_counterparty_id = f"external_bank_{self.fake.uuid4()}"
+            external_counterparty_id = f"external_bank_{counterparty_suffix}"
             counterparty_type = "external_bank_account"
         elif transaction_type == "bank_transfer_in":
             source_account_id = None
             target_account_id = account_id
-            external_counterparty_id = f"external_bank_{self.fake.uuid4()}"
+            external_counterparty_id = f"external_bank_{counterparty_suffix}"
             counterparty_type = "external_bank_account"
             direction = "incoming"
         elif transaction_type == "salary":
             source_account_id = None
             target_account_id = account_id
-            external_counterparty_id = f"employer_{self.fake.uuid4()}"
+            external_counterparty_id = f"employer_{counterparty_suffix}"
             counterparty_type = "employer"
             direction = "incoming"
             category = "salary"
-            merchant_name = self.fake.company()
+            merchant_name = "Revolut Payroll"
         elif transaction_type == "cash_withdrawal":
-            external_counterparty_id = f"atm_{self.fake.uuid4()}"
+            external_counterparty_id = f"atm_{counterparty_suffix}"
             counterparty_type = "atm"
             category = "cash"
         elif transaction_type == "fee":
@@ -220,7 +237,7 @@ class MetropolisTransactionGenerator:
         elif transaction_type == "refund":
             source_account_id = None
             target_account_id = account_id
-            external_counterparty_id = f"merchant_{self.fake.uuid4()}"
+            external_counterparty_id = f"merchant_{counterparty_suffix}"
             counterparty_type = "merchant"
             direction = "incoming"
             category = "refund"

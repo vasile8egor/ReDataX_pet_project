@@ -1,4 +1,4 @@
-WITH transactions AS (
+WITH daily_transactions AS (
     SELECT
         transaction_id,
         account_id,
@@ -12,6 +12,7 @@ WITH transactions AS (
             ORDER BY bronze_loaded_at DESC
         ) AS row_num
     FROM silver.v_transactions
+    WHERE tx_timestamp::DATE = %(target_date)s::DATE
 )
 SELECT
     transaction_id,
@@ -21,5 +22,5 @@ SELECT
     currency,
     merchant_name,
     bronze_loaded_at
-FROM transactions
+FROM daily_transactions
 WHERE row_num = 1;

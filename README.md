@@ -31,6 +31,7 @@ Airflow используется только для оркестрации. DAG
 | PostgreSQL | DWH для Bronze JSONB и Silver SQL views |
 | ClickHouse | Gold serving layer для аналитических витрин |
 | MinIO | S3-compatible raw landing zone для API JSON |
+| Metabase | BI-интерфейс для визуализации и построения дашбордов |
 | Docker Compose | Локальное развертывание инфраструктуры |
 | Python | Генераторы, API-клиент, ETL pipelines |
 | Revolut Open Banking API | Источник реальных банковских данных |
@@ -217,6 +218,7 @@ airflow_init
 postgres_main
 minio
 clickhouse
+metabase
 ```
 
 ### 6. Открыть Airflow
@@ -241,6 +243,55 @@ http://localhost:9001
 
 ```text
 minioadmin / minioadmin
+```
+
+### 8. Открыть Metabase
+
+```text
+http://localhost:3001
+```
+
+При первом запуске Metabase попросит создать пользователя и подключить источник данных.
+
+Рекомендуемое подключение к PostgreSQL:
+
+```text
+Host: postgres_main
+Port: 5432
+Database: airflow
+User: airflow
+Password: airflow
+```
+
+Через PostgreSQL удобно анализировать Bronze/Silver:
+
+```text
+bronze.revolut_accounts_raw
+bronze.revolut_transactions_raw
+silver.v_accounts
+silver.v_transactions
+```
+
+ClickHouse можно подключить к Metabase через community ClickHouse driver. Папка для плагинов уже примонтирована:
+
+```text
+metabase/plugins -> /plugins
+```
+
+После добавления ClickHouse driver `.jar` в `metabase/plugins` нужно перезапустить Metabase:
+
+```bash
+docker compose restart metabase
+```
+
+Параметры ClickHouse:
+
+```text
+Host: clickhouse
+HTTP Port: 8123
+Database: gold
+User: default
+Password: default
 ```
 
 ## Рекомендуемый Порядок Запуска DAG-ов
@@ -279,10 +330,22 @@ docker compose logs -f airflow-scheduler
 docker compose exec postgres_main psql -U airflow -d airflow
 ```
 
+Применить DDL для API transaction events:
+
+```bash
+docker compose exec postgres_main psql -U airflow -d airflow -f /sql/bronze/transaction_events_raw.sql
+```
+
 Зайти в ClickHouse:
 
 ```bash
 docker compose exec clickhouse clickhouse-client
+```
+
+Посмотреть логи Metabase:
+
+```bash
+docker compose logs -f metabase
 ```
 
 Остановить проект:

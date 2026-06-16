@@ -1,4 +1,5 @@
 from clickhouse_driver import Client
+from datetime import datetime
 
 
 class GoldLayerLoader:
@@ -27,6 +28,23 @@ class GoldLayerLoader:
             ENGINE = ReplacingMergeTree(gold_loaded_at)
             ORDER BY (tx_timestamp, transaction_id)
             '''
+        )
+
+    def truncate_transactions(self) -> None:
+        self.ensure_schema()
+        self.ch_client.execute('TRUNCATE TABLE gold.fact_transactions')
+
+    def delete_transactions_for_date(self, target_date_str: str) -> None:
+        datetime.strptime(target_date_str, '%Y-%m-%d')
+
+        self.ensure_schema()
+        self.ch_client.execute(
+            '''
+            ALTER TABLE gold.fact_transactions
+            DELETE WHERE toDate(tx_timestamp) = toDate(%(target_date)s)
+            SETTINGS mutations_sync = 1
+            ''',
+            {'target_date': target_date_str}
         )
 
     def load_transactions(self, rows: list[tuple]) -> int:
