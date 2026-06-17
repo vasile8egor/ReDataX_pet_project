@@ -57,6 +57,3 @@ class TransactionEventRepository:
                         risk_level,
                     )
                 )
-
-
-TrasnasctionEventRepository = TransactionEventRepository
