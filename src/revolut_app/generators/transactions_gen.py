@@ -244,6 +244,16 @@ class MetropolisTransactionGenerator:
         else:
             raise ValueError(f"Unsupported transaction type: {transaction_type}")
 
+        credit_debit_indicator = (
+            "Credit" if direction == "incoming" else "Debit"
+        )
+        transaction_information = self._transaction_information(
+            transaction_type=transaction_type,
+            merchant_name=merchant_name,
+            category=category,
+            external_counterparty_id=external_counterparty_id,
+        )
+
         return {
             "transaction_id": (
                 f"{account_id}_{target_date.strftime('%Y%m%d')}_"
@@ -257,12 +267,33 @@ class MetropolisTransactionGenerator:
             "amount": self.generate_amount(transaction_type),
             "currency": "GBP",
             "direction": direction,
+            "credit_debit_indicator": credit_debit_indicator,
             "transaction_type": transaction_type,
+            "transaction_information": transaction_information,
             "status": "completed",
             "created_at": tx_time.isoformat(),
             "merchant_name": merchant_name,
             "category": category,
         }
+
+    @staticmethod
+    def _transaction_information(
+        *,
+        transaction_type: str,
+        merchant_name: str | None,
+        category: str | None,
+        external_counterparty_id: str | None,
+    ) -> str:
+        if merchant_name:
+            return merchant_name
+
+        if category:
+            return category.replace("_", " ").title()
+
+        if external_counterparty_id:
+            return external_counterparty_id
+
+        return transaction_type.replace("_", " ").title()
 
     def generate_all(self, account_ids: list[str], target_date):
         account_ids = [str(account_id) for account_id in account_ids]

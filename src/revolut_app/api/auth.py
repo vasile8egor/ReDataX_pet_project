@@ -1,12 +1,30 @@
 import os
 from pathlib import Path
-from dotenv import load_dotenv, set_key
+from dotenv import load_dotenv
 
 from . import RevolutClient
 
 
+PROJECT_ROOT = Path(__file__).resolve().parents[3]
+DEFAULT_REFRESH_TOKEN_FILE = PROJECT_ROOT / '.secrets' / 'revolut_refresh_token'
+
+
+def _refresh_token_path() -> Path:
+    return Path(
+        os.getenv('REVOLUT_REFRESH_TOKEN_FILE', DEFAULT_REFRESH_TOKEN_FILE)
+    ).expanduser()
+
+
+def _save_refresh_token(refresh_token: str) -> Path:
+    token_path = _refresh_token_path()
+    token_path.parent.mkdir(parents=True, exist_ok=True)
+    token_path.write_text(refresh_token + '\n', encoding='utf-8')
+    token_path.chmod(0o600)
+    return token_path
+
+
 def main():
-    env_path = Path(__file__).resolve().parents[3] / '.env'
+    env_path = PROJECT_ROOT / '.env'
     load_dotenv(env_path)
 
     client_params = {
@@ -21,7 +39,7 @@ def main():
     missing = [k for k, v in client_params.items() if not v]
     if missing:
         raise ValueError(
-            f'Missing required ENV variables: {', '.join(missing)}'
+            f"Missing required ENV variables: {', '.join(missing)}"
         )
 
     client = RevolutClient(**client_params)
@@ -44,8 +62,8 @@ def main():
     refresh_token = tokens.get('refresh_token')
 
     if refresh_token:
-        set_key(str(env_path), 'REVOLUT_REFRESH_TOKEN', refresh_token)
-        print(f'Success: REVOLUT_REFRESH_TOKEN saved')
+        token_path = _save_refresh_token(refresh_token)
+        print(f'Success: REVOLUT_REFRESH_TOKEN saved to {token_path}')
     else:
         print('Error: Did not receive refresh_token.')
 

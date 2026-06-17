@@ -4,6 +4,7 @@ import jwt
 import uuid
 import time
 import datetime
+import logging
 from pathlib import Path
 from typing import Dict, Optional
 
@@ -14,6 +15,43 @@ from revolut_app.core.constants import (
 )
 
 
+logger = logging.getLogger(__name__)
+PROJECT_ROOT = Path(__file__).resolve().parents[3]
+DEFAULT_REFRESH_TOKEN_FILE = PROJECT_ROOT / '.secrets' / 'revolut_refresh_token'
+
+
+def _env_flag(name: str, default: bool) -> bool:
+    value = os.getenv(name)
+    if value is None:
+        return default
+    return value.strip().lower() not in {'0', 'false', 'no', 'off'}
+
+
+def _refresh_token_from_file() -> Optional[str]:
+    path = Path(
+        os.getenv('REVOLUT_REFRESH_TOKEN_FILE', DEFAULT_REFRESH_TOKEN_FILE)
+    ).expanduser()
+    if not path.exists():
+        return None
+
+    token = path.read_text(encoding='utf-8').strip()
+    return token or None
+
+
+def _tls_verify_from_env() -> bool | str:
+    ca_bundle = os.getenv('REVOLUT_CA_BUNDLE')
+    if ca_bundle:
+        return ca_bundle
+
+    verify_tls = _env_flag('REVOLUT_VERIFY_TLS', True)
+    if not verify_tls:
+        logger.warning(
+            'REVOLUT_VERIFY_TLS=false disables TLS certificate validation. '
+            'Use this only for local sandbox debugging.'
+        )
+    return verify_tls
+
+
 class RevolutClient:
     def __init__(
         self,
@@ -22,7 +60,8 @@ class RevolutClient:
         private_key_path,
         transport_cert_path,
         kid: str,
-        redirect_url: str
+        redirect_url: str,
+        tls_verify: bool | str | None = None,
     ):
         self.client_id = client_id
         self.financial_id = financial_id
@@ -36,8 +75,13 @@ class RevolutClient:
         self.ui_url = REVOLUT_UI_URL
 
         self.access_token: Optional[str] = None
-        self.refresh_token = os.getenv('REVOLUT_REFRESH_TOKEN')
+        self.refresh_token = (
+            os.getenv('REVOLUT_REFRESH_TOKEN') or _refresh_token_from_file()
+        )
         self.token_expires_at = 0
+        self.tls_verify = (
+            _tls_verify_from_env() if tls_verify is None else tls_verify
+        )
 
     @classmethod
     def from_env(cls) -> 'RevolutClient':
@@ -70,7 +114,7 @@ class RevolutClient:
                 'client_id': self.client_id,
             },
             headers={'Content-Type': 'application/x-www-form-urlencoded'},
-            verify=False,
+            verify=self.tls_verify,
         )
         resp.raise_for_status()
         return resp.json()['access_token']
@@ -116,7 +160,7 @@ class RevolutClient:
             json=payload,
             cert=self._cert(),
             headers=headers,
-            verify=False,
+            verify=self.tls_verify,
         )
         resp.raise_for_status()
         return resp.json()
@@ -173,7 +217,7 @@ class RevolutClient:
                 'code': authorization_code,
             },
             headers={'Content-Type': 'application/x-www-form-urlencoded'},
-            verify=False,
+            verify=self.tls_verify,
         )
         resp.raise_for_status()
         td = resp.json()
@@ -184,8 +228,9 @@ class RevolutClient:
 
     def refresh_tokens(self):
         if not self.refresh_token:
-            import os
-            self.refresh_token = os.getenv('REVOLUT_REFRESH_TOKEN')
+            self.refresh_token = (
+                os.getenv('REVOLUT_REFRESH_TOKEN') or _refresh_token_from_file()
+            )
 
         if not self.refresh_token:
             raise ValueError(
@@ -200,7 +245,7 @@ class RevolutClient:
                 'refresh_token': self.refresh_token,
             },
             headers={"Content-Type": "application/x-www-form-urlencoded"},
-            verify=False,
+            verify=self.tls_verify,
         )
         resp.raise_for_status()
         td = resp.json()
@@ -218,7 +263,7 @@ class RevolutClient:
             f'{self.base_api}/accounts',
             cert=self._cert(),
             headers=headers,
-            verify=False,
+            verify=self.tls_verify,
         )
         if resp.status_code == 401:
             self.refresh_tokens()
@@ -227,7 +272,7 @@ class RevolutClient:
                 f'{self.base_api}/accounts',
                 cert=self._cert(),
                 headers=headers,
-                verify=False,
+                verify=self.tls_verify,
             )
         resp.raise_for_status()
         return resp.json()
@@ -250,7 +295,7 @@ class RevolutClient:
             cert=self._cert(),
             headers=headers,
             params=params,
-            verify=False,
+            verify=self.tls_verify,
         )
         if resp.status_code == 401:
             self.refresh_tokens()
@@ -260,7 +305,7 @@ class RevolutClient:
                 cert=self._cert(),
                 headers=headers,
                 params=params,
-                verify=False,
+                verify=self.tls_verify,
             )
         resp.raise_for_status()
         return resp.json()

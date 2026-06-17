@@ -209,6 +209,7 @@ __marimo__/
 # Project
 data/
 logs/
+.secrets/
 metabase-data/
 certs/
 certs/private.key

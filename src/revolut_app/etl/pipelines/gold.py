@@ -13,7 +13,7 @@ def run_gold_transactions_load(
 ) -> int:
     run_db_bootstrap_pipeline()
 
-    mode = (load_mode or 'daily').lower()
+    mode = (load_mode or 'full').lower()
     hook = PostgresHook(postgres_conn_id='postgres_main')
     loader = GoldLayerLoader()
 
