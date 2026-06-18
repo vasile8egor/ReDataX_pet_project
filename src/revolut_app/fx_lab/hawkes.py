@@ -2,6 +2,20 @@ from datetime import datetime, timedelta, timezone
 
 import numpy as np
 
+from revolut_app.fx_lab.constants import (
+    BUSINESS_SEGMENT_PROBABILITY,
+    DEFAULT_HAWKES_ALPHA,
+    DEFAULT_HAWKES_BASE_INTENSITY,
+    DEFAULT_HAWKES_BETA,
+    DEFAULT_HAWKES_DT_SECONDS,
+    DEFAULT_HAWKES_STEPS,
+    HAWKES_BUY_PROBABILITY,
+    HAWKES_LOGNORMAL_MEAN,
+    HAWKES_LOGNORMAL_SIGMA,
+    PREMIUM_SEGMENT_PROBABILITY,
+    SECONDS_PER_MINUTE,
+    ZERO_FLOAT,
+)
 from revolut_app.fx_lab.models import (
     Currency,
     CustomerSegment,
@@ -16,15 +30,15 @@ class HawkesLikeFXEventGenerator:
 
     def simulate_quote_requests(
         self, *,
-        steps: int = 1_000,
-        dt_seconds: int = 10,
-        base_intensity: float = 0.015,
-        alpha: float = 0.08,
-        beta: float = 0.12,
+        steps: int = DEFAULT_HAWKES_STEPS,
+        dt_seconds: int = DEFAULT_HAWKES_DT_SECONDS,
+        base_intensity: float = DEFAULT_HAWKES_BASE_INTENSITY,
+        alpha: float = DEFAULT_HAWKES_ALPHA,
+        beta: float = DEFAULT_HAWKES_BETA,
         start_at: datetime | None = None,
     ) -> list[QuoteRequest]:
         current_time = start_at or datetime.now(timezone.utc)
-        execution = 0.0
+        execution = ZERO_FLOAT
         requests = []
 
         currency_pairs = [
@@ -47,16 +61,23 @@ class HawkesLikeFXEventGenerator:
                     base_currency=base_currency,
                     quote_currency=quote_currency,
                     side=(
-                        FXSide.buy if self.rng.random() < 0.55 else FXSide.sell
+                        FXSide.buy
+                        if self.rng.random() < HAWKES_BUY_PROBABILITY
+                        else FXSide.sell
                     ),
-                    amount=float(self.rng.lognormal(mean=0.7, sigma=0.75)),
+                    amount=float(
+                        self.rng.lognormal(
+                            mean=HAWKES_LOGNORMAL_MEAN,
+                            sigma=HAWKES_LOGNORMAL_SIGMA,
+                        )
+                    ),
                     segment=self._sample_segment(),
                     channel='synthetic_hawkes',
                 )
                 requests.append(request)
                 execution += alpha
 
-            execution *= float(np.exp(-beta * dt_seconds / 60.0))
+            execution *= float(np.exp(-beta * dt_seconds / SECONDS_PER_MINUTE))
             current_time += timedelta(seconds=dt_seconds)
 
         return requests
@@ -64,8 +85,8 @@ class HawkesLikeFXEventGenerator:
     def _sample_segment(self) -> CustomerSegment:
         value = self.rng.random()
 
-        if value < 0.12:
+        if value < PREMIUM_SEGMENT_PROBABILITY:
             return CustomerSegment.premium
-        if value < 0.2:
+        if value < BUSINESS_SEGMENT_PROBABILITY:
             return CustomerSegment.business
         return CustomerSegment.retail

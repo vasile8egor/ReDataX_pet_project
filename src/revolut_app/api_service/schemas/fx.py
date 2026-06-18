@@ -1,5 +1,33 @@
 from datetime import datetime
+
 from pydantic import BaseModel, Field
+
+from revolut_app.fx_lab.constants import (
+    DEFAULT_AMOUNT_MULTIPLIER,
+    DEFAULT_HAWKES_ALPHA,
+    DEFAULT_HAWKES_BETA,
+    DEFAULT_HAWKES_DT_SECONDS,
+    DEFAULT_MAX_SNAPSHOTS,
+    DEFAULT_SIMULATION_BASE_INTENSITY,
+    DEFAULT_SIMULATION_SEED,
+    DEFAULT_SIMULATION_STEPS,
+    DEFAULT_STRESS_HEDGE_CAPACITY_MULTIPLIER,
+    DEFAULT_STRESS_VOLATILITY_MULTIPLIER,
+    MAX_ALPHA,
+    MAX_AMOUNT_MULTIPLIER,
+    MAX_BETA,
+    MAX_DT_SECONDS,
+    MAX_INTENSITY,
+    MAX_MAX_SNAPSHOTS,
+    MAX_SIMULATION_STEPS,
+    MIN_ALPHA,
+    MIN_AMOUNT_MULTIPLIER,
+    MIN_BETA,
+    MIN_DT_SECONDS,
+    MIN_INTENSITY,
+    MIN_MAX_SNAPSHOTS,
+    MIN_SIMULATION_STEPS,
+)
 from revolut_app.fx_lab.models import (
     Currency,
     CustomerSegment,
@@ -63,30 +91,65 @@ class RiskSnapshotResponse(BaseModel):
 
 
 class StressShockRequest(BaseModel):
-    volatility_multiplier: float = Field(default=2.0, gt=0)
-    hedge_capacity_multiplier: float = Field(default=0.7, gt=0, le=1)
+    volatility_multiplier: float = Field(
+        default=DEFAULT_STRESS_VOLATILITY_MULTIPLIER,
+        gt=0,
+    )
+    hedge_capacity_multiplier: float = Field(
+        default=DEFAULT_STRESS_HEDGE_CAPACITY_MULTIPLIER,
+        gt=0,
+        le=1,
+    )
 
 
 class DaySimulationRequest(BaseModel):
-    steps: int = Field(default=5000, ge=1, le=100_000)
-    dt_seconds: int = Field(default=10, ge=1, le=3600)
+    steps: int = Field(
+        default=DEFAULT_SIMULATION_STEPS,
+        ge=MIN_SIMULATION_STEPS,
+        le=MAX_SIMULATION_STEPS,
+    )
+    dt_seconds: int = Field(
+        default=DEFAULT_HAWKES_DT_SECONDS,
+        ge=MIN_DT_SECONDS,
+        le=MAX_DT_SECONDS,
+    )
 
-    base_intensity: float = Field(default=0.03, ge=0.0, le=1.0)
-    alpha: float = Field(default=0.08, ge=0.0, le=5.0)
-    beta: float = Field(default=0.12, ge=0.0, le=10.0)
+    base_intensity: float = Field(
+        default=DEFAULT_SIMULATION_BASE_INTENSITY,
+        ge=MIN_INTENSITY,
+        le=MAX_INTENSITY,
+    )
+    alpha: float = Field(
+        default=DEFAULT_HAWKES_ALPHA,
+        ge=MIN_ALPHA,
+        le=MAX_ALPHA,
+    )
+    beta: float = Field(
+        default=DEFAULT_HAWKES_BETA,
+        ge=MIN_BETA,
+        le=MAX_BETA,
+    )
 
-    seed: int | None = 42
+    seed: int | None = DEFAULT_SIMULATION_SEED
 
     reset_state: bool = True
-    amount_multiplier: float = Field(default=1000.0, ge=0, le=1_000_000.0)
-    max_snapshots: int = Field(default=100, ge=0, le=10_000)
+    amount_multiplier: float = Field(
+        default=DEFAULT_AMOUNT_MULTIPLIER,
+        ge=MIN_AMOUNT_MULTIPLIER,
+        le=MAX_AMOUNT_MULTIPLIER,
+    )
+    max_snapshots: int = Field(
+        default=DEFAULT_MAX_SNAPSHOTS,
+        ge=MIN_MAX_SNAPSHOTS,
+        le=MAX_MAX_SNAPSHOTS,
+    )
 
 
 class InventorySnapshotPointResponse(BaseModel):
-    event_idx: int
+    event_index: int
     timestamp: datetime
     regime: StressRegime
-    inventory_pressure: float
+    inventory_pressure: dict[str, float]
     max_abs_pressure: float
     synthetic_spread_revenue_usd: float
 
@@ -100,7 +163,7 @@ class DaySimulationResponse(BaseModel):
     final_regime: StressRegime
     max_abs_pressure: float
     stress_time_fraction: float
-    elevated_o_stress_time_fraction: float
+    elevated_or_stress_time_fraction: float
     synthetic_spread_revenue_usd: float
     final_inventory_pressure: dict[str, float]
     regime_counts: dict[str, int]

@@ -8,6 +8,11 @@ from revolut_app.api_service.schemas.fx import (
     InventoryStateResponse,
     RiskSnapshotResponse,
 )
+from revolut_app.fx_lab.constants import (
+    COMPONENT_BPS_PRECISION,
+    RATIO_PRECISION,
+    STATE_VALUE_PRECISION,
+)
 from revolut_app.fx_lab.models import QuoteRequest
 from revolut_app.fx_lab.quote_engine import QuoteEngine
 from revolut_app.fx_lab.state_engine import InventoryLedger
@@ -69,7 +74,7 @@ class FXQuoteService:
                 regime_penalty_bps=quote.components.regime_penalty_bps,
                 total_spread_bps=round(
                     quote.components.total_spread_bps,
-                    4,
+                    COMPONENT_BPS_PRECISION,
                 ),
             ),
             inventory_pressure=quote.inventory_pressure,
@@ -87,17 +92,26 @@ class FXQuoteService:
             states_payload.append(
                 InventoryStateResponse(
                     currency=currency,
-                    position=round(state.position, 4),
+                    position=round(state.position, STATE_VALUE_PRECISION),
                     position_limit=state.position_limit,
-                    limit_utilization=round(state.limit_utilization, 6),
-                    hedge_capacity=round(state.hedge_capacity, 4),
+                    limit_utilization=round(
+                        state.limit_utilization,
+                        RATIO_PRECISION,
+                    ),
+                    hedge_capacity=round(
+                        state.hedge_capacity,
+                        STATE_VALUE_PRECISION,
+                    ),
                     max_hedge_capacity=state.max_hedge_capacity,
                     hedge_capacity_used_ratio=round(
                         state.hedge_capacity_used_ratio,
-                        6,
+                        RATIO_PRECISION,
                     ),
                     funding_cost_bps=state.funding_cost_bps,
-                    market_volatility=round(state.market_volatility, 6),
+                    market_volatility=round(
+                        state.market_volatility,
+                        RATIO_PRECISION,
+                    ),
                     phi=pressures[currency.value],
                 )
             )
@@ -137,16 +151,17 @@ class FXQuoteService:
 
     def simulate_day(
         self,
-        request: DaySimulationRequest
-    ):
+        request: DaySimulationRequest,
+    ) -> DaySimulationResponse:
         if request.reset_state:
             self.reset_state()
 
         engine = DaySimulationEngine(
             ledger=self.ledger,
-            quote_engine=self.stress_detect,
+            quote_engine=self.quote_engine,
+            stress_detect=self.stress_detect,
         )
-        result = engine.simulte_day(
+        result = engine.simulate_day(
             steps=request.steps,
             dt_seconds=request.dt_seconds,
             base_intensity=request.base_intensity,

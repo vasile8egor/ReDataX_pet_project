@@ -2,6 +2,13 @@ from dataclasses import dataclass
 
 import numpy as np
 
+from revolut_app.fx_lab.constants import (
+    DEFAULT_RG_STRESS_THRESHOLD,
+    EPSILON,
+    RATIO_PRECISION,
+    ZERO_FLOAT,
+)
+
 
 @dataclass
 class RGFlowPoint:
@@ -19,7 +26,7 @@ class CoarseGrainingEngine:
         *,
         phi_by_currency: dict[str, list[float]],
         window_sizes: list[int],
-        stress_threshold: float = 0.8,
+        stress_threshold: float = DEFAULT_RG_STRESS_THRESHOLD,
     ) -> list[RGFlowPoint]:
         result: list[RGFlowPoint] = []
 
@@ -39,12 +46,15 @@ class CoarseGrainingEngine:
                     RGFlowPoint(
                         window_size=window_size,
                         currency=currency,
-                        mean_phi=round(float(np.mean(coarse)), 6),
-                        var_phi=round(float(np.var(coarse)), 6),
-                        autocorr_lag1=round(self._autocorr_lag1(coarse), 6),
+                        mean_phi=round(float(np.mean(coarse)), RATIO_PRECISION),
+                        var_phi=round(float(np.var(coarse)), RATIO_PRECISION),
+                        autocorr_lag1=round(
+                            self._autocorr_lag1(coarse),
+                            RATIO_PRECISION,
+                        ),
                         stress_probability=round(
                             float(np.mean(np.abs(coarse) >= stress_threshold)),
-                            6,
+                            RATIO_PRECISION,
                         ),
                     )
                 )
@@ -68,10 +78,10 @@ class CoarseGrainingEngine:
     @staticmethod
     def _autocorr_lag1(arr: np.ndarray) -> float:
         if arr.size < 2:
-            return 0.0
+            return ZERO_FLOAT
 
         x = arr[:-1]
         y = arr[1:]
-        if np.std(x) < 1e-12 or np.std(y) < 1e-12:
-            return 0.0
+        if np.std(x) < EPSILON or np.std(y) < EPSILON:
+            return ZERO_FLOAT
         return float(np.corrcoef(x, y)[0, 1])

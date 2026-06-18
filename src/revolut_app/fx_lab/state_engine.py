@@ -1,5 +1,21 @@
 from datetime import datetime, timezone
 
+from revolut_app.fx_lab.constants import (
+    DEFAULT_CURRENCY_STATES,
+    DEFAULT_STRESS_HEDGE_CAPACITY_MULTIPLIER,
+    DEFAULT_STRESS_VOLATILITY_MULTIPLIER,
+    EPSILON,
+    LIQUIDITY_PRESSURE_WEIGHT,
+    MAX_PRESSURE,
+    MIN_PRESSURE,
+    ORDER_FLOW_DECAY,
+    ORDER_FLOW_NORMALIZER,
+    ORDER_FLOW_PRESSURE_WEIGHT,
+    POSITION_PRESSURE_WEIGHT,
+    RATIO_PRECISION,
+    ONE_FLOAT,
+    ZERO_FLOAT,
+)
 from revolut_app.fx_lab.models import (
     Currency,
     CurrencyState,
@@ -15,33 +31,11 @@ class InventoryLedger:
     @staticmethod
     def _default_states() -> dict[Currency, CurrencyState]:
         return {
-            Currency.EUR: CurrencyState(
-                currency=Currency.EUR,
-                position=10_000.0,
-                position_limit=100_000.0,
-                hedge_capacity=50_000.0,
-                max_hedge_capacity=50_000.0,
-                funding_cost_bps=1.2,
-                market_volatility=0.012,
-            ),
-            Currency.GBP: CurrencyState(
-                currency=Currency.GBP,
-                position=8_000.0,
-                position_limit=90_000.0,
-                hedge_capacity=40_000.0,
-                max_hedge_capacity=40_000.0,
-                funding_cost_bps=1.4,
-                market_volatility=0.014,
-            ),
-            Currency.USD: CurrencyState(
-                currency=Currency.USD,
-                position=15_000.0,
-                position_limit=120_000.0,
-                hedge_capacity=60_000.0,
-                max_hedge_capacity=60_000.0,
-                funding_cost_bps=1.0,
-                market_volatility=0.01,
-            ),
+            Currency(currency): CurrencyState(
+                currency=Currency(currency),
+                **params,
+            )
+            for currency, params in DEFAULT_CURRENCY_STATES.items()
         }
 
     def get_state(self, currency: Currency) -> CurrencyState:
@@ -71,12 +65,12 @@ class InventoryLedger:
         liquidity_pressure = state.hedge_capacity_used_ratio
 
         phi = (
-            0.65 * position_pressure
-            + 0.25 * order_flow_imbalance
-            + 0.10 * liquidity_pressure
+            POSITION_PRESSURE_WEIGHT * position_pressure
+            + ORDER_FLOW_PRESSURE_WEIGHT * order_flow_imbalance
+            + LIQUIDITY_PRESSURE_WEIGHT * liquidity_pressure
         )
 
-        return round(max(-2.0, min(2.0, phi)), 6)
+        return round(max(MIN_PRESSURE, min(MAX_PRESSURE, phi)), RATIO_PRECISION)
 
     def pressures(self) -> dict[str, float]:
         return {
@@ -98,7 +92,7 @@ class InventoryLedger:
             self._update_order_flow(
                 state=base_state,
                 buy_amount=base_amount,
-                sell_amount=0.0,
+                sell_amount=ZERO_FLOAT,
             )
 
         elif request.side == FXSide.sell:
@@ -107,7 +101,7 @@ class InventoryLedger:
 
             self._update_order_flow(
                 state=base_state,
-                buy_amount=0.0,
+                buy_amount=ZERO_FLOAT,
                 sell_amount=base_amount,
             )
 
@@ -118,8 +112,10 @@ class InventoryLedger:
     def apply_market_shock(
         self,
         *,
-        volatility_multiplier: float = 2.0,
-        hedge_capacity_multiplier: float = 0.7,
+        volatility_multiplier: float = DEFAULT_STRESS_VOLATILITY_MULTIPLIER,
+        hedge_capacity_multiplier: float = (
+            DEFAULT_STRESS_HEDGE_CAPACITY_MULTIPLIER
+        ),
     ) -> None:
         for state in self.states.values():
             state.market_volatility *= volatility_multiplier
@@ -132,23 +128,23 @@ class InventoryLedger:
         state: CurrencyState,
         buy_amount: float,
         sell_amount: float,
-        decay: float = 0.92,
+        decay: float = ORDER_FLOW_DECAY,
     ) -> None:
-        norm_buy = buy_amount / 10_000.0
-        norm_sell = sell_amount / 10_000.0
+        norm_buy = buy_amount / ORDER_FLOW_NORMALIZER
+        norm_sell = sell_amount / ORDER_FLOW_NORMALIZER
 
         state.order_flow_buy_ewma = (
             decay * state.order_flow_buy_ewma
-            + (1.0 - decay) * norm_buy
+            + (ONE_FLOAT - decay) * norm_buy
         )
 
         state.order_flow_sell_ewma = (
             decay * state.order_flow_sell_ewma
-            + (1.0 - decay) * norm_sell
+            + (ONE_FLOAT - decay) * norm_sell
         )
 
     @staticmethod
     def _div_zero(numerator: float, denominator: float) -> float:
-        if abs(denominator) < 1e-12:
-            return 0.0
+        if abs(denominator) < EPSILON:
+            return ZERO_FLOAT
         return numerator / denominator

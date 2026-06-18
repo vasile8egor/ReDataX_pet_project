@@ -1,3 +1,15 @@
+from revolut_app.fx_lab.constants import (
+    CALM_REGIME_PENALTY_BPS,
+    ELEVATED_LIMIT_UTILIZATION_THRESHOLD,
+    ELEVATED_PRESSURE_THRESHOLD,
+    ELEVATED_REGIME_PENALTY_BPS,
+    ELEVATED_VOLATILITY_THRESHOLD,
+    STRESS_LIMIT_UTILIZATION_THRESHOLD,
+    STRESS_PRESSURE_THRESHOLD,
+    STRESS_REGIME_PENALTY_BPS,
+    STRESS_VOLATILITY_THRESHOLD,
+    ZERO_FLOAT,
+)
 from revolut_app.fx_lab.models import CurrencyState, StressRegime
 
 
@@ -10,29 +22,29 @@ class StressRegimeDetect:
     ) -> StressRegime:
         max_abs_pressure = max(
             (abs(value) for value in pressures.values()),
-            default=0.0,
+            default=ZERO_FLOAT,
         )
 
         max_volatility = max(
             (state.market_volatility for state in states.values()),
-            default=0.0,
+            default=ZERO_FLOAT,
         )
 
         max_limit_utilization = max(
             (state.limit_utilization for state in states.values()),
-            default=0.0,
+            default=ZERO_FLOAT,
         )
 
         if (
-            max_abs_pressure >= 0.9
-            or max_volatility >= 0.045
-            or max_limit_utilization >= 0.9
+            max_abs_pressure >= STRESS_PRESSURE_THRESHOLD
+            or max_volatility >= STRESS_VOLATILITY_THRESHOLD
+            or max_limit_utilization >= STRESS_LIMIT_UTILIZATION_THRESHOLD
         ):
             return StressRegime.stress
         if (
-            max_abs_pressure >= 0.6
-            or max_volatility >= 0.025
-            or max_limit_utilization >= 0.7
+            max_abs_pressure >= ELEVATED_PRESSURE_THRESHOLD
+            or max_volatility >= ELEVATED_VOLATILITY_THRESHOLD
+            or max_limit_utilization >= ELEVATED_LIMIT_UTILIZATION_THRESHOLD
         ):
             return StressRegime.elevated
         return StressRegime.calm
@@ -40,8 +52,9 @@ class StressRegimeDetect:
     @staticmethod
     def regime_penalty_bps(regime: StressRegime) -> float:
         if regime == StressRegime.calm:
-            return 0.0
+            return CALM_REGIME_PENALTY_BPS
         if regime == StressRegime.elevated:
-            return 4.0
+            return ELEVATED_REGIME_PENALTY_BPS
         if regime == StressRegime.stress:
-            return 12.0
+            return STRESS_REGIME_PENALTY_BPS
+        return CALM_REGIME_PENALTY_BPS

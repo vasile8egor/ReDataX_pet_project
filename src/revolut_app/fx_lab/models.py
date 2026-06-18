@@ -3,6 +3,16 @@ from datetime import datetime, timezone
 from enum import Enum
 from uuid import uuid4
 
+from revolut_app.fx_lab.constants import (
+    DEFAULT_FUNDING_COST_BPS,
+    DEFAULT_HEDGE_CAPACITY,
+    DEFAULT_MARKET_VOLATILITY,
+    DEFAULT_ORDER_FLOW_EWMA,
+    DEFAULT_POSITION_LIMIT,
+    ONE_FLOAT,
+    ZERO_FLOAT,
+)
+
 
 class Currency(str, Enum):
     GBP = 'GBP'
@@ -42,29 +52,29 @@ class QuoteRequest:
 class CurrencyState:
     currency: Currency
     position: float
-    position_limit: float = 100_000.0
-    hedge_capacity: float = 50_000.0
-    max_hedge_capacity: float = 50_000.0
-    funding_cost_bps: float = 1.0
-    market_volatility: float = 0.01
-    order_flow_buy_ewma: float = 0.0
-    order_flow_sell_ewma: float = 0.0
+    position_limit: float = DEFAULT_POSITION_LIMIT
+    hedge_capacity: float = DEFAULT_HEDGE_CAPACITY
+    max_hedge_capacity: float = DEFAULT_HEDGE_CAPACITY
+    funding_cost_bps: float = DEFAULT_FUNDING_COST_BPS
+    market_volatility: float = DEFAULT_MARKET_VOLATILITY
+    order_flow_buy_ewma: float = DEFAULT_ORDER_FLOW_EWMA
+    order_flow_sell_ewma: float = DEFAULT_ORDER_FLOW_EWMA
     updated_at: datetime = field(
         default_factory=lambda: datetime.now(timezone.utc)
     )
 
     @property
     def limit_utilization(self) -> float:
-        if self.position_limit <= 0:
-            return 0.0
+        if self.position_limit <= ZERO_FLOAT:
+            return ZERO_FLOAT
         return abs(self.position) / self.position_limit
 
     @property
     def hedge_capacity_used_ratio(self) -> float:
-        if self.max_hedge_capacity <= 0:
-            return 1.0
+        if self.max_hedge_capacity <= ZERO_FLOAT:
+            return ONE_FLOAT
         used = self.max_hedge_capacity - self.hedge_capacity
-        return max(0.0, min(1.0, used / self.max_hedge_capacity))
+        return max(ZERO_FLOAT, min(ONE_FLOAT, used / self.max_hedge_capacity))
 
 
 @dataclass
