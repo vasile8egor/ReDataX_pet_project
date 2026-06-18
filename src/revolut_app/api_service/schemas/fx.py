@@ -1,23 +1,32 @@
 from datetime import datetime
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from revolut_app.fx_lab.constants import (
     DEFAULT_AMOUNT_MULTIPLIER,
     DEFAULT_HAWKES_ALPHA,
     DEFAULT_HAWKES_BETA,
     DEFAULT_HAWKES_DT_SECONDS,
+    DEFAULT_HEDGE_PRESSURE_THRESHOLD,
+    DEFAULT_HEDGE_TARGET_PRESSURE,
+    DEFAULT_MAX_HEDGE_FRACTION,
     DEFAULT_MAX_SNAPSHOTS,
+    DEFAULT_MIN_HEDGE_NOTIONAL,
     DEFAULT_SIMULATION_BASE_INTENSITY,
     DEFAULT_SIMULATION_SEED,
     DEFAULT_SIMULATION_STEPS,
     DEFAULT_STRESS_HEDGE_CAPACITY_MULTIPLIER,
     DEFAULT_STRESS_VOLATILITY_MULTIPLIER,
+    DEFAULT_RG_STRESS_THRESHOLD,
+    DEFAULT_RG_WINDOW_SIZES,
     MAX_ALPHA,
     MAX_AMOUNT_MULTIPLIER,
     MAX_BETA,
     MAX_DT_SECONDS,
     MAX_INTENSITY,
+    MAX_HEDGE_PRESSURE_THRESHOLD,
+    MAX_HEDGE_TARGET_PRESSURE,
+    MAX_MAX_HEDGE_FRACTION,
     MAX_MAX_SNAPSHOTS,
     MAX_SIMULATION_STEPS,
     MIN_ALPHA,
@@ -25,7 +34,12 @@ from revolut_app.fx_lab.constants import (
     MIN_BETA,
     MIN_DT_SECONDS,
     MIN_INTENSITY,
+    MIN_HEDGE_NOTIONAL,
+    MIN_HEDGE_PRESSURE_THRESHOLD,
+    MIN_HEDGE_TARGET_PRESSURE,
+    MIN_MAX_HEDGE_FRACTION,
     MIN_MAX_SNAPSHOTS,
+    MIN_RG_WINDOW_SIZE,
     MIN_SIMULATION_STEPS,
 )
 from revolut_app.fx_lab.models import (
@@ -34,6 +48,7 @@ from revolut_app.fx_lab.models import (
     FXSide,
     StressRegime,
 )
+from revolut_app.fx_lab.hedging import HedgeAction
 
 
 class FXQuoteRequest(BaseModel):
@@ -168,3 +183,87 @@ class DaySimulationResponse(BaseModel):
     final_inventory_pressure: dict[str, float]
     regime_counts: dict[str, int]
     snapshots: list[InventorySnapshotPointResponse]
+
+
+class RGFlowRequest(BaseModel):
+    window_sizes: list[int] = Field(
+        default_factory=lambda: DEFAULT_RG_WINDOW_SIZES.copy(),
+        min_length=1,
+    )
+    stress_threshold: float = Field(
+        default=DEFAULT_RG_STRESS_THRESHOLD,
+        gt=0.0
+    )
+
+    @field_validator('window_sizes')
+    @classmethod
+    def validate_window_sizes(cls, value: list[int]) -> list[int]:
+        invalid = [
+            window_size
+            for window_size in value
+            if window_size < MIN_RG_WINDOW_SIZE
+        ]
+        if invalid:
+            raise ValueError(
+                'window_sizes must contain only positive integers'
+            )
+        return value
+
+
+class RGFlowPointResponse(BaseModel):
+    window_size: int
+    currency: str
+    mean_phi: float
+    var_phi: float
+    autocorr_lag1: float
+    stress_probability: float
+
+
+class RGFlowResponse(BaseModel):
+    source_run_id: str
+    source_snapshots: int
+    window_sizes: list[int]
+    stress_threshold: float
+    points: list[RGFlowPointResponse]
+
+
+class HedgeRecommendationRequest(BaseModel):
+    pressure_threshold: float = Field(
+        default=DEFAULT_HEDGE_PRESSURE_THRESHOLD,
+        gt=MIN_HEDGE_PRESSURE_THRESHOLD,
+        le=MAX_HEDGE_PRESSURE_THRESHOLD,
+    )
+    target_pressure: float = Field(
+        default=DEFAULT_HEDGE_TARGET_PRESSURE,
+        ge=MIN_HEDGE_TARGET_PRESSURE,
+        le=MAX_HEDGE_TARGET_PRESSURE,
+    )
+    max_hedge_fraction: float = Field(
+        default=DEFAULT_MAX_HEDGE_FRACTION,
+        gt=MIN_MAX_HEDGE_FRACTION,
+        le=MAX_MAX_HEDGE_FRACTION,
+    )
+    min_notional: float = Field(
+        default=DEFAULT_MIN_HEDGE_NOTIONAL,
+        ge=MIN_HEDGE_NOTIONAL,
+    )
+
+
+class HedgeRecommendationItemResponse(BaseModel):
+    currency: Currency
+    action: HedgeAction
+    amount: float
+    current_position: float
+    position_limit: float
+    current_pressure: float
+    threshold: float
+    target_pressure: float
+    expected_pressure_reduction: float
+    reason: str
+
+
+class HedgeRecommendationResponse(BaseModel):
+    regime: StressRegime
+    pressure_threshold: float
+    target_pressure: float
+    recommendations: list[HedgeRecommendationItemResponse]

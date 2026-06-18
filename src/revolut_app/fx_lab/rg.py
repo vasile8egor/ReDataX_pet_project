@@ -46,7 +46,9 @@ class CoarseGrainingEngine:
                     RGFlowPoint(
                         window_size=window_size,
                         currency=currency,
-                        mean_phi=round(float(np.mean(coarse)), RATIO_PRECISION),
+                        mean_phi=round(
+                            float(np.mean(coarse)), RATIO_PRECISION
+                        ),
                         var_phi=round(float(np.var(coarse)), RATIO_PRECISION),
                         autocorr_lag1=round(
                             self._autocorr_lag1(coarse),

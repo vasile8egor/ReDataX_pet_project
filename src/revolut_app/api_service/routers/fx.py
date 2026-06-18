@@ -5,6 +5,10 @@ from revolut_app.api_service.schemas.fx import (
     DaySimulationResponse,
     FXQuoteRequest,
     FXQuoteResponse,
+    HedgeRecommendationResponse,
+    HedgeRecommendationRequest,
+    RGFlowRequest,
+    RGFlowResponse,
     RiskSnapshotResponse,
     StressShockRequest,
 )
@@ -45,6 +49,26 @@ def run_stress(request: StressShockRequest) -> RiskSnapshotResponse:
 )
 def simulate_day(request: DaySimulationRequest) -> DaySimulationResponse:
     return fx_quote_service.simulate_day(request)
+
+
+@router.post(
+    '/rg-flow',
+    response_model=RGFlowResponse,
+    status_code=status.HTTP_200_OK,
+)
+def rg_flow(request: RGFlowRequest):
+    return fx_quote_service.rg_flow(request)
+
+
+@router.post(
+    '/hedge-recommendation',
+    response_model=HedgeRecommendationResponse,
+    status_code=status.HTTP_200_OK,
+)
+def hedge_recommendation(
+    request: HedgeRecommendationRequest,
+) -> HedgeRecommendationResponse:
+    return fx_quote_service.hedge_recommendation(request)
 
 
 @router.get(

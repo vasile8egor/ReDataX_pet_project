@@ -1,11 +1,18 @@
+from fastapi import HTTPException, status
 from revolut_app.api_service.schemas.fx import (
     DaySimulationRequest,
     DaySimulationResponse,
     FXQuoteRequest,
     FXQuoteResponse,
     FXQuoteComponentsResponse,
+    HedgeRecommendationRequest,
+    HedgeRecommendationItemResponse,
+    HedgeRecommendationResponse,
     InventorySnapshotPointResponse,
     InventoryStateResponse,
+    RGFlowPointResponse,
+    RGFlowRequest,
+    RGFlowResponse,
     RiskSnapshotResponse,
 )
 from revolut_app.fx_lab.constants import (
@@ -17,7 +24,13 @@ from revolut_app.fx_lab.models import QuoteRequest
 from revolut_app.fx_lab.quote_engine import QuoteEngine
 from revolut_app.fx_lab.state_engine import InventoryLedger
 from revolut_app.fx_lab.stress import StressRegimeDetect
-from revolut_app.fx_lab.simulation import DaySimulationEngine
+from revolut_app.fx_lab.simulation import (
+    DaySimulationEngine,
+    DaySimulationResult,
+    InventorySnapshotPoint,
+)
+from revolut_app.fx_lab.rg import CoarseGrainingEngine
+from revolut_app.fx_lab.hedging import HedgeEngine
 
 
 class FXQuoteService:
@@ -33,6 +46,8 @@ class FXQuoteService:
             ledger=self.ledger,
             stress_detect=self.stress_detect,
         )
+        self.last_simulation_result: DaySimulationResult | None = None
+        self.hedge_engine = HedgeEngine()
 
     def quote(self, request: FXQuoteRequest) -> FXQuoteResponse:
         domain_request = QuoteRequest(
@@ -141,13 +156,14 @@ class FXQuoteService:
         )
         return self.risk_snapshot()
 
-    def reset_state(self):
+    def reset_state(self) -> None:
         self.ledger = InventoryLedger()
         self.stress_detect = StressRegimeDetect()
         self.quote_engine = QuoteEngine(
             ledger=self.ledger,
             stress_detect=self.stress_detect,
         )
+        self.last_simulation_result = None
 
     def simulate_day(
         self,
@@ -171,6 +187,8 @@ class FXQuoteService:
             amount_multiplier=request.amount_multiplier,
             max_snapshots=request.max_snapshots,
         )
+        self.last_simulation_result = result
+
         return DaySimulationResponse(
             run_id=result.run_id,
             started_at=result.started_at,
@@ -200,6 +218,102 @@ class FXQuoteService:
                 for snapshot in result.snapshots
             ],
         )
+
+    def rg_flow(self, request: RGFlowRequest) -> RGFlowResponse:
+        if self.last_simulation_result is None:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail='Run /fx/simulate-day before requesting RG flow.',
+            )
+
+        snapshots = self.last_simulation_result.snapshots
+        phi_by_currency = self._extract_phi_series_from_snapshots(snapshots)
+        engine = CoarseGrainingEngine()
+        points = engine.estimate_rg_flow(
+            phi_by_currency=phi_by_currency,
+            window_sizes=request.window_sizes,
+            stress_threshold=request.stress_threshold,
+        )
+
+        return RGFlowResponse(
+            source_run_id=self.last_simulation_result.run_id,
+            source_snapshots=len(snapshots),
+            window_sizes=request.window_sizes,
+            stress_threshold=request.stress_threshold,
+            points=[
+                RGFlowPointResponse(
+                    window_size=point.window_size,
+                    currency=point.currency,
+                    mean_phi=point.mean_phi,
+                    var_phi=point.var_phi,
+                    autocorr_lag1=point.autocorr_lag1,
+                    stress_probability=point.stress_probability,
+                )
+                for point in points
+            ]
+        )
+
+    def hedge_recommendation(
+        self,
+        request: HedgeRecommendationRequest,
+    ) -> HedgeRecommendationResponse:
+        pressures = self.ledger.pressures()
+        states = self.ledger.get_all_states()
+
+        regime = self.stress_detect.detect(
+            pressures=pressures,
+            states={
+                currency.value: state
+                for currency, state in states.items()
+            },
+        )
+        result = self.hedge_engine.recommend(
+            pressures=pressures,
+            states=states,
+            regime=regime,
+            pressure_threshold=request.pressure_threshold,
+            target_pressure=request.target_pressure,
+            max_hedge_fraction=request.max_hedge_fraction,
+            min_notional=request.min_notional,
+        )
+
+        return HedgeRecommendationResponse(
+            regime=result.regime,
+            pressure_threshold=result.pressure_threshold,
+            target_pressure=result.target_pressure,
+            recommendations=[
+                HedgeRecommendationItemResponse(
+                    currency=recommendation.currency,
+                    action=recommendation.action,
+                    amount=recommendation.amount,
+                    current_position=recommendation.current_position,
+                    position_limit=recommendation.position_limit,
+                    current_pressure=recommendation.current_pressure,
+                    threshold=recommendation.threshold,
+                    target_pressure=recommendation.target_pressure,
+                    expected_pressure_reduction=(
+                        recommendation.expected_pressure_reduction
+                    ),
+                    reason=recommendation.reason,
+                )
+                for recommendation in result.recommendations
+            ],
+        )
+
+    @staticmethod
+    def _extract_phi_series_from_snapshots(
+        snapshots: list[InventorySnapshotPoint],
+    ) -> dict[str, list[float]]:
+        phi_by_currency: dict[str, list[float]] = {}
+
+        for snapshot in snapshots:
+            for currency, phi in snapshot.inventory_pressure.items():
+                if currency not in phi_by_currency:
+                    phi_by_currency[currency] = []
+
+                phi_by_currency[currency].append(phi)
+
+        return phi_by_currency
 
     def _current_regime(self):
         pressures = self.ledger.pressures()
