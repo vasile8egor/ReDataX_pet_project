@@ -24,6 +24,12 @@ class StressRegimeDetect:
         )
 
         if (
+            max_abs_pressure >= 0.9
+            or max_volatility >= 0.045
+            or max_limit_utilization >= 0.9
+        ):
+            return StressRegime.stress
+        if (
             max_abs_pressure >= 0.6
             or max_volatility >= 0.025
             or max_limit_utilization >= 0.7
@@ -37,4 +43,5 @@ class StressRegimeDetect:
             return 0.0
         if regime == StressRegime.elevated:
             return 4.0
-        return 12.0
+        if regime == StressRegime.stress:
+            return 12.0

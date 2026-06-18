@@ -1,6 +1,8 @@
 from fastapi import APIRouter, status
 
 from revolut_app.api_service.schemas.fx import (
+    DaySimulationRequest,
+    DaySimulationResponse,
     FXQuoteRequest,
     FXQuoteResponse,
     RiskSnapshotResponse,
@@ -24,15 +26,6 @@ def quote_fx(request: FXQuoteRequest) -> FXQuoteResponse:
     return fx_quote_service.quote(request)
 
 
-@router.get(
-    '/risk-snapshot',
-    response_model=RiskSnapshotResponse,
-    status_code=status.HTTP_200_OK,
-)
-def get_risk_snapshot() -> RiskSnapshotResponse:
-    return fx_quote_service.risk_snapshot()
-
-
 @router.post(
     '/stress-shock',
     response_model=RiskSnapshotResponse,
@@ -43,3 +36,21 @@ def run_stress(request: StressShockRequest) -> RiskSnapshotResponse:
         volatility_multiplier=request.volatility_multiplier,
         hedge_capacity_multiplier=request.hedge_capacity_multiplier,
     )
+
+
+@router.post(
+    '/simulate-day',
+    response_model=DaySimulationResponse,
+    status_code=status.HTTP_200_OK,
+)
+def simulate_day(request: DaySimulationRequest) -> DaySimulationResponse:
+    return fx_quote_service.simulate_day(request)
+
+
+@router.get(
+    '/risk-snapshot',
+    response_model=RiskSnapshotResponse,
+    status_code=status.HTTP_200_OK,
+)
+def get_risk_snapshot() -> RiskSnapshotResponse:
+    return fx_quote_service.risk_snapshot()

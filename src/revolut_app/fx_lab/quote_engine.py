@@ -35,7 +35,7 @@ class QuoteEngine:
         mid_rate_provider: StaticMidRateProvider | None = None,
     ):
         self.ledger = ledger
-        self.stress_detect = stress_detect
+        self.stress_detect = stress_detect or StressRegimeDetect()
         self.mid_rate_provider = mid_rate_provider or StaticMidRateProvider()
 
     def quote(self, request: QuoteRequest) -> FXQuote:
@@ -91,10 +91,11 @@ class QuoteEngine:
 
         if request.side == FXSide.buy:
             bad_base_pressure = max(0.0, -base_phi)
-            bad_quote_pressure = max(0.0, -quote_phi)
+            bad_quote_pressure = max(0.0, quote_phi)
         else:
             bad_base_pressure = max(0.0, base_phi)
-            bad_quote_pressure = max(0.0, quote_phi)
+            bad_quote_pressure = max(0.0, -quote_phi)
+
         inventory_penalty_bps = (
             18.0 * bad_base_pressure
             + 8.0 * bad_quote_pressure

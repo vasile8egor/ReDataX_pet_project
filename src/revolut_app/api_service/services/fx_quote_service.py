@@ -1,7 +1,10 @@
 from revolut_app.api_service.schemas.fx import (
+    DaySimulationRequest,
+    DaySimulationResponse,
     FXQuoteRequest,
     FXQuoteResponse,
     FXQuoteComponentsResponse,
+    InventorySnapshotPointResponse,
     InventoryStateResponse,
     RiskSnapshotResponse,
 )
@@ -9,6 +12,7 @@ from revolut_app.fx_lab.models import QuoteRequest
 from revolut_app.fx_lab.quote_engine import QuoteEngine
 from revolut_app.fx_lab.state_engine import InventoryLedger
 from revolut_app.fx_lab.stress import StressRegimeDetect
+from revolut_app.fx_lab.simulation import DaySimulationEngine
 
 
 class FXQuoteService:
@@ -46,6 +50,7 @@ class FXQuoteService:
 
             quote.executed = True
             quote.inventory_pressure = self.ledger.pressures()
+            quote.regime = self._current_regime()
 
         return FXQuoteResponse(
             quote_id=quote.quote_id,
@@ -121,3 +126,74 @@ class FXQuoteService:
             hedge_capacity_multiplier=hedge_capacity_multiplier,
         )
         return self.risk_snapshot()
+
+    def reset_state(self):
+        self.ledger = InventoryLedger()
+        self.stress_detect = StressRegimeDetect()
+        self.quote_engine = QuoteEngine(
+            ledger=self.ledger,
+            stress_detect=self.stress_detect,
+        )
+
+    def simulate_day(
+        self,
+        request: DaySimulationRequest
+    ):
+        if request.reset_state:
+            self.reset_state()
+
+        engine = DaySimulationEngine(
+            ledger=self.ledger,
+            quote_engine=self.stress_detect,
+        )
+        result = engine.simulte_day(
+            steps=request.steps,
+            dt_seconds=request.dt_seconds,
+            base_intensity=request.base_intensity,
+            alpha=request.alpha,
+            beta=request.beta,
+            seed=request.seed,
+            amount_multiplier=request.amount_multiplier,
+            max_snapshots=request.max_snapshots,
+        )
+        return DaySimulationResponse(
+            run_id=result.run_id,
+            started_at=result.started_at,
+            finished_at=result.finished_at,
+            generated_requests=result.generated_requests,
+            executed_events=result.executed_events,
+            final_regime=result.final_regime,
+            max_abs_pressure=result.max_abs_pressure,
+            stress_time_fraction=result.stress_time_fraction,
+            elevated_or_stress_time_fraction=(
+                result.elevated_or_stress_time_fraction
+            ),
+            synthetic_spread_revenue_usd=result.synthetic_spread_revenue_usd,
+            final_inventory_pressure=result.final_inventory_pressure,
+            regime_counts=result.regime_counts,
+            snapshots=[
+                InventorySnapshotPointResponse(
+                    event_index=snapshot.event_index,
+                    timestamp=snapshot.timestamp,
+                    regime=snapshot.regime,
+                    inventory_pressure=snapshot.inventory_pressure,
+                    max_abs_pressure=snapshot.max_abs_pressure,
+                    synthetic_spread_revenue_usd=(
+                        snapshot.synthetic_spread_revenue_usd
+                    ),
+                )
+                for snapshot in result.snapshots
+            ],
+        )
+
+    def _current_regime(self):
+        pressures = self.ledger.pressures()
+        states = {
+            currency.value: state
+            for currency, state in self.ledger.get_all_states().items()
+        }
+
+        return self.stress_detect.detect(
+            pressures=pressures,
+            states=states,
+        )

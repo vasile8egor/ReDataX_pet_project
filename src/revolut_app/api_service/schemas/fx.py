@@ -65,3 +65,43 @@ class RiskSnapshotResponse(BaseModel):
 class StressShockRequest(BaseModel):
     volatility_multiplier: float = Field(default=2.0, gt=0)
     hedge_capacity_multiplier: float = Field(default=0.7, gt=0, le=1)
+
+
+class DaySimulationRequest(BaseModel):
+    steps: int = Field(default=5000, ge=1, le=100_000)
+    dt_seconds: int = Field(default=10, ge=1, le=3600)
+
+    base_intensity: float = Field(default=0.03, ge=0.0, le=1.0)
+    alpha: float = Field(default=0.08, ge=0.0, le=5.0)
+    beta: float = Field(default=0.12, ge=0.0, le=10.0)
+
+    seed: int | None = 42
+
+    reset_state: bool = True
+    amount_multiplier: float = Field(default=1000.0, ge=0, le=1_000_000.0)
+    max_snapshots: int = Field(default=100, ge=0, le=10_000)
+
+
+class InventorySnapshotPointResponse(BaseModel):
+    event_idx: int
+    timestamp: datetime
+    regime: StressRegime
+    inventory_pressure: float
+    max_abs_pressure: float
+    synthetic_spread_revenue_usd: float
+
+
+class DaySimulationResponse(BaseModel):
+    run_id: str
+    started_at: datetime
+    finished_at: datetime
+    generated_requests: int
+    executed_events: int
+    final_regime: StressRegime
+    max_abs_pressure: float
+    stress_time_fraction: float
+    elevated_o_stress_time_fraction: float
+    synthetic_spread_revenue_usd: float
+    final_inventory_pressure: dict[str, float]
+    regime_counts: dict[str, int]
+    snapshots: list[InventorySnapshotPointResponse]
