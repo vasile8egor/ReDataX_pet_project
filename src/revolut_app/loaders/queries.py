@@ -17,7 +17,7 @@ CREATE TABLE IF NOT EXISTS gold.dim_event_datasets(
     created_at DateTime64(6, 'UTC'),
     loaded_at DateTime64(6, 'UTC') DEFAULT now64(6)
 )
-ENGINE = MergeTree 
+ENGINE = MergeTree
 PARTITION BY toYYYYMM(created_at)
 ORDER BY (created_at, event_dataset_id);
 '''
@@ -94,6 +94,8 @@ CREATE TABLE IF NOT EXISTS gold.fact_inventory_snapshots(
     physics_mode LowCardinality(String),
     pricing_policy LowCardinality(String),
     event_index UInt64,
+    source_event_id Nullable(UUID),
+    source_step_index Nullable(UInt64),
     snapshot_ts DateTime64(6, 'UTC'),
     currency LowCardinality(String),
     position Float64,
@@ -125,6 +127,14 @@ CREATE TABLE IF NOT EXISTS gold.fact_inventory_snapshots(
 ENGINE = MergeTree
 PARTITION BY toYYYYMM(snapshot_ts)
 ORDER BY (run_id, event_index, currency)
+'''
+
+ALTER_INVENTORY_SNAPSHOTS_Q = '''
+ALTER TABLE gold.fact_inventory_snapshots
+    ADD COLUMN IF NOT EXISTS source_event_id Nullable(UUID)
+        AFTER event_index,
+    ADD COLUMN IF NOT EXISTS source_step_index Nullable(UInt64)
+        AFTER source_event_id
 '''
 
 INSERT_INTO_DIM_EVENT_Q = '''
@@ -193,6 +203,8 @@ INSERT INTO gold.fact_inventory_snapshots(
     physics_mode,
     pricing_policy,
     event_index,
+    source_event_id,
+    source_step_index,
     snapshot_ts,
     currency,
     position,
@@ -223,7 +235,7 @@ INSERT INTO gold.fact_inventory_snapshots(
 VALUES
 '''
 
-SELECT_EXISTING_EXPERIMENT_Q = '''
+SELECT_EXISTING_EVENT_DATASET_Q = '''
 SELECT
     (
         SELECT count()
@@ -232,12 +244,97 @@ SELECT
     ) AS dataset_rows,
     (
         SELECT count()
-        FROM gold.fact_simulation_runs
+        FROM gold.fact_fx_events
         WHERE event_dataset_id = %(event_dataset_id)s
+    ) AS event_rows
+'''
+
+SELECT_EXISTING_COMPARISON_Q = '''
+SELECT
+    (
+        SELECT count()
+        FROM gold.fact_simulation_runs
+        WHERE comparison_id = %(comparison_id)s
     ) AS run_rows,
     (
         SELECT count()
         FROM gold.fact_inventory_snapshots
-        WHERE event_dataset_id = %(event_dataset_id)s
+        WHERE comparison_id = %(comparison_id)s
     ) AS snapshot_rows
+'''
+
+FACT_FX_EVENTS_Q = """
+CREATE TABLE IF NOT EXISTS gold.fact_fx_events(
+    event_dataset_id UUID,
+    event_id UUID,
+
+    event_sequence UInt64,
+    source_step_index UInt64,
+    event_ts DateTime64(6, 'UTC'),
+
+    customer_id String,
+
+    base_currency LowCardinality(String),
+    quote_currency LowCardinality(String),
+    side LowCardinality(String),
+
+    amount Float64,
+
+    customer_segment LowCardinality(String),
+    channel LowCardinality(String),
+
+    loaded_at DateTime64(6, 'UTC') DEFAULT now64(6)
+)
+ENGINE = MergeTree
+PARTITION BY toYYYYMM(event_ts)
+ORDER BY (
+    event_dataset_id,
+    event_sequence
+)
+"""
+
+INSERT_INTO_FACT_FX_EVENTS_Q = """
+INSERT INTO gold.fact_fx_events(
+    event_dataset_id,
+    event_id,
+    event_sequence,
+    source_step_index,
+    event_ts,
+    customer_id,
+    base_currency,
+    quote_currency,
+    side,
+    amount,
+    customer_segment,
+    channel
+)
+VALUES
+"""
+
+SELECT_ALL_FX_EVENTS_Q = '''
+SELECT
+    events.event_dataset_id,
+    events.event_id,
+    events.event_sequence,
+    events.source_step_index,
+    events.event_ts,
+    events.customer_id,
+    events.base_currency,
+    events.quote_currency,
+    events.side,
+    events.amount,
+    events.customer_segment,
+    events.channel,
+    datasets.generator,
+    datasets.seed,
+    datasets.steps,
+    datasets.dt_seconds,
+    datasets.base_intensity,
+    datasets.alpha,
+    datasets.beta
+FROM gold.fact_fx_events AS events
+ANY INNER JOIN gold.dim_event_datasets AS datasets
+    ON datasets.event_dataset_id = events.event_dataset_id
+WHERE events.event_dataset_id = %(event_dataset_id)s
+ORDER BY events.event_sequence
 '''

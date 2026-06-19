@@ -2,6 +2,8 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field, field_validator
 
+from uuid import UUID
+
 from revolut_app.fx_lab.constants import (
     DEFAULT_AMOUNT_MULTIPLIER,
     DEFAULT_HAWKES_ALPHA,
@@ -430,6 +432,8 @@ class PolicyComparisonRequest(BaseModel):
         ge=MIN_POLICY_SNAPSHOT_EVERY_N_EVENTS,
         le=MAX_POLICY_SNAPSHOT_EVERY_N_EVENTS,
     )
+    event_dataset_id: UUID | None = None
+    simulation_start_at: datetime | None = None
 
 
 class ExperimentPersistenceResponse(BaseModel):
@@ -437,6 +441,7 @@ class ExperimentPersistenceResponse(BaseModel):
     event_dataset_rows: int
     simulation_run_rows: int
     inventory_snapshot_rows: int
+    event_rows: int
 
 
 class PolicyRunResponse(BaseModel):
@@ -467,7 +472,8 @@ class PolicyRunResponse(BaseModel):
 
 
 class PolicyComparisonResponse(BaseModel):
-    event_dataset_id: str
+    event_dataset_id: UUID
+    event_dataset_reused: bool
     persistence: ExperimentPersistenceResponse
     comparison_id: str
     started_at: datetime

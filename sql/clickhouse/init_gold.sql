@@ -104,6 +104,8 @@ CREATE TABLE IF NOT EXISTS gold.fact_inventory_snapshots(
     pricing_policy LowCardinality(String),
 
     event_index UInt64,
+    source_event_id Nullable(UUID),
+    source_step_index Nullable(UInt64),
     snapshot_ts DateTime64(6, 'UTC'),
 
     currency LowCardinality(String),
@@ -150,3 +152,23 @@ ORDER BY (
     event_index,
     currency
 );
+
+
+CREATE TABLE IF NOT EXISTS gold.fact_fx_events(
+    event_dataset_id UUID,
+    event_id UUID,
+    event_sequence UInt64,
+    source_step_index UInt64,
+    event_ts DateTime64(6, 'UTC'),
+    customer_id String,
+    base_currency LowCardinality(String),
+    quote_currency LowCardinality(String),
+    side LowCardinality(String),
+    amount Float64,
+    customer_segment LowCardinality(String),
+    channel LowCardinality(String),
+    loaded_at DateTime64(6, 'UTC') DEFAULT now64(6)
+)
+ENGINE = MergeTree
+PARTITION BY toYYYYMM(event_ts)
+ORDER BY (event_dataset_id, event_sequence);

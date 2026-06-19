@@ -1,4 +1,5 @@
 import json
+from datetime import timedelta
 from uuid import UUID
 from fastapi import HTTPException, status
 from revolut_app.api_service.schemas.fx import (
@@ -38,7 +39,15 @@ from revolut_app.fx_lab.execution_constants import (
     EXECUTION_AMOUNT_PRECISION,
     EXECUTION_COST_PRECISION,
 )
-from revolut_app.fx_lab.models import QuoteRequest
+from revolut_app.fx_lab.hawkes import HawkesLikeFXEventGenerator
+from revolut_app.fx_lab.models import (
+    Currency,
+    CustomerSegment,
+    FXEvent,
+    FXEventDataset,
+    FXSide,
+    QuoteRequest,
+)
 from revolut_app.fx_lab.quote_engine import QuoteEngine, StaticMidRateProvider
 from revolut_app.fx_lab.state_engine import InventoryLedger
 from revolut_app.fx_lab.stress import StressRegimeDetect
@@ -47,7 +56,6 @@ from revolut_app.fx_lab.simulation import (
     DaySimulationResult,
     InventorySnapshotPoint,
 )
-from revolut_app.fx_lab.models import Currency
 from revolut_app.fx_lab.rg import CoarseGrainingEngine
 from revolut_app.fx_lab.hedging import HedgeEngine, HedgeAction
 from revolut_app.fx_lab.pnl import PnLLedger
@@ -56,6 +64,7 @@ from revolut_app.fx_lab.policy_comparison import (
 )
 from revolut_app.loaders.fx_experiment_loader import (
     EventDatasetRecord,
+    FXEventRecord,
     FXExperimentClickHouseLoader,
     InventorySnapshotRecord,
     SimulationRunRecord,
@@ -522,14 +531,46 @@ class FXQuoteService:
         self,
         request: PolicyComparisonRequest,
     ) -> PolicyComparisonResponse:
+        if request.event_dataset_id is None:
+            generator = HawkesLikeFXEventGenerator(seed=request.seed)
+            event_dataset = generator.simulate_event_dataset(
+                steps=request.steps,
+                dt_seconds=request.dt_seconds,
+                base_intensity=request.base_intensity,
+                alpha=request.alpha,
+                beta=request.beta,
+                start_at=request.simulation_start_at,
+                seed=request.seed,
+            )
+            dataset_was_reused = False
+        else:
+            try:
+                event_records = self.experiment_loader.load_event_dataset(
+                    event_dataset_id=request.event_dataset_id,
+                )
+            except Exception as exc:
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail=f'Failed to load FX event dataset: {exc}',
+                ) from exc
+
+            if not event_records:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=(
+                        'FX event dataset was not found: '
+                        f'{request.event_dataset_id}'
+                    ),
+                )
+
+            event_dataset = self._event_dataset_from_records(
+                records=event_records,
+            )
+            dataset_was_reused = True
+
         result = self.policy_comparison_engine.compare(
             policy_names=request.policies,
-            steps=request.steps,
-            dt_seconds=request.dt_seconds,
-            base_intensity=request.base_intensity,
-            alpha=request.alpha,
-            beta=request.beta,
-            seed=request.seed,
+            event_dataset=event_dataset,
             amount_multiplier=request.amount_multiplier,
             snapshot_every_n_events=(
                 request.snapshot_every_n_events
@@ -538,6 +579,7 @@ class FXQuoteService:
         dataset_rows = 0
         run_rows = 0
         snapshot_rows = 0
+        event_rows = 0
         if request.persist_result:
             parameters = {
                 'policies': [
@@ -555,21 +597,23 @@ class FXQuoteService:
                 'physics_mode': request.physics_mode.value,
                 'hedging_policy': request.hedging_policy,
                 'snapshot_every_n_events': request.snapshot_every_n_events,
+                'event_dataset_id': str(event_dataset.event_dataset_id),
+                'event_dataset_reused': dataset_was_reused,
             }
 
-            event_dataset = EventDatasetRecord(
+            event_dataset_record = EventDatasetRecord(
                 event_dataset_id=UUID(result.event_dataset_id),
                 comparison_id=UUID(result.comparison_id),
-                generator="hawkes-like-v1",
-                seed=request.seed,
-                steps=request.steps,
-                dt_seconds=request.dt_seconds,
-                base_intensity=request.base_intensity,
-                alpha=request.alpha,
-                beta=request.beta,
+                generator=event_dataset.generator,
+                seed=event_dataset.seed,
+                steps=event_dataset.source_steps,
+                dt_seconds=event_dataset.dt_seconds,
+                base_intensity=event_dataset.base_intensity,
+                alpha=event_dataset.alpha,
+                beta=event_dataset.beta,
                 amount_multiplier=request.amount_multiplier,
                 generated_requests=result.generated_requests,
-                created_at=result.started_at,
+                created_at=event_dataset.started_at,
             )
 
             runs = [
@@ -581,12 +625,12 @@ class FXQuoteService:
                     physics_mode=request.physics_mode.value,
                     pricing_policy=item.policy.value,
                     hedging_policy=request.hedging_policy,
-                    seed=request.seed,
-                    steps=request.steps,
-                    dt_seconds=request.dt_seconds,
-                    base_intensity=request.base_intensity,
-                    alpha=request.alpha,
-                    beta=request.beta,
+                    seed=event_dataset.seed,
+                    steps=event_dataset.source_steps,
+                    dt_seconds=event_dataset.dt_seconds,
+                    base_intensity=event_dataset.base_intensity,
+                    alpha=event_dataset.alpha,
+                    beta=event_dataset.beta,
                     amount_multiplier=request.amount_multiplier,
                     generated_requests=item.generated_requests,
                     accepted_events=item.accepted_events,
@@ -636,6 +680,8 @@ class FXQuoteService:
                     pricing_policy=policy_result.policy.value,
 
                     event_index=snapshot.event_index,
+                    source_event_id=snapshot.source_event_id,
+                    source_step_index=snapshot.source_step_index,
                     snapshot_ts=snapshot.snapshot_ts,
 
                     currency=snapshot.currency.value,
@@ -696,12 +742,20 @@ class FXQuoteService:
                 for snapshot in policy_result.snapshots
             ]
 
+            event_records_to_persist = (
+                self._event_records_from_dataset(event_dataset)
+                if not dataset_was_reused
+                else []
+            )
+
             try:
-                dataset_rows, run_rows, snapshot_rows = (
+                dataset_rows, run_rows, snapshot_rows, event_rows = (
                     self.experiment_loader.load_comparison(
-                        event_dataset=event_dataset,
+                        event_dataset=event_dataset_record,
                         runs=runs,
                         snapshots=snapshot_records,
+                        events=event_records_to_persist,
+                        persist_event_dataset=not dataset_was_reused,
                     )
                 )
             except Exception as exc:
@@ -714,7 +768,8 @@ class FXQuoteService:
                 ) from exc
 
         return PolicyComparisonResponse(
-            event_dataset_id=result.event_dataset_id,
+            event_dataset_id=event_dataset.event_dataset_id,
+            event_dataset_reused=dataset_was_reused,
             comparison_id=result.comparison_id,
             started_at=result.started_at,
             finished_at=result.finished_at,
@@ -764,7 +819,81 @@ class FXQuoteService:
                 event_dataset_rows=dataset_rows,
                 simulation_run_rows=run_rows,
                 inventory_snapshot_rows=snapshot_rows,
+                event_rows=event_rows,
             ),
+        )
+
+    @staticmethod
+    def _event_records_from_dataset(
+        event_dataset: FXEventDataset,
+    ) -> list[FXEventRecord]:
+        return [
+            FXEventRecord(
+                event_dataset_id=event_dataset.event_dataset_id,
+                event_id=event.event_id,
+                event_sequence=event.event_sequence,
+                source_step_index=event.source_step_index,
+                event_ts=event.event_ts,
+                customer_id=event.request.customer_id,
+                base_currency=event.request.base_currency.value,
+                quote_currency=event.request.quote_currency.value,
+                side=event.request.side.value,
+                amount=event.request.amount,
+                customer_segment=event.request.segment.value,
+                channel=event.request.channel,
+                generator=event_dataset.generator,
+                seed=event_dataset.seed,
+                source_steps=event_dataset.source_steps,
+                dt_seconds=event_dataset.dt_seconds,
+                base_intensity=event_dataset.base_intensity,
+                alpha=event_dataset.alpha,
+                beta=event_dataset.beta,
+            )
+            for event in event_dataset.events
+        ]
+
+    @staticmethod
+    def _event_dataset_from_records(
+        records: list[FXEventRecord],
+    ) -> FXEventDataset:
+        first = records[0]
+        started_at = first.event_ts - timedelta(
+            seconds=first.source_step_index * first.dt_seconds,
+        )
+
+        events = tuple(
+            FXEvent(
+                event_id=record.event_id,
+                event_sequence=record.event_sequence,
+                source_step_index=record.source_step_index,
+                event_ts=record.event_ts,
+                request=QuoteRequest(
+                    customer_id=record.customer_id,
+                    base_currency=Currency(record.base_currency),
+                    quote_currency=Currency(record.quote_currency),
+                    side=FXSide(record.side),
+                    amount=record.amount,
+                    segment=CustomerSegment(record.customer_segment),
+                    channel=record.channel,
+                ),
+            )
+            for record in records
+        )
+
+        return FXEventDataset(
+            event_dataset_id=first.event_dataset_id,
+            generator=first.generator,
+            seed=first.seed,
+            started_at=started_at,
+            finished_at=started_at + timedelta(
+                seconds=first.source_steps * first.dt_seconds,
+            ),
+            source_steps=first.source_steps,
+            dt_seconds=first.dt_seconds,
+            base_intensity=first.base_intensity,
+            alpha=first.alpha,
+            beta=first.beta,
+            events=events,
         )
 
     def _estimated_funding_cost_usd(self) -> float:

@@ -14,13 +14,18 @@ from revolut_app.fx_lab.constants import (
 
 from .queries import (
     ALTER_DIM_EVENT_DATASET_Q,
+    ALTER_INVENTORY_SNAPSHOTS_Q,
     DIM_EVENT_DATASET_Q,
     FACT_INVENTORY_SNAPSHOTS_Q,
     FACT_SIMULATION_RUNS_Q,
+    FACT_FX_EVENTS_Q,
     INSERT_INTO_DIM_EVENT_Q,
     INSERT_INTO_FACT_SIM_Q,
+    INSERT_INTO_FACT_FX_EVENTS_Q,
     INSERT_INTO_FACT_INVENTORY_SNAPSHOTS_Q,
-    SELECT_EXISTING_EXPERIMENT_Q,
+    SELECT_ALL_FX_EVENTS_Q,
+    SELECT_EXISTING_COMPARISON_Q,
+    SELECT_EXISTING_EVENT_DATASET_Q,
 )
 
 
@@ -89,6 +94,35 @@ class SimulationRunRecord:
     finished_at: datetime
 
 
+@dataclass(frozen=True)
+class FXEventRecord:
+    event_dataset_id: UUID
+    event_id: UUID
+
+    event_sequence: int
+    source_step_index: int
+    event_ts: datetime
+
+    customer_id: str
+
+    base_currency: str
+    quote_currency: str
+    side: str
+
+    amount: float
+
+    customer_segment: str
+    channel: str
+
+    generator: str
+    seed: int | None
+    source_steps: int
+    dt_seconds: int
+    base_intensity: float
+    alpha: float
+    beta: float
+
+
 class FXExperimentClickHouseLoader:
     def __init__(
         self,
@@ -118,6 +152,8 @@ class FXExperimentClickHouseLoader:
         self.client.execute(ALTER_DIM_EVENT_DATASET_Q)
         self.client.execute(FACT_SIMULATION_RUNS_Q)
         self.client.execute(FACT_INVENTORY_SNAPSHOTS_Q)
+        self.client.execute(ALTER_INVENTORY_SNAPSHOTS_Q)
+        self.client.execute(FACT_FX_EVENTS_Q)
 
     @staticmethod
     def _chunks(
@@ -129,23 +165,38 @@ class FXExperimentClickHouseLoader:
             raise ValueError('Chunk size must be positive')
 
         for start in range(0, len(rows), size):
-            yield rows[start : start + size]
+            yield rows[start: start + size]
 
-    def _ensure_not_persisted(
+    def _ensure_event_dataset_not_persisted(
         self,
         event_dataset_id: UUID,
     ) -> None:
-        dataset_rows, run_rows, snapshot_rows = self.client.execute(
-            SELECT_EXISTING_EXPERIMENT_Q,
+        dataset_rows, event_rows = self.client.execute(
+            SELECT_EXISTING_EVENT_DATASET_Q,
             {'event_dataset_id': event_dataset_id},
         )[0]
 
-        if dataset_rows or run_rows or snapshot_rows:
+        if dataset_rows or event_rows:
             raise ValueError(
-                'Experiment already has persisted rows for '
+                'Event dataset already has persisted rows for '
                 f'event_dataset_id={event_dataset_id}: '
-                f'datasets={dataset_rows}, runs={run_rows}, '
-                f'snapshots={snapshot_rows}'
+                f'datasets={dataset_rows}, events={event_rows}'
+            )
+
+    def _ensure_comparison_not_persisted(
+        self,
+        comparison_id: UUID,
+    ) -> None:
+        run_rows, snapshot_rows = self.client.execute(
+            SELECT_EXISTING_COMPARISON_Q,
+            {'comparison_id': comparison_id},
+        )[0]
+
+        if run_rows or snapshot_rows:
+            raise ValueError(
+                'Comparison already has persisted rows for '
+                f'comparison_id={comparison_id}: '
+                f'runs={run_rows}, snapshots={snapshot_rows}'
             )
 
     def load_comparison(
@@ -153,14 +204,22 @@ class FXExperimentClickHouseLoader:
         event_dataset: EventDatasetRecord,
         runs: list[SimulationRunRecord],
         snapshots: list[InventorySnapshotRecord],
-    ) -> tuple[int, int, int]:
+        events: list[FXEventRecord],
+        persist_event_dataset: bool,
+    ) -> tuple[int, int, int, int]:
         if not runs:
             raise ValueError(
                 'At least one simulation run is required'
             )
 
         self.ensure_schema()
-        self._ensure_not_persisted(event_dataset.event_dataset_id)
+        self._ensure_comparison_not_persisted(
+            event_dataset.comparison_id,
+        )
+        if persist_event_dataset:
+            self._ensure_event_dataset_not_persisted(
+                event_dataset.event_dataset_id,
+            )
 
         dataset_rows = [
             (
@@ -225,6 +284,8 @@ class FXExperimentClickHouseLoader:
                 item.physics_mode,
                 item.pricing_policy,
                 item.event_index,
+                item.source_event_id,
+                item.source_step_index,
                 item.snapshot_ts,
                 item.currency,
                 item.position,
@@ -254,6 +315,11 @@ class FXExperimentClickHouseLoader:
             )
             for item in snapshots
         ]
+        event_rows = self._event_rows(events)
+
+        if persist_event_dataset:
+            self._persist_event_rows(event_rows)
+
         for batch in self._chunks(
             snapshot_rows,
             size=CLICKHOUSE_SNAPSHOT_INSERT_BATCH_SIZE,
@@ -264,12 +330,78 @@ class FXExperimentClickHouseLoader:
             )
 
         self.client.execute(INSERT_INTO_FACT_SIM_Q, run_rows)
-        self.client.execute(INSERT_INTO_DIM_EVENT_Q, dataset_rows)
+        if persist_event_dataset:
+            self.client.execute(INSERT_INTO_DIM_EVENT_Q, dataset_rows)
         return (
-            len(dataset_rows),
+            len(dataset_rows) if persist_event_dataset else ZERO_INT,
             len(run_rows),
             len(snapshot_rows),
+            len(event_rows) if persist_event_dataset else ZERO_INT,
         )
+
+    def load_event_dataset(
+        self, *,
+        event_dataset_id: UUID,
+    ) -> list[FXEventRecord]:
+        self.ensure_schema()
+        rows = self.client.execute(
+            SELECT_ALL_FX_EVENTS_Q,
+            {'event_dataset_id': event_dataset_id},
+        )
+        return [
+            FXEventRecord(
+                event_dataset_id=row[0],
+                event_id=row[1],
+                event_sequence=row[2],
+                source_step_index=row[3],
+                event_ts=row[4],
+                customer_id=row[5],
+                base_currency=row[6],
+                quote_currency=row[7],
+                side=row[8],
+                amount=row[9],
+                customer_segment=row[10],
+                channel=row[11],
+                generator=row[12],
+                seed=row[13],
+                source_steps=row[14],
+                dt_seconds=row[15],
+                base_intensity=row[16],
+                alpha=row[17],
+                beta=row[18],
+            )
+            for row in rows
+        ]
+
+    @staticmethod
+    def _event_rows(events: list[FXEventRecord]) -> list[tuple]:
+        return [
+            (
+                item.event_dataset_id,
+                item.event_id,
+                item.event_sequence,
+                item.source_step_index,
+                item.event_ts,
+                item.customer_id,
+                item.base_currency,
+                item.quote_currency,
+                item.side,
+                item.amount,
+                item.customer_segment,
+                item.channel,
+            )
+            for item in events
+        ]
+
+    def _persist_event_rows(self, rows: list[tuple]) -> None:
+        for batch in self._chunks(
+            rows,
+            size=CLICKHOUSE_SNAPSHOT_INSERT_BATCH_SIZE,
+        ):
+            self.client.execute(
+                INSERT_INTO_FACT_FX_EVENTS_Q,
+                batch,
+            )
 
 
 @dataclass(frozen=True)
@@ -283,6 +415,8 @@ class InventorySnapshotRecord:
     pricing_policy: str
 
     event_index: int
+    source_event_id: UUID | None
+    source_step_index: int | None
     snapshot_ts: datetime
 
     currency: str

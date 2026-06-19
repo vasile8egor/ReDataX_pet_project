@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from collections import Counter
 from dataclasses import dataclass, replace
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
 from statistics import mean
-from uuid import uuid4
+from uuid import uuid4, UUID
 
 from revolut_app.fx_lab.acceptance import AcceptanceModel
 from revolut_app.fx_lab.constants import (
@@ -12,12 +12,13 @@ from revolut_app.fx_lab.constants import (
     EPSILON,
     ONE_INT,
     RATIO_PRECISION,
+    SECONDS_PER_YEAR,
     USD_MARKS,
     ZERO_FLOAT,
     ZERO_INT,
 )
-from revolut_app.fx_lab.hawkes import HawkesLikeFXEventGenerator
 from revolut_app.fx_lab.models import (
+    FXEventDataset,
     QuoteRequest,
     StressRegime,
     Currency,
@@ -80,38 +81,24 @@ class PolicyComparisonResult:
 
 class PolicyComparisonEngine:
     def compare(
-        self, *,
+        self,
+        *,
         policy_names: list[QuotePolicyName],
-        steps: int,
-        dt_seconds: int,
-        base_intensity: float,
-        alpha: float,
-        beta: float,
-        seed: int | None,
+        event_dataset: FXEventDataset,
         amount_multiplier: float,
         snapshot_every_n_events: int,
     ) -> PolicyComparisonResult:
         started_at = datetime.now(timezone.utc)
-
-        requests = self._generate_requests(
-            steps=steps,
-            dt_seconds=dt_seconds,
-            base_intensity=base_intensity,
-            alpha=alpha,
-            beta=beta,
-            seed=seed,
-            amount_multiplier=amount_multiplier,
-        )
-
         comparison_id = str(uuid4())
-        event_dataset_id = str(uuid4())
+
+        acceptance_seed = event_dataset.seed
 
         results = [
             self._run_policy(
                 policy_name=policy_name,
-                requests=requests,
-                seed=seed,
-                dt_seconds=dt_seconds,
+                event_dataset=event_dataset,
+                amount_multiplier=amount_multiplier,
+                acceptance_seed=acceptance_seed,
                 snapshot_every_n_events=snapshot_every_n_events,
             )
             for policy_name in policy_names
@@ -119,11 +106,11 @@ class PolicyComparisonEngine:
 
         return PolicyComparisonResult(
             comparison_id=comparison_id,
-            event_dataset_id=event_dataset_id,
+            event_dataset_id=str(event_dataset.event_dataset_id),
             started_at=started_at,
             finished_at=datetime.now(timezone.utc),
-            generated_requests=len(requests),
-            seed=seed,
+            generated_requests=len(event_dataset.events),
+            seed=event_dataset.seed,
             results=results,
             best_policy_by_net_pnl=max(
                 results,
@@ -139,15 +126,16 @@ class PolicyComparisonEngine:
                     item.stress_time_fraction,
                     item.max_abs_pressure,
                 ),
-            ).policy
+            ).policy,
         )
 
     def _run_policy(
-        self, *,
+        self,
+        *,
         policy_name: QuotePolicyName,
-        requests: list[QuoteRequest],
-        seed: int | None,
-        dt_seconds: int,
+        event_dataset: FXEventDataset,
+        amount_multiplier: float,
+        acceptance_seed: int | None,
         snapshot_every_n_events: int,
     ) -> PolicyRunResult:
         ledger = InventoryLedger()
@@ -157,6 +145,7 @@ class PolicyComparisonEngine:
             name=policy_name,
             stress_detect=stress_detect,
         )
+
         quote_engine = QuoteEngine(
             ledger=ledger,
             stress_detect=stress_detect,
@@ -164,22 +153,30 @@ class PolicyComparisonEngine:
         )
 
         run_started_at = datetime.now(timezone.utc)
+
+        acceptance_model = AcceptanceModel(
+            seed=acceptance_seed,
+        )
+
         snapshots: list[PolicyInventorySnapshot] = []
 
-        acceptance_model = AcceptanceModel(seed=seed)
         accepted_events = 0
         rejected_events = 0
 
-        quoted_spread: list[float] = []
-        accepted_spreads: list[float] = []
+        quoted_spread_values: list[float] = []
+        accepted_spread_values: list[float] = []
 
         spread_revenue_usd = ZERO_FLOAT
         product_revenue_usd = ZERO_FLOAT
+        funding_cost_usd = ZERO_FLOAT
 
         max_abs_pressure = ZERO_FLOAT
         regime_counter: Counter[str] = Counter()
 
+        previous_event_ts = event_dataset.started_at
+
         initial_pressures = ledger.pressures()
+
         initial_regime = stress_detect.detect(
             pressures=initial_pressures,
             states={
@@ -187,10 +184,13 @@ class PolicyComparisonEngine:
                 for currency, state in ledger.get_all_states().items()
             },
         )
+
         snapshots.extend(
             self._capture_inventory_snapshots(
                 event_index=ZERO_INT,
-                snapshot_ts=run_started_at,
+                source_event_id=None,
+                source_step_index=None,
+                snapshot_ts=event_dataset.started_at,
                 ledger=ledger,
                 pressures=initial_pressures,
                 regime=initial_regime,
@@ -202,16 +202,33 @@ class PolicyComparisonEngine:
             )
         )
 
-        for event_index, request in enumerate(requests, start=ONE_INT):
+        for event in event_dataset.events:
+            elapsed_seconds = max(
+                ZERO_FLOAT,
+                (event.event_ts - previous_event_ts).total_seconds(),
+            )
+
+            funding_cost_usd += self._funding_cost_interval(
+                ledger=ledger,
+                elapsed_seconds=elapsed_seconds,
+            )
+
+            previous_event_ts = event.event_ts
+
+            request = replace(
+                event.request,
+                amount=event.request.amount * amount_multiplier,
+            )
+
             quote = quote_engine.quote(request)
             decision = acceptance_model.decide(quote)
 
             total_spread_bps = quote.components.total_spread_bps
-            quoted_spread.append(total_spread_bps)
+            quoted_spread_values.append(total_spread_bps)
 
             if decision.accepted:
                 accepted_events += 1
-                accepted_spreads.append(total_spread_bps)
+                accepted_spread_values.append(total_spread_bps)
 
                 revenue_usd = self._spread_revenue_usd(
                     request=request,
@@ -219,6 +236,7 @@ class PolicyComparisonEngine:
                 )
 
                 spread_revenue_usd += revenue_usd
+
                 product_revenue_usd += (
                     policy.allocated_product_revenue_usd(request)
                 )
@@ -231,6 +249,7 @@ class PolicyComparisonEngine:
                 rejected_events += 1
 
             pressures = ledger.pressures()
+
             states = {
                 currency.value: state
                 for currency, state in ledger.get_all_states().items()
@@ -247,26 +266,24 @@ class PolicyComparisonEngine:
                 (abs(value) for value in pressures.values()),
                 default=ZERO_FLOAT,
             )
+
             max_abs_pressure = max(
                 max_abs_pressure,
                 point_max_pressure,
             )
 
             should_capture = (
-                event_index % snapshot_every_n_events == 0
-                or event_index == len(requests)
+                event.event_sequence % snapshot_every_n_events == 0
+                or event.event_sequence == len(event_dataset.events)
             )
 
             if should_capture:
-                snapshot_ts = (
-                    run_started_at
-                    + timedelta(seconds=event_index * dt_seconds)
-                )
-
                 snapshots.extend(
                     self._capture_inventory_snapshots(
-                        event_index=event_index,
-                        snapshot_ts=snapshot_ts,
+                        event_index=event.event_sequence,
+                        source_event_id=event.event_id,
+                        source_step_index=event.source_step_index,
+                        snapshot_ts=event.event_ts,
                         ledger=ledger,
                         pressures=pressures,
                         regime=regime,
@@ -274,11 +291,24 @@ class PolicyComparisonEngine:
                         acceptance_probability=decision.probability,
                         cumulative_accepted_events=accepted_events,
                         cumulative_rejected_events=rejected_events,
-                        cumulative_spread_revenue_usd=spread_revenue_usd,
-                    ),
+                        cumulative_spread_revenue_usd=(
+                            spread_revenue_usd
+                        ),
+                    )
                 )
 
+        final_elapsed_seconds = max(
+            ZERO_FLOAT,
+            (event_dataset.finished_at - previous_event_ts).total_seconds(),
+        )
+
+        funding_cost_usd += self._funding_cost_interval(
+            ledger=ledger,
+            elapsed_seconds=final_elapsed_seconds,
+        )
+
         final_pressures = ledger.pressures()
+
         final_regime = stress_detect.detect(
             pressures=final_pressures,
             states={
@@ -287,22 +317,28 @@ class PolicyComparisonEngine:
             },
         )
 
-        funding_cost_usd = self._funding_cost_usd(ledger)
         net_pnl_usd = (
             spread_revenue_usd
             + product_revenue_usd
             - funding_cost_usd
         )
 
-        total_requests = len(requests)
-        stress_count = regime_counter[StressRegime.stress.value]
+        total_requests = len(event_dataset.events)
 
-        quoted_spreads = (
-            mean(quoted_spread) if quoted_spread else ZERO_FLOAT
+        stress_count = regime_counter[
+            StressRegime.stress.value
+        ]
+
+        average_quoted_spread = (
+            mean(quoted_spread_values)
+            if quoted_spread_values
+            else ZERO_FLOAT
         )
 
-        accepted_spreads = (
-            mean(accepted_spreads) if accepted_spreads else ZERO_FLOAT
+        average_accepted_spread = (
+            mean(accepted_spread_values)
+            if accepted_spread_values
+            else ZERO_FLOAT
         )
 
         return PolicyRunResult(
@@ -318,11 +354,11 @@ class PolicyComparisonEngine:
                 RATIO_PRECISION
             ),
             average_quoted_spread_bps=round(
-                quoted_spreads,
+                average_quoted_spread,
                 RATIO_PRECISION
             ),
             average_accepted_spread_bps=round(
-                accepted_spreads,
+                average_accepted_spread,
                 RATIO_PRECISION
             ),
             customer_spread_cost_usd=round(
@@ -359,8 +395,37 @@ class PolicyComparisonEngine:
         )
 
     @staticmethod
+    def _funding_cost_interval(
+        ledger: InventoryLedger,
+        elapsed_seconds: float,
+    ):
+        total = ZERO_FLOAT
+
+        for currency, state in ledger.get_all_states().items():
+            usd_mark = StaticMidRateProvider.USD_MARKS[
+                currency.value
+            ]
+            inventory_notional_usd = (
+                abs(state.position) * usd_mark
+            )
+
+            annual_cost_rate = (
+                state.funding_cost_bps / BPS_DENOMINATOR
+            )
+
+            total += (
+                inventory_notional_usd
+                * annual_cost_rate
+                * elapsed_seconds
+                / SECONDS_PER_YEAR
+            )
+        return total
+
+    @staticmethod
     def _capture_inventory_snapshots(
         event_index: int,
+        source_event_id: UUID | None,
+        source_step_index: int | None,
         snapshot_ts: datetime,
         ledger: InventoryLedger,
         pressures: dict[str, float],
@@ -395,6 +460,8 @@ class PolicyComparisonEngine:
             result.append(
                 PolicyInventorySnapshot(
                     event_index=event_index,
+                    source_event_id=source_event_id,
+                    source_step_index=source_step_index,
                     snapshot_ts=snapshot_ts,
                     currency=currency,
                     position=round(state.position, RATIO_PRECISION),
@@ -460,28 +527,11 @@ class PolicyComparisonEngine:
                     ),
                     cumulative_spread_revenue_usd=round(
                         cumulative_spread_revenue_usd,
-                        6,
+                        RATIO_PRECISION,
                     ),
                 )
             )
         return result
-
-    @staticmethod
-    def _funding_cost_usd(ledger: InventoryLedger) -> float:
-        total = ZERO_FLOAT
-
-        for currency, state in ledger.get_all_states().items():
-            usd_mark = StaticMidRateProvider.USD_MARKS[
-                currency.value
-            ]
-            notional_usd = abs(state.position) * usd_mark
-
-            total += (
-                notional_usd
-                * state.funding_cost_bps
-                / BPS_DENOMINATOR
-            )
-        return total
 
     @staticmethod
     def _spread_revenue_usd(
@@ -496,36 +546,6 @@ class PolicyComparisonEngine:
             * spread_bps
             / BPS_DENOMINATOR
         )
-
-    @staticmethod
-    def _generate_requests(
-        *,
-        steps: int,
-        dt_seconds: int,
-        base_intensity: float,
-        alpha: float,
-        beta: float,
-        seed: int | None,
-        amount_multiplier: float,
-    ) -> list[QuoteRequest]:
-        generator = HawkesLikeFXEventGenerator(seed=seed)
-
-        raw_requests = generator.simulate_quote_requests(
-            steps=steps,
-            dt_seconds=dt_seconds,
-            base_intensity=base_intensity,
-            alpha=alpha,
-            beta=beta,
-            start_at=datetime.now(timezone.utc),
-        )
-
-        return [
-            replace(
-                request, amount=request.amount * amount_multiplier,
-            )
-            for request in raw_requests
-        ]
-
 
 @dataclass(frozen=True)
 class PolicyInventorySnapshot:
@@ -548,6 +568,9 @@ class PolicyInventorySnapshot:
     hedge_capacity: float
     max_hedge_capacity: float
     hedge_capacity_used_ratio: float
+
+    source_event_id: UUID | None
+    source_step_index: int | None
 
     funding_cost_bps: float
     market_volatility: float

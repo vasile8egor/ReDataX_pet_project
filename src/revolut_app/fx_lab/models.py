@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
-from uuid import uuid4
+from uuid import uuid4, UUID
 
 from revolut_app.fx_lab.constants import (
     DEFAULT_FUNDING_COST_BPS,
@@ -129,3 +129,27 @@ class FXQuote:
             regime=regime,
             executed=executed,
         )
+
+
+@dataclass(frozen=True)
+class FXEvent:
+    event_id: UUID
+    event_sequence: int
+    source_step_index: int
+    event_ts: datetime
+    request: QuoteRequest
+
+
+@dataclass(frozen=True)
+class FXEventDataset:
+    event_dataset_id: UUID
+    generator: str
+    seed: int | None
+    started_at: datetime
+    finished_at: datetime
+    source_steps: int
+    dt_seconds: int
+    base_intensity: float
+    alpha: float
+    beta: float
+    events: tuple[FXEvent, ...]
