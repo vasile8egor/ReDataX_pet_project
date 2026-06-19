@@ -14,6 +14,7 @@ from revolut_app.fx_lab.constants import (
     RATIO_PRECISION,
     USD_MARKS,
     ZERO_FLOAT,
+    ZERO_INT,
 )
 from revolut_app.fx_lab.hawkes import HawkesLikeFXEventGenerator
 from revolut_app.fx_lab.models import (
@@ -178,7 +179,30 @@ class PolicyComparisonEngine:
         max_abs_pressure = ZERO_FLOAT
         regime_counter: Counter[str] = Counter()
 
-        for event_idx, request in enumerate(requests):
+        initial_pressures = ledger.pressures()
+        initial_regime = stress_detect.detect(
+            pressures=initial_pressures,
+            states={
+                currency.value: state
+                for currency, state in ledger.get_all_states().items()
+            },
+        )
+        snapshots.extend(
+            self._capture_inventory_snapshots(
+                event_index=ZERO_INT,
+                snapshot_ts=run_started_at,
+                ledger=ledger,
+                pressures=initial_pressures,
+                regime=initial_regime,
+                event_accepted=False,
+                acceptance_probability=ZERO_FLOAT,
+                cumulative_accepted_events=ZERO_INT,
+                cumulative_rejected_events=ZERO_INT,
+                cumulative_spread_revenue_usd=ZERO_FLOAT,
+            )
+        )
+
+        for event_index, request in enumerate(requests, start=ONE_INT):
             quote = quote_engine.quote(request)
             decision = acceptance_model.decide(quote)
 
@@ -229,19 +253,19 @@ class PolicyComparisonEngine:
             )
 
             should_capture = (
-                event_idx % snapshot_every_n_events == 0
-                or event_idx == len(requests) - ONE_INT
+                event_index % snapshot_every_n_events == 0
+                or event_index == len(requests)
             )
 
             if should_capture:
                 snapshot_ts = (
                     run_started_at
-                    + timedelta(seconds=event_idx * dt_seconds)
+                    + timedelta(seconds=event_index * dt_seconds)
                 )
 
                 snapshots.extend(
                     self._capture_inventory_snapshots(
-                        event_idx=event_idx,
+                        event_index=event_index,
                         snapshot_ts=snapshot_ts,
                         ledger=ledger,
                         pressures=pressures,
@@ -336,7 +360,7 @@ class PolicyComparisonEngine:
 
     @staticmethod
     def _capture_inventory_snapshots(
-        event_idx: int,
+        event_index: int,
         snapshot_ts: datetime,
         ledger: InventoryLedger,
         pressures: dict[str, float],
@@ -370,7 +394,7 @@ class PolicyComparisonEngine:
 
             result.append(
                 PolicyInventorySnapshot(
-                    event_index=event_idx,
+                    event_index=event_index,
                     snapshot_ts=snapshot_ts,
                     currency=currency,
                     position=round(state.position, RATIO_PRECISION),

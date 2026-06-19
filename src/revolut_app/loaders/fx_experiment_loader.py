@@ -1,11 +1,17 @@
 from __future__ import annotations
 
 import os
+from collections.abc import Iterator
 from dataclasses import dataclass
 from datetime import datetime
 from uuid import UUID
 
 from clickhouse_driver import Client
+from revolut_app.fx_lab.constants import (
+    CLICKHOUSE_SNAPSHOT_INSERT_BATCH_SIZE,
+    ZERO_INT,
+)
+
 from .queries import (
     ALTER_DIM_EVENT_DATASET_Q,
     DIM_EVENT_DATASET_Q,
@@ -13,7 +19,8 @@ from .queries import (
     FACT_SIMULATION_RUNS_Q,
     INSERT_INTO_DIM_EVENT_Q,
     INSERT_INTO_FACT_SIM_Q,
-    INSERT_INTO_FACT_INVENT_Q
+    INSERT_INTO_FACT_INVENTORY_SNAPSHOTS_Q,
+    SELECT_EXISTING_EXPERIMENT_Q,
 )
 
 
@@ -90,7 +97,7 @@ class FXExperimentClickHouseLoader:
         port: int | None = None,
         user: str | None = None,
         password: str | None = None,
-    ):
+    ) -> None:
         self.client = Client(
             host=host or os.getenv("CLICKHOUSE_HOST", "clickhouse"),
             port=port or int(os.getenv("CLICKHOUSE_PORT", "9000")),
@@ -103,7 +110,7 @@ class FXExperimentClickHouseLoader:
             database=os.getenv("CLICKHOUSE_DATABASE", "gold"),
         )
 
-    def ensure_schema(self):
+    def ensure_schema(self) -> None:
         self.client.execute(
             '''create database if not exists gold'''
         )
@@ -112,18 +119,48 @@ class FXExperimentClickHouseLoader:
         self.client.execute(FACT_SIMULATION_RUNS_Q)
         self.client.execute(FACT_INVENTORY_SNAPSHOTS_Q)
 
+    @staticmethod
+    def _chunks(
+        rows: list[tuple],
+        *,
+        size: int,
+    ) -> Iterator[list[tuple]]:
+        if size <= ZERO_INT:
+            raise ValueError('Chunk size must be positive')
+
+        for start in range(0, len(rows), size):
+            yield rows[start : start + size]
+
+    def _ensure_not_persisted(
+        self,
+        event_dataset_id: UUID,
+    ) -> None:
+        dataset_rows, run_rows, snapshot_rows = self.client.execute(
+            SELECT_EXISTING_EXPERIMENT_Q,
+            {'event_dataset_id': event_dataset_id},
+        )[0]
+
+        if dataset_rows or run_rows or snapshot_rows:
+            raise ValueError(
+                'Experiment already has persisted rows for '
+                f'event_dataset_id={event_dataset_id}: '
+                f'datasets={dataset_rows}, runs={run_rows}, '
+                f'snapshots={snapshot_rows}'
+            )
+
     def load_comparison(
         self, *,
         event_dataset: EventDatasetRecord,
         runs: list[SimulationRunRecord],
-        snapshots: list[InventorySnapshotRecord]
-    ):
+        snapshots: list[InventorySnapshotRecord],
+    ) -> tuple[int, int, int]:
         if not runs:
             raise ValueError(
                 'At least one simulation run is required'
             )
 
         self.ensure_schema()
+        self._ensure_not_persisted(event_dataset.event_dataset_id)
 
         dataset_rows = [
             (
@@ -217,9 +254,17 @@ class FXExperimentClickHouseLoader:
             )
             for item in snapshots
         ]
-        self.client.execute(INSERT_INTO_DIM_EVENT_Q, dataset_rows)
+        for batch in self._chunks(
+            snapshot_rows,
+            size=CLICKHOUSE_SNAPSHOT_INSERT_BATCH_SIZE,
+        ):
+            self.client.execute(
+                INSERT_INTO_FACT_INVENTORY_SNAPSHOTS_Q,
+                batch,
+            )
+
         self.client.execute(INSERT_INTO_FACT_SIM_Q, run_rows)
-        self.client.execute(INSERT_INTO_FACT_INVENT_Q, snapshot_rows)
+        self.client.execute(INSERT_INTO_DIM_EVENT_Q, dataset_rows)
         return (
             len(dataset_rows),
             len(run_rows),

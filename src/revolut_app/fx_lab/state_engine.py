@@ -98,7 +98,12 @@ class InventoryLedger:
 
             self._update_order_flow(
                 state=base_state,
-                buy_amount=base_amount,
+                buy_amount=ZERO_FLOAT,
+                sell_amount=base_amount,
+            )
+            self._update_order_flow(
+                state=quote_state,
+                buy_amount=quote_amount,
                 sell_amount=ZERO_FLOAT,
             )
 
@@ -108,8 +113,13 @@ class InventoryLedger:
 
             self._update_order_flow(
                 state=base_state,
+                buy_amount=base_amount,
+                sell_amount=ZERO_FLOAT,
+            )
+            self._update_order_flow(
+                state=quote_state,
                 buy_amount=ZERO_FLOAT,
-                sell_amount=base_amount,
+                sell_amount=quote_amount,
             )
 
         now = datetime.now(timezone.utc)

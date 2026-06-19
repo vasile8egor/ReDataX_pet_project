@@ -184,7 +184,7 @@ INSERT INTO gold.fact_simulation_runs(
 VALUES
 '''
 
-INSERT_INTO_FACT_INVENT_Q = '''
+INSERT_INTO_FACT_INVENTORY_SNAPSHOTS_Q = '''
 INSERT INTO gold.fact_inventory_snapshots(
     run_id,
     comparison_id,
@@ -221,4 +221,23 @@ INSERT INTO gold.fact_inventory_snapshots(
     h_external
 )
 VALUES
+'''
+
+SELECT_EXISTING_EXPERIMENT_Q = '''
+SELECT
+    (
+        SELECT count()
+        FROM gold.dim_event_datasets
+        WHERE event_dataset_id = %(event_dataset_id)s
+    ) AS dataset_rows,
+    (
+        SELECT count()
+        FROM gold.fact_simulation_runs
+        WHERE event_dataset_id = %(event_dataset_id)s
+    ) AS run_rows,
+    (
+        SELECT count()
+        FROM gold.fact_inventory_snapshots
+        WHERE event_dataset_id = %(event_dataset_id)s
+    ) AS snapshot_rows
 '''

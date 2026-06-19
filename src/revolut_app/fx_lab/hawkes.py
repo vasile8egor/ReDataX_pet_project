@@ -71,7 +71,7 @@ class HawkesLikeFXEventGenerator:
                             sigma=HAWKES_LOGNORMAL_SIGMA,
                         )
                     ),
-                    segment=self._sample_segment(),
+                    segment=self._sample_segment(self.rng),
                     channel='synthetic_hawkes',
                 )
                 requests.append(request)
@@ -82,11 +82,18 @@ class HawkesLikeFXEventGenerator:
 
         return requests
 
-    def _sample_segment(self) -> CustomerSegment:
-        value = self.rng.random()
+    @staticmethod
+    def _sample_segment(rng: np.random.Generator) -> CustomerSegment:
+        value = rng.random()
 
-        if value < PREMIUM_SEGMENT_PROBABILITY:
+        premium_threshold = PREMIUM_SEGMENT_PROBABILITY
+        business_threshold = (
+            PREMIUM_SEGMENT_PROBABILITY
+            + BUSINESS_SEGMENT_PROBABILITY
+        )
+
+        if value < premium_threshold:
             return CustomerSegment.premium
-        if value < BUSINESS_SEGMENT_PROBABILITY:
+        if value < business_threshold:
             return CustomerSegment.business
         return CustomerSegment.retail

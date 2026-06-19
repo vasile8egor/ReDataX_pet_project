@@ -412,7 +412,7 @@ class FXQuoteService:
 
             notional_usd = self._notional_usd(
                 currency=recommendation.currency,
-                amount=recommendation.amount,
+                amount=executed_amount,
             )
 
             self.pnl_ledger.record_hedge_cost(
