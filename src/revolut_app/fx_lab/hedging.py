@@ -28,6 +28,9 @@ class HedgeRecommendation:
     currency: Currency
     action: HedgeAction
     amount: float
+    desired_amount: float
+    capacity_limited: bool
+    unhedged_amount: float
     current_position: float
     position_limit: float
     current_pressure: float
@@ -35,6 +38,14 @@ class HedgeRecommendation:
     target_pressure: float
     expected_pressure_reduction: float
     reason: str
+
+
+@dataclass(frozen=True)
+class HedgeAmountDecision:
+    amount: float
+    desired_amount: float
+    capacity_limited: bool
+    unhedged_amount: float
 
 
 @dataclass(frozen=True)
@@ -75,7 +86,7 @@ class HedgeEngine:
                 continue
 
             action = self._action_from_pressure(phi)
-            amount = self._hedge_amount(
+            decision = self._hedge_amount(
                 phi=phi,
                 state=state,
                 target_pressure=target_pressure,
@@ -83,7 +94,7 @@ class HedgeEngine:
                 min_notional=min_notional,
             )
 
-            if amount < min_notional:
+            if decision.amount < min_notional:
                 continue
 
             expected_reduction = max(ZERO_FLOAT, abs(phi) - target_pressure)
@@ -92,7 +103,16 @@ class HedgeEngine:
                 HedgeRecommendation(
                     currency=currency,
                     action=action,
-                    amount=round(amount, AMOUNT_PRECISION),
+                    amount=round(decision.amount, AMOUNT_PRECISION),
+                    desired_amount=round(
+                        decision.desired_amount,
+                        AMOUNT_PRECISION
+                    ),
+                    capacity_limited=decision.capacity_limited,
+                    unhedged_amount=round(
+                        decision.unhedged_amount,
+                        AMOUNT_PRECISION
+                    ),
                     current_position=round(state.position, POSITION_PRECISION),
                     position_limit=round(
                         state.position_limit,
@@ -122,12 +142,22 @@ class HedgeEngine:
     @staticmethod
     def _reason(phi: float, currency: Currency, regime: StressRegime) -> str:
         if phi > 0:
-            inventory_side = 'positive inventory pressure, play long'
+            inventory_side = (
+                f"positive inventory pressure: bank is long {currency.value};"
+                f" recommend: play SELL {currency.value}"
+            )
+        elif phi < 0:
+            inventory_side = (
+                f"negative inventory pressure: bank is short {currency.value};"
+                f" recommend: play BUY {currency.value}"
+            )
         else:
-            inventory_side = 'negative inventory pressure, play short'
+            inventory_side = (
+                f"neutral inventory pressure for {currency.value}; "
+                "recommend: play HOLD"
+            )
         return (
-            f'{inventory_side} {currency.value} \n'
-            f'regime={regime.value}'
+            f'{inventory_side}; regime={regime.value}'
         )
 
     @staticmethod
@@ -137,11 +167,16 @@ class HedgeEngine:
         target_pressure: float,
         max_hedge_fraction: float,
         min_notional: float,
-    ) -> float:
+    ) -> HedgeAmountDecision:
         current_abs_phi = abs(phi)
 
         if current_abs_phi <= target_pressure:
-            return ZERO_FLOAT
+            return HedgeAmountDecision(
+                amount=ZERO_FLOAT,
+                desired_amount=ZERO_FLOAT,
+                capacity_limited=False,
+                unhedged_amount=ZERO_FLOAT,
+            )
 
         pressure_excess_ratio = (current_abs_phi - target_pressure) / max(
             current_abs_phi,
@@ -158,8 +193,21 @@ class HedgeEngine:
         )
 
         if amount < min_notional:
-            return ZERO_FLOAT
-        return amount
+            return HedgeAmountDecision(
+                amount=ZERO_FLOAT,
+                desired_amount=desired_amount,
+                capacity_limited=amount < desired_amount,
+                unhedged_amount=desired_amount,
+            )
+
+        unhedged_amount = max(ZERO_FLOAT, desired_amount - amount)
+
+        return HedgeAmountDecision(
+            amount=amount,
+            desired_amount=desired_amount,
+            capacity_limited=amount < desired_amount,
+            unhedged_amount=unhedged_amount,
+        )
 
     @staticmethod
     def _effective_threshold(*, base_threshold: float, regime: StressRegime):

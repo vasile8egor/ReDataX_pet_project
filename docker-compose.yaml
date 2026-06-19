@@ -35,10 +35,18 @@ services:
       POSTGRES_DB: airflow
       POSTGRES_USER: airflow
       POSTGRES_PASSWORD: airflow
+      CLICKHOUSE_HOST: clickhouse
+      CLICKHOUSE_PORT: 9000
+      CLICKHOUSE_USER: default
+      CLICKHOUSE_PASSWORD: default
+      CLICKHOUSE_DATABASE: gold
     volumes:
       - ./src:/opt/airflow/src
     depends_on:
-      - postgres_main
+      postgres_main:
+        condition: service_healthy
+      clickhouse:
+        condition: service_healthy
     networks:
       - revolut_network
     profiles:

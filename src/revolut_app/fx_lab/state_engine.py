@@ -16,12 +16,16 @@ from revolut_app.fx_lab.constants import (
     ONE_FLOAT,
     ZERO_FLOAT,
 )
+from revolut_app.fx_lab.execution_constants import (
+    EXECUTION_AMOUNT_PRECISION,
+)
 from revolut_app.fx_lab.models import (
     Currency,
     CurrencyState,
     FXSide,
     QuoteRequest,
 )
+from revolut_app.fx_lab.hedging import HedgeAction
 
 
 class InventoryLedger:
@@ -70,7 +74,10 @@ class InventoryLedger:
             + LIQUIDITY_PRESSURE_WEIGHT * liquidity_pressure
         )
 
-        return round(max(MIN_PRESSURE, min(MAX_PRESSURE, phi)), RATIO_PRECISION)
+        return round(
+            max(MIN_PRESSURE, min(MAX_PRESSURE, phi)),
+            RATIO_PRECISION
+        )
 
     def pressures(self) -> dict[str, float]:
         return {
@@ -121,6 +128,86 @@ class InventoryLedger:
             state.market_volatility *= volatility_multiplier
             state.hedge_capacity *= hedge_capacity_multiplier
             state.updated_at = datetime.now(timezone.utc)
+
+    def apply_hedge(
+        self, *,
+        currency: Currency,
+        action: HedgeAction,
+        amount: float,
+    ):
+        if amount <= ZERO_FLOAT:
+            return {
+                'requested_amount': amount,
+                'executed_amount': ZERO_FLOAT,
+                'position_before': self.get_state(
+                    currency
+                ).position,
+                'position_after': self.get_state(
+                    currency
+                ).position,
+                'hedge_capacity_before': self.get_state(
+                    currency
+                ).hedge_capacity,
+                'hedge_capacity_after': self.get_state(
+                    currency
+                ).hedge_capacity,
+            }
+
+        state = self.get_state(currency)
+
+        position_before = state.position
+        hedge_capacity_before = state.hedge_capacity
+
+        executable_amount = min(
+            float(amount),
+            max(ZERO_FLOAT, state.hedge_capacity),
+        )
+
+        if executable_amount <= ZERO_FLOAT:
+            return {
+                'requested_amount': amount,
+                'executed_amount': ZERO_FLOAT,
+                'position_before': position_before,
+                'position_after': state.position,
+                'hedge_capacity_before': hedge_capacity_before,
+                'hedge_capacity_after': state.hedge_capacity,
+            }
+
+        if action == HedgeAction.buy:
+            state.position += executable_amount
+        elif action == HedgeAction.sell:
+            state.position -= executable_amount
+        else:
+            executable_amount = ZERO_FLOAT
+
+        state.hedge_capacity = max(
+            ZERO_FLOAT, state.hedge_capacity - executable_amount
+        )
+        state.updated_at = datetime.now(timezone.utc)
+
+        return {
+            'requested_amount': float(amount),
+            'executed_amount': round(
+                executable_amount,
+                EXECUTION_AMOUNT_PRECISION,
+            ),
+            'position_before': round(
+                position_before,
+                EXECUTION_AMOUNT_PRECISION,
+            ),
+            'position_after': round(
+                state.position,
+                EXECUTION_AMOUNT_PRECISION,
+            ),
+            'hedge_capacity_before': round(
+                hedge_capacity_before,
+                EXECUTION_AMOUNT_PRECISION,
+            ),
+            'hedge_capacity_after': round(
+                state.hedge_capacity,
+                EXECUTION_AMOUNT_PRECISION,
+            ),
+        }
 
     @staticmethod
     def _update_order_flow(

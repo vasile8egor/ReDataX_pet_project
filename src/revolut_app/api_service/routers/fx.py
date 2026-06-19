@@ -5,8 +5,13 @@ from revolut_app.api_service.schemas.fx import (
     DaySimulationResponse,
     FXQuoteRequest,
     FXQuoteResponse,
+    HedgeExecutionRequest,
+    HedgeExecutionResponse,
     HedgeRecommendationResponse,
     HedgeRecommendationRequest,
+    PnLSnapshotResponse,
+    PolicyComparisonRequest,
+    PolicyComparisonResponse,
     RGFlowRequest,
     RGFlowResponse,
     RiskSnapshotResponse,
@@ -71,6 +76,28 @@ def hedge_recommendation(
     return fx_quote_service.hedge_recommendation(request)
 
 
+@router.post(
+    '/execute-hedge',
+    response_model=HedgeExecutionResponse,
+    status_code=status.HTTP_200_OK,
+)
+def hedge_execution(
+    request: HedgeExecutionRequest,
+) -> HedgeExecutionResponse:
+    return fx_quote_service.execute_hedge(request)
+
+
+@router.post(
+    '/policy-comparison',
+    response_model=PolicyComparisonResponse,
+    status_code=status.HTTP_200_OK,
+)
+def policy_comparison(
+    request: PolicyComparisonRequest,
+) -> PolicyComparisonResponse:
+    return fx_quote_service.policy_comparison(request)
+
+
 @router.get(
     '/risk-snapshot',
     response_model=RiskSnapshotResponse,
@@ -78,3 +105,12 @@ def hedge_recommendation(
 )
 def get_risk_snapshot() -> RiskSnapshotResponse:
     return fx_quote_service.risk_snapshot()
+
+
+@router.get(
+    '/pnl-snapshot',
+    response_model=PnLSnapshotResponse,
+    status_code=status.HTTP_200_OK,
+)
+def pnl_snapshot() -> PnLSnapshotResponse:
+    return fx_quote_service.pnl_snapshot()

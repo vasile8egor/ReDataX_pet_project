@@ -23,6 +23,8 @@ from revolut_app.fx_lab.models import FXQuote, QuoteRequest, StressRegime
 from revolut_app.fx_lab.quote_engine import QuoteEngine, StaticMidRateProvider
 from revolut_app.fx_lab.state_engine import InventoryLedger
 from revolut_app.fx_lab.stress import StressRegimeDetect
+from revolut_app.fx_lab.acceptance import AcceptanceModel
+from revolut_app.fx_lab.pnl import PnLLedger
 
 
 @dataclass
@@ -33,6 +35,9 @@ class InventorySnapshotPoint:
     inventory_pressure: dict[str, float]
     max_abs_pressure: float
     synthetic_spread_revenue_usd: float
+    accepted: bool
+    acceptance_probability: float
+    rejected_events: int
 
 
 @dataclass
@@ -42,6 +47,9 @@ class DaySimulationResult:
     finished_at: datetime
     generated_requests: int
     executed_events: int
+    accepted_events: int
+    rejected_events: int
+    acceptance_rate: float
     final_regime: StressRegime
     max_abs_pressure: float
     stress_time_fraction: float
@@ -58,10 +66,12 @@ class DaySimulationEngine:
         ledger: InventoryLedger,
         quote_engine: QuoteEngine,
         stress_detect: StressRegimeDetect,
+        pnl_ledger: PnLLedger | None = None,
     ):
         self.ledger = ledger
         self.quote_engine = quote_engine
         self.stress_detect = stress_detect
+        self.pnl_ledger = pnl_ledger
 
     def simulate_day(
         self, *,
@@ -76,6 +86,7 @@ class DaySimulationEngine:
     ) -> DaySimulationResult:
         started_at = datetime.now(timezone.utc)
         generator = HawkesLikeFXEventGenerator(seed=seed)
+        acceptance_model = AcceptanceModel(seed=seed)
 
         raw_requests = generator.simulate_quote_requests(
             steps=steps,
@@ -98,15 +109,46 @@ class DaySimulationEngine:
         total_spread_revenue_usd = ZERO_FLOAT
         max_abs_pressure = ZERO_FLOAT
 
+        accepted_events = 0
+        rejected_events = 0
+        quoted_events = len(requests)
+
         for event_idx, request in enumerate(requests):
             quote = self.quote_engine.quote(request)
-            spread_revenue_usd = self._synthetic_spread_revenue_usd(quote)
-            total_spread_revenue_usd += spread_revenue_usd
 
-            self.ledger.apply_client_fx(
-                request=request,
-                mid_rate=quote.mid_rate,
-            )
+            acceptance_decision = acceptance_model.decide(quote)
+
+            if acceptance_decision.accepted:
+                spread_revenue_usd = self._synthetic_spread_revenue_usd(quote)
+                total_spread_revenue_usd += spread_revenue_usd
+
+                if self.pnl_ledger is not None:
+                    base_usd_mark = StaticMidRateProvider.USD_MARKS[
+                        quote.request.base_currency
+                    ]
+
+                    notional_usd = quote.request.amount * base_usd_mark
+
+                    currency_pair = (
+                        f'{quote.request.base_currency.value}/'
+                        f'{quote.request.quote_currency.value}'
+                    )
+                    self.pnl_ledger.record_spread_revenue(
+                        quote_id=quote.quote_id,
+                        currency_pair=currency_pair,
+                        notional_usd=notional_usd,
+                        spread_bps=quote.components.total_spread_bps,
+                        revenue_usd=spread_revenue_usd,
+                    )
+
+                self.ledger.apply_client_fx(
+                    request=request,
+                    mid_rate=quote.mid_rate,
+                )
+                accepted_events += 1
+            else:
+                rejected_events += 1
+
             pressures = self.ledger.pressures()
             states = {
                 currency.value: state
@@ -141,12 +183,15 @@ class DaySimulationEngine:
                         total_spread_revenue_usd,
                         RATIO_PRECISION,
                     ),
+                    accepted=acceptance_decision.accepted,
+                    acceptance_probability=acceptance_decision.probability,
+                    rejected_events=rejected_events,
                 )
             )
 
-        executed_events = len(requests)
+        executed_events = accepted_events
 
-        if executed_events == 0:
+        if quoted_events == 0:
             final_pressures = self.ledger.pressures()
             final_regime = self.stress_detect.detect(
                 pressures=final_pressures,
@@ -162,6 +207,9 @@ class DaySimulationEngine:
                 finished_at=datetime.now(timezone.utc),
                 generated_requests=ZERO_INT,
                 executed_events=ZERO_INT,
+                accepted_events=accepted_events,
+                rejected_events=rejected_events,
+                acceptance_rate=ZERO_FLOAT,
                 final_regime=final_regime,
                 max_abs_pressure=ZERO_FLOAT,
                 stress_time_fraction=ZERO_FLOAT,
@@ -187,14 +235,20 @@ class DaySimulationEngine:
             finished_at=datetime.now(timezone.utc),
             generated_requests=len(raw_requests),
             executed_events=executed_events,
+            accepted_events=accepted_events,
+            rejected_events=rejected_events,
+            acceptance_rate=round(
+                accepted_events / quoted_events,
+                RATIO_PRECISION,
+            ),
             final_regime=final_snapshot.regime,
             max_abs_pressure=round(max_abs_pressure, RATIO_PRECISION),
             stress_time_fraction=round(
-                stress_count / executed_events,
+                stress_count / quoted_events,
                 RATIO_PRECISION,
             ),
             elevated_or_stress_time_fraction=round(
-                (stress_count + elevated_count) / executed_events,
+                (stress_count + elevated_count) / quoted_events,
                 RATIO_PRECISION,
             ),
             synthetic_spread_revenue_usd=round(
