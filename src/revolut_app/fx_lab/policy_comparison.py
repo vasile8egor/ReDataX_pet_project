@@ -547,6 +547,7 @@ class PolicyComparisonEngine:
             / BPS_DENOMINATOR
         )
 
+
 @dataclass(frozen=True)
 class PolicyInventorySnapshot:
     event_index: int
