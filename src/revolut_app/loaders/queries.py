@@ -338,3 +338,118 @@ ANY INNER JOIN gold.dim_event_datasets AS datasets
 WHERE events.event_dataset_id = %(event_dataset_id)s
 ORDER BY events.event_sequence
 '''
+
+FX_POLICY_RUN_SUMMARY_VIEW_Q = """
+CREATE VIEW IF NOT EXISTS gold.v_fx_policy_run_summary AS
+SELECT
+    run_id,
+    comparison_id,
+    event_dataset_id,
+
+    model_version,
+    physics_mode,
+    pricing_policy,
+    hedging_policy,
+
+    seed,
+
+    generated_requests,
+    accepted_events,
+    rejected_events,
+    acceptance_rate,
+
+    average_quoted_spread_bps,
+    average_accepted_spread_bps,
+    customer_spread_cost_usd,
+
+    spread_revenue_usd,
+    allocated_product_revenue_usd,
+    hedge_cost_usd,
+    funding_cost_usd,
+    net_pnl_usd,
+
+    spread_revenue_usd
+        + allocated_product_revenue_usd AS total_revenue_usd,
+
+    final_regime,
+    max_abs_pressure,
+    stress_time_fraction,
+
+    started_at,
+    finished_at,
+    loaded_at
+FROM gold.fact_simulation_runs
+"""
+
+FX_INVENTORY_TRAJECTORY_VIEW_Q = """
+CREATE VIEW IF NOT EXISTS gold.v_fx_inventory_trajectory AS
+SELECT
+    run_id,
+    comparison_id,
+    event_dataset_id,
+
+    model_version,
+    physics_mode,
+    pricing_policy,
+
+    event_index,
+    snapshot_ts,
+    currency,
+
+    position,
+    position_limit,
+    limit_utilization,
+    position_pressure,
+
+    order_flow_imbalance,
+    phi,
+    abs(phi) AS abs_phi,
+
+    hedge_capacity,
+    hedge_capacity_used_ratio,
+
+    regime,
+    event_accepted,
+    acceptance_probability,
+
+    cumulative_accepted_events,
+    cumulative_rejected_events,
+    cumulative_spread_revenue_usd,
+
+    h_total,
+    h_quadratic,
+    h_quartic,
+    h_coupling,
+    h_external
+FROM gold.fact_inventory_snapshots
+"""
+
+FX_REGIME_DISTRIBUTION_VIEW_Q = """
+CREATE VIEW IF NOT EXISTS gold.v_fx_regime_distribution AS
+SELECT
+    run_id,
+    comparison_id,
+    model_version,
+    physics_mode,
+    pricing_policy,
+    regime,
+
+    uniqExact(event_index) AS sampled_events,
+
+    uniqExact(event_index)
+        / sum(uniqExact(event_index))
+          OVER (
+              PARTITION BY
+                  run_id,
+                  pricing_policy
+          ) AS regime_fraction
+FROM gold.fact_inventory_snapshots
+WHERE event_index > 0
+GROUP BY
+    run_id,
+    comparison_id,
+    model_version,
+    physics_mode,
+    pricing_policy,
+    regime
+"""

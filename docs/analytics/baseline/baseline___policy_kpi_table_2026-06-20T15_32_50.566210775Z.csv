@@ -1,0 +1,4 @@
+policy,runs,avg_net_pnl_usd,pnl_std_usd,acceptance_rate_pct,avg_customer_spread_bps,stress_time_pct,avg_max_abs_pressure
+inventory_aware,10,"8,702.03",831.78,65.37,17.54,63.79,1.24
+platform,10,"8,052.65",781.89,67.5,14.14,66.57,1.37
+naive,10,"3,358.05",85.13,72.65,6,73.32,1.82

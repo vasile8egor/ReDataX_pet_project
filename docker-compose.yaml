@@ -166,7 +166,7 @@ services:
       retries: 5
 
   metabase:
-    image: metabase/metabase:latest
+    image: metabase/metabase:v0.62.1
     container_name: metabase
     ports:
       - "3001:3000"

@@ -19,6 +19,9 @@ from .queries import (
     FACT_INVENTORY_SNAPSHOTS_Q,
     FACT_SIMULATION_RUNS_Q,
     FACT_FX_EVENTS_Q,
+    FX_POLICY_RUN_SUMMARY_VIEW_Q,
+    FX_INVENTORY_TRAJECTORY_VIEW_Q,
+    FX_REGIME_DISTRIBUTION_VIEW_Q,
     INSERT_INTO_DIM_EVENT_Q,
     INSERT_INTO_FACT_SIM_Q,
     INSERT_INTO_FACT_FX_EVENTS_Q,
@@ -154,6 +157,9 @@ class FXExperimentClickHouseLoader:
         self.client.execute(FACT_INVENTORY_SNAPSHOTS_Q)
         self.client.execute(ALTER_INVENTORY_SNAPSHOTS_Q)
         self.client.execute(FACT_FX_EVENTS_Q)
+        self.client.execute(FX_POLICY_RUN_SUMMARY_VIEW_Q)
+        self.client.execute(FX_INVENTORY_TRAJECTORY_VIEW_Q)
+        self.client.execute(FX_REGIME_DISTRIBUTION_VIEW_Q)
 
     @staticmethod
     def _chunks(
