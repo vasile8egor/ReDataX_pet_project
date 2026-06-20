@@ -69,6 +69,11 @@ from revolut_app.loaders.fx_experiment_loader import (
     InventorySnapshotRecord,
     SimulationRunRecord,
 )
+from revolut_app.fx_lab.experiment_models import PhysicsMode
+from revolut_app.fx_lab.hamiltonian import (
+    HamiltonianEngine,
+    HamiltonianParameters,
+)
 
 
 class FXQuoteService:
@@ -568,6 +573,18 @@ class FXQuoteService:
             )
             dataset_was_reused = True
 
+        hamiltonian_engine: HamiltonianEngine | None = None
+        if request.physics_mode == PhysicsMode.observer:
+            hamiltonian_parameters = HamiltonianParameters.threshold_v1()
+            hamiltonian_engine = HamiltonianEngine(hamiltonian_parameters)
+        elif request.physics_mode == PhysicsMode.controller:
+            raise HTTPException(
+                status_code=status.HTTP_501_NOT_IMPLEMENTED,
+                detail=(
+                    'Hamiltonian controller is not implemented yet'
+                ),
+            )
+
         result = self.policy_comparison_engine.compare(
             policy_names=request.policies,
             event_dataset=event_dataset,
@@ -575,6 +592,7 @@ class FXQuoteService:
             snapshot_every_n_events=(
                 request.snapshot_every_n_events
             ),
+            hamiltonian_engine=hamiltonian_engine,
         )
         dataset_rows = 0
         run_rows = 0
@@ -599,6 +617,11 @@ class FXQuoteService:
                 'snapshot_every_n_events': request.snapshot_every_n_events,
                 'event_dataset_id': str(event_dataset.event_dataset_id),
                 'event_dataset_reused': dataset_was_reused,
+                'hamiltonian': (
+                    hamiltonian_engine.parameters.as_dict()
+                    if hamiltonian_engine is not None
+                    else None
+                ),
             }
 
             event_dataset_record = EventDatasetRecord(
@@ -731,12 +754,11 @@ class FXQuoteService:
                         snapshot.cumulative_spread_revenue_usd
                     ),
 
-                    # Baseline model:
-                    h_total=None,
-                    h_quadratic=None,
-                    h_quartic=None,
-                    h_coupling=None,
-                    h_external=None,
+                    h_total=snapshot.h_total,
+                    h_quadratic=snapshot.h_quadratic,
+                    h_quartic=snapshot.h_quartic,
+                    h_coupling=snapshot.h_coupling,
+                    h_external=snapshot.h_external,
                 )
                 for policy_result in result.results
                 for snapshot in policy_result.snapshots

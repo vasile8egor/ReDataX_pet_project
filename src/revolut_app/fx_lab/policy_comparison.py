@@ -33,6 +33,10 @@ from revolut_app.fx_lab.quote_engine import (
 )
 from revolut_app.fx_lab.state_engine import InventoryLedger
 from revolut_app.fx_lab.stress import StressRegimeDetect
+from revolut_app.fx_lab.hamiltonian import (
+    HamiltonianBreakdown,
+    HamiltonianEngine,
+)
 
 
 @dataclass(frozen=True)
@@ -87,6 +91,7 @@ class PolicyComparisonEngine:
         event_dataset: FXEventDataset,
         amount_multiplier: float,
         snapshot_every_n_events: int,
+        hamiltonian_engine: HamiltonianEngine | None = None,
     ) -> PolicyComparisonResult:
         started_at = datetime.now(timezone.utc)
         comparison_id = str(uuid4())
@@ -100,6 +105,7 @@ class PolicyComparisonEngine:
                 amount_multiplier=amount_multiplier,
                 acceptance_seed=acceptance_seed,
                 snapshot_every_n_events=snapshot_every_n_events,
+                hamiltonian_engine=hamiltonian_engine,
             )
             for policy_name in policy_names
         ]
@@ -137,6 +143,7 @@ class PolicyComparisonEngine:
         amount_multiplier: float,
         acceptance_seed: int | None,
         snapshot_every_n_events: int,
+        hamiltonian_engine: HamiltonianEngine | None,
     ) -> PolicyRunResult:
         ledger = InventoryLedger()
         stress_detect = StressRegimeDetect()
@@ -176,13 +183,17 @@ class PolicyComparisonEngine:
         previous_event_ts = event_dataset.started_at
 
         initial_pressures = ledger.pressures()
-
         initial_regime = stress_detect.detect(
             pressures=initial_pressures,
             states={
                 currency.value: state
                 for currency, state in ledger.get_all_states().items()
             },
+        )
+        initial_hamiltonian = (
+            hamiltonian_engine.evaluate(initial_pressures)
+            if hamiltonian_engine is not None
+            else None
         )
 
         snapshots.extend(
@@ -199,6 +210,7 @@ class PolicyComparisonEngine:
                 cumulative_accepted_events=ZERO_INT,
                 cumulative_rejected_events=ZERO_INT,
                 cumulative_spread_revenue_usd=ZERO_FLOAT,
+                hamiltonian=initial_hamiltonian,
             )
         )
 
@@ -278,6 +290,11 @@ class PolicyComparisonEngine:
             )
 
             if should_capture:
+                hamiltonian = (
+                    hamiltonian_engine.evaluate(pressures)
+                    if hamiltonian_engine is not None
+                    else None
+                )
                 snapshots.extend(
                     self._capture_inventory_snapshots(
                         event_index=event.event_sequence,
@@ -294,6 +311,7 @@ class PolicyComparisonEngine:
                         cumulative_spread_revenue_usd=(
                             spread_revenue_usd
                         ),
+                        hamiltonian=hamiltonian,
                     )
                 )
 
@@ -435,6 +453,7 @@ class PolicyComparisonEngine:
         cumulative_accepted_events: int,
         cumulative_rejected_events: int,
         cumulative_spread_revenue_usd: float,
+        hamiltonian: HamiltonianBreakdown | None,
     ):
         result: list[PolicyInventorySnapshot] = []
 
@@ -529,6 +548,46 @@ class PolicyComparisonEngine:
                         cumulative_spread_revenue_usd,
                         RATIO_PRECISION,
                     ),
+                    h_total=(
+                        round(
+                            hamiltonian.total,
+                            RATIO_PRECISION,
+                        )
+                        if hamiltonian is not None
+                        else None
+                    ),
+                    h_quadratic=(
+                        round(
+                            hamiltonian.quadratic,
+                            RATIO_PRECISION,
+                        )
+                        if hamiltonian is not None
+                        else None
+                    ),
+                    h_quartic=(
+                        round(
+                            hamiltonian.quartic,
+                            RATIO_PRECISION,
+                        )
+                        if hamiltonian is not None
+                        else None
+                    ),
+                    h_coupling=(
+                        round(
+                            hamiltonian.coupling,
+                            RATIO_PRECISION,
+                        )
+                        if hamiltonian is not None
+                        else None
+                    ),
+                    h_external=(
+                        round(
+                            hamiltonian.external,
+                            RATIO_PRECISION,
+                        )
+                        if hamiltonian is not None
+                        else None
+                    ),
                 )
             )
         return result
@@ -584,3 +643,9 @@ class PolicyInventorySnapshot:
     cumulative_accepted_events: int
     cumulative_rejected_events: int
     cumulative_spread_revenue_usd: float
+
+    h_total: float | None = None
+    h_quadratic: float | None = None
+    h_quartic: float | None = None
+    h_coupling: float | None = None
+    h_external: float | None = None
