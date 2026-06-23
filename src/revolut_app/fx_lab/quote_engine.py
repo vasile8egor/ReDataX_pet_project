@@ -1,3 +1,5 @@
+from dataclasses import replace
+
 from revolut_app.fx_lab.constants import (
     BPS_DENOMINATOR,
     CLIENT_RATE_PRECISION,
@@ -47,7 +49,11 @@ class QuoteEngine:
             stress_detect=self.stress_detect
         )
 
-    def quote(self, request: QuoteRequest) -> FXQuote:
+    def quote(
+            self,
+            request: QuoteRequest,
+            hamiltonian_penalty_bps: float = 0.0,
+    ) -> FXQuote:
         mid_rate = self.mid_rate_provider.get_mid_rate(
             base_currency=request.base_currency,
             quote_currency=request.quote_currency,
@@ -70,6 +76,11 @@ class QuoteEngine:
             regime=regime,
         )
 
+        components = replace(
+            components,
+            hamiltonian_penalty_bps=max(0.0, hamiltonian_penalty_bps),
+        )
+
         spread_multiplier = components.total_spread_bps / BPS_DENOMINATOR
 
         if request.side == FXSide.buy:
@@ -85,57 +96,3 @@ class QuoteEngine:
             inventory_pressure=pressures,
             regime=regime,
         )
-
-    # def _spread_components(
-    #     self,
-    #     *,
-    #     request: QuoteRequest,
-    #     pressures: dict[str, float],
-    #     regime,
-    # ) -> FXQuoteComponents:
-    #     base_spread_bps = self._base_spread_bps(request.segment)
-
-    #     base_phi = pressures.get(request.base_currency.value, ZERO_FLOAT)
-    #     quote_phi = pressures.get(request.quote_currency.value, ZERO_FLOAT)
-
-    #     if request.side == FXSide.buy:
-    #         bad_base_pressure = max(ZERO_FLOAT, -base_phi)
-    #         bad_quote_pressure = max(ZERO_FLOAT, quote_phi)
-    #     else:
-    #         bad_base_pressure = max(ZERO_FLOAT, base_phi)
-    #         bad_quote_pressure = max(ZERO_FLOAT, -quote_phi)
-
-    #     inventory_penalty_bps = (
-    #         BASE_INVENTORY_PENALTY_WEIGHT_BPS * bad_base_pressure
-    #         + QUOTE_INVENTORY_PENALTY_WEIGHT_BPS * bad_quote_pressure
-    #     )
-    #     max_pressure = max(abs(base_phi), abs(quote_phi))
-    #     liquidity_penalty_bps = (
-    #         max(ZERO_FLOAT, max_pressure - LIQUIDITY_PRESSURE_THRESHOLD)
-    #         * LIQUIDITY_PENALTY_WEIGHT_BPS
-    #     )
-    #     regime_penalty_bps = self.stress_detect.regime_penalty_bps(regime)
-
-    #     return FXQuoteComponents(
-    #         base_spread_bps=base_spread_bps,
-    #         inventory_penalty_bps=round(
-    #             inventory_penalty_bps,
-    #             COMPONENT_BPS_PRECISION,
-    #         ),
-    #         liquidity_penalty_bps=round(
-    #             liquidity_penalty_bps,
-    #             COMPONENT_BPS_PRECISION,
-    #         ),
-    #         regime_penalty_bps=round(
-    #             regime_penalty_bps,
-    #             COMPONENT_BPS_PRECISION,
-    #         ),
-    #     )
-
-    # @staticmethod
-    # def _base_spread_bps(segment: CustomerSegment) -> float:
-    #     if segment == CustomerSegment.premium:
-    #         return PREMIUM_BASE_SPREAD_BPS
-    #     if segment == CustomerSegment.business:
-    #         return BUSINESS_BASE_SPREAD_BPS
-    #     return RETAIL_BASE_SPREAD_BPS

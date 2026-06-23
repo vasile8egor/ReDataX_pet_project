@@ -88,6 +88,7 @@ class FXQuoteComponents:
     inventory_penalty_bps: float
     liquidity_penalty_bps: float
     regime_penalty_bps: float
+    hamiltonian_penalty_bps: float
 
     @property
     def total_spread_bps(self) -> float:
@@ -96,6 +97,7 @@ class FXQuoteComponents:
             + self.inventory_penalty_bps
             + self.liquidity_penalty_bps
             + self.regime_penalty_bps
+            + self.hamiltonian_penalty_bps
         )
 
 

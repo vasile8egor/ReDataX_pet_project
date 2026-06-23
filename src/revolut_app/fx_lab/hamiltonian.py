@@ -311,6 +311,38 @@ class HamiltonianEngine:
         )
 
 
+@dataclass(frozen=True)
+class HamiltonianControlDecision:
+    h_total: float
+    activation_energy: float
+
+    raw_adjustment_bps: float
+    applied_adjustment_bps: float
+
+    activated: bool
+
+
+@dataclass(frozen=True)
+class HamiltonianControllerParameters:
+    activation_energy: float = 0.7
+    spread_gain_bps_per_energy: float = 2.0
+    max_adjustment_bps: float = 8.0
+
+    def __post_init__(self):
+        if self.activation_energy < 0.0:
+            raise ValueError(
+                'activation_energy must be positive'
+            )
+        if self.spread_gain_bps_per_energy < 0.0:
+            raise ValueError(
+                'spread_gain_bps_per_energy must be positive'
+            )
+        if self.max_adjustment_bps < 0.0:
+            raise ValueError(
+                'max_adjustment_bps must be positive'
+            )
+
+
 def build_hamiltonian_parameters(
     preset: HamiltonianPreset,
 ) -> HamiltonianParameters:

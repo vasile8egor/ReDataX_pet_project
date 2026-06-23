@@ -37,6 +37,7 @@ from revolut_app.fx_lab.hamiltonian import (
     HamiltonianBreakdown,
     HamiltonianEngine,
 )
+from revolut_app.fx_lab.hamiltonian_controller import HamiltonianController
 
 
 @dataclass(frozen=True)
@@ -92,7 +93,15 @@ class PolicyComparisonEngine:
         amount_multiplier: float,
         snapshot_every_n_events: int,
         hamiltonian_engine: HamiltonianEngine | None = None,
+        hamiltonian_controller: HamiltonianController | None = None,
     ) -> PolicyComparisonResult:
+        if (
+            hamiltonian_engine is not None
+            and hamiltonian_controller is not None
+        ):
+            raise ValueError(
+                'Observer and controller cant be enabled together'
+            )
         started_at = datetime.now(timezone.utc)
         comparison_id = str(uuid4())
 
@@ -144,6 +153,7 @@ class PolicyComparisonEngine:
         acceptance_seed: int | None,
         snapshot_every_n_events: int,
         hamiltonian_engine: HamiltonianEngine | None,
+        hamiltonian_controller: HamiltonianController | None,
     ) -> PolicyRunResult:
         ledger = InventoryLedger()
         stress_detect = StressRegimeDetect()
@@ -237,6 +247,23 @@ class PolicyComparisonEngine:
 
             total_spread_bps = quote.components.total_spread_bps
             quoted_spread_values.append(total_spread_bps)
+
+            pressures_before_event = ledger.pressures()
+            control_decision = None
+
+            if hamiltonian_controller is not None:
+                control_decision = (
+                    hamiltonian_controller.evalute(pressures_before_event)
+                )
+
+            quote = quote_engine.quote(
+                request=request,
+                hamiltonian_penalty_bps=(
+                    control_decision.applied_adjustment_bps
+                    if control_decision is not None
+                    else 0.0
+                ),
+            )
 
             if decision.accepted:
                 accepted_events += 1
