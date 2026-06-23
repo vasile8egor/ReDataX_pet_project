@@ -1,5 +1,5 @@
-from revolut_app.fx_lab.policies import QuotePolicyName
-from revolut_app.fx_lab.policy_comparison import (
+from revolut_app.fx_lab.pricing.policies import QuotePolicyName
+from revolut_app.fx_lab.experiments import (
     PolicyComparisonEngine
 )
 

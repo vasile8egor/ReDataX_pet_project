@@ -1,11 +1,11 @@
 import pytest
 
-from revolut_app.fx_lab.constants import SECONDS_PER_YEAR
-from revolut_app.fx_lab.models import Currency
-from revolut_app.fx_lab.policy_comparison import (
+from revolut_app.fx_lab.shared.constants import SECONDS_PER_YEAR
+from revolut_app.fx_lab.shared.enums import Currency
+from revolut_app.fx_lab.experiments import (
     PolicyComparisonEngine
 )
-from revolut_app.fx_lab.state_engine import InventoryLedger
+from revolut_app.fx_lab.inventory.ledger import InventoryLedger
 
 
 def _zero_inventory(ledger: InventoryLedger) -> None:

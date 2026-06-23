@@ -1,6 +1,6 @@
-from revolut_app.fx_lab.policies import QuotePolicyName
-from revolut_app.fx_lab.policy_comparison import PolicyComparisonEngine
-from revolut_app.fx_lab.state_engine import InventoryLedger
+from revolut_app.fx_lab.pricing.policies import QuotePolicyName
+from revolut_app.fx_lab.experiments import PolicyComparisonEngine
+from revolut_app.fx_lab.inventory.ledger import InventoryLedger
 
 from .test_policy_reproducibility import _policy_signature
 

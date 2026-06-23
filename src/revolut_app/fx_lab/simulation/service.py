@@ -3,7 +3,7 @@ from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 from uuid import uuid4
 
-from revolut_app.fx_lab.constants import (
+from revolut_app.fx_lab.shared.constants import (
     BPS_DENOMINATOR,
     DEFAULT_AMOUNT_MULTIPLIER,
     DEFAULT_HAWKES_ALPHA,
@@ -18,13 +18,15 @@ from revolut_app.fx_lab.constants import (
     ZERO_FLOAT,
     ZERO_INT,
 )
-from revolut_app.fx_lab.hawkes import HawkesLikeFXEventGenerator
-from revolut_app.fx_lab.models import FXQuote, QuoteRequest, StressRegime
-from revolut_app.fx_lab.quote_engine import QuoteEngine, StaticMidRateProvider
-from revolut_app.fx_lab.state_engine import InventoryLedger
-from revolut_app.fx_lab.stress import StressRegimeDetect
-from revolut_app.fx_lab.acceptance import AcceptanceModel
-from revolut_app.fx_lab.pnl import PnLLedger
+from revolut_app.fx_lab.market.event_generation import HawkesLikeFXEventGenerator
+from revolut_app.fx_lab.pricing.models import FXQuote, QuoteRequest
+from revolut_app.fx_lab.shared.enums import StressRegime
+from revolut_app.fx_lab.pricing.quote_engine import QuoteEngine
+from revolut_app.fx_lab.market.mid_rate import StaticMidRateProvider
+from revolut_app.fx_lab.inventory.ledger import InventoryLedger
+from revolut_app.fx_lab.inventory.stress import StressRegimeDetect
+from revolut_app.fx_lab.pricing.acceptance import AcceptanceModel
+from revolut_app.fx_lab.inventory.pnl import PnLLedger
 
 
 @dataclass

@@ -1,13 +1,13 @@
 import pytest
 
-from revolut_app.fx_lab.hamiltonian import (
+from revolut_app.fx_lab.risk.hamiltonian import (
     HamiltonianEngine,
     HamiltonianParameters,
     SignedCoupling,
 )
-from revolut_app.fx_lab.models import Currency
-from revolut_app.fx_lab.policy_comparison import PolicyComparisonEngine
-from revolut_app.fx_lab.policies import QuotePolicyName
+from revolut_app.fx_lab.shared.enums import Currency
+from revolut_app.fx_lab.experiments import PolicyComparisonEngine
+from revolut_app.fx_lab.pricing.policies import QuotePolicyName
 
 
 def test_zero_pressure_has_zero_hamiltonian():

@@ -1,11 +1,11 @@
 import pytest
 
-from revolut_app.fx_lab.models import HamiltonianPreset, Currency
-from revolut_app.fx_lab.policy_comparison import (
+from revolut_app.fx_lab.shared.enums import HamiltonianPreset, Currency
+from revolut_app.fx_lab.experiments import (
     PolicyComparisonEngine,
-    QuotePolicyName
 )
-from revolut_app.fx_lab.hamiltonian import (
+from revolut_app.fx_lab.pricing.policies import QuotePolicyName
+from revolut_app.fx_lab.risk.hamiltonian import (
     build_hamiltonian_parameters,
     build_hamiltonian_engine
 )
