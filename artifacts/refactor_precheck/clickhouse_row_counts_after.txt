@@ -1,0 +1,4 @@
+gold	dim_event_datasets	10
+gold	fact_fx_events	49297
+gold	fact_inventory_snapshots	156231
+gold	fact_simulation_runs	240
