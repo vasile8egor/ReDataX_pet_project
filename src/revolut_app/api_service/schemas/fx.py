@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from uuid import UUID
 
@@ -62,6 +62,7 @@ from revolut_app.fx_lab.models import (
     CustomerSegment,
     FXSide,
     StressRegime,
+    HamiltonianPreset,
 )
 from revolut_app.fx_lab.hedging import HedgeAction
 from revolut_app.fx_lab.pnl import PnLEventType
@@ -434,6 +435,25 @@ class PolicyComparisonRequest(BaseModel):
     )
     event_dataset_id: UUID | None = None
     simulation_start_at: datetime | None = None
+    hamiltonian_preset: HamiltonianPreset | None = None
+
+    @model_validator(mode='after')
+    def validate_hamiltonian_configuration(self):
+        if (
+            self.physics_mode == PhysicsMode.none
+            and self.hamiltonian_preset is not None
+        ):
+            raise ValueError(
+                'hamiltonian_preset must be null when physics mode is none'
+            )
+        if self.physics_mode in {
+            PhysicsMode.observer,
+            PhysicsMode.controller
+        } and self.hamiltonian_preset is None:
+            raise ValueError(
+                'hamiltonian_preset is required when physics mode is not none'
+            )
+        return self
 
 
 class ExperimentPersistenceResponse(BaseModel):
@@ -486,3 +506,7 @@ class PolicyComparisonResponse(BaseModel):
     best_policy_by_net_pnl: QuotePolicyName
     lowest_risk_policy: QuotePolicyName
     lowest_customer_spread_policy: QuotePolicyName
+
+    model_version: str
+    physics_mode: PhysicsMode
+    hamiltonian_preset: HamiltonianPreset | None

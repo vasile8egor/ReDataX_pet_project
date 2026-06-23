@@ -71,9 +71,10 @@ from revolut_app.loaders.fx_experiment_loader import (
 )
 from revolut_app.fx_lab.experiment_models import PhysicsMode
 from revolut_app.fx_lab.hamiltonian import (
-    HamiltonianEngine,
-    HamiltonianParameters,
+    HamiltonianPreset,
+    build_hamiltonian_engine,
 )
+from revolut_app.core.version import resolve_git_sha
 
 
 class FXQuoteService:
@@ -573,11 +574,11 @@ class FXQuoteService:
             )
             dataset_was_reused = True
 
-        hamiltonian_engine: HamiltonianEngine | None = None
-        if request.physics_mode == PhysicsMode.observer:
-            hamiltonian_parameters = HamiltonianParameters.threshold_v1()
-            hamiltonian_engine = HamiltonianEngine(hamiltonian_parameters)
-        elif request.physics_mode == PhysicsMode.controller:
+        hamiltonian_engine = self._build_hamiltonian_engine(
+            physics_mode=request.physics_mode,
+            preset=request.hamiltonian_preset,
+        )
+        if request.physics_mode == PhysicsMode.controller:
             raise HTTPException(
                 status_code=status.HTTP_501_NOT_IMPLEMENTED,
                 detail=(
@@ -594,6 +595,7 @@ class FXQuoteService:
             ),
             hamiltonian_engine=hamiltonian_engine,
         )
+
         dataset_rows = 0
         run_rows = 0
         snapshot_rows = 0
@@ -617,9 +619,15 @@ class FXQuoteService:
                 'snapshot_every_n_events': request.snapshot_every_n_events,
                 'event_dataset_id': str(event_dataset.event_dataset_id),
                 'event_dataset_reused': dataset_was_reused,
+                'git_sha': resolve_git_sha(),
                 'hamiltonian': (
                     hamiltonian_engine.parameters.as_dict()
                     if hamiltonian_engine is not None
+                    else None
+                ),
+                'hamiltonian_preset': (
+                    request.hamiltonian_preset.value
+                    if request.hamiltonian_preset is not None
                     else None
                 ),
             }
@@ -843,6 +851,9 @@ class FXQuoteService:
                 inventory_snapshot_rows=snapshot_rows,
                 event_rows=event_rows,
             ),
+            model_version=request.model_version,
+            physics_mode=request.physics_mode,
+            hamiltonian_preset=request.hamiltonian_preset,
         )
 
     @staticmethod
@@ -974,3 +985,19 @@ class FXQuoteService:
             pressures=pressures,
             states=states,
         )
+
+    def _build_hamiltonian_engine(
+        self, *,
+        physics_mode: PhysicsMode,
+        preset: HamiltonianPreset | None,
+    ):
+        if physics_mode == PhysicsMode.none:
+            return None
+        if physics_mode == PhysicsMode.controller:
+            raise HTTPException(
+                status_code=status.HTTP_501_NOT_IMPLEMENTED,
+                detail=(
+                    'Hamiltonian controller doesnt exist now'
+                ),
+            )
+        return build_hamiltonian_engine(preset)

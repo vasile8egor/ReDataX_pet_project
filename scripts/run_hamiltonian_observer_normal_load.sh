@@ -18,14 +18,9 @@ mapfile -t DATASET_IDS < <(
     "
 )
 
-if [[ "${#DATASET_IDS[@]}" -eq 0 ]]; then
-  echo "No baseline datasets found"
-  exit 1
-fi
-
 for dataset_id in "${DATASET_IDS[@]}"; do
   echo
-  echo "Observer replay: ${dataset_id}"
+  echo "Normal-load observer: ${dataset_id}"
 
   curl --fail-with-body \
     --request POST \
@@ -38,10 +33,10 @@ for dataset_id in "${DATASET_IDS[@]}"; do
         \"inventory_aware\",
         \"platform\"
       ],
-      \"amount_multiplier\": 500,
+      \"amount_multiplier\": 150,
       \"snapshot_every_n_events\": 20,
       \"persist_result\": true,
-      \"model_version\": \"hamiltonian-observer-v1\",
+      \"model_version\": \"hamiltonian-observer-v1-normal\",
       \"physics_mode\": \"observer\",
       \"hedging_policy\": \"none\",
       \"hamiltonian_preset\": \"local-v1\"
@@ -51,4 +46,4 @@ for dataset_id in "${DATASET_IDS[@]}"; do
   sleep 1
 done
 
-echo "Observer replays completed."
+echo "Normal-load observer runs completed."

@@ -333,7 +333,7 @@ SELECT
     datasets.alpha,
     datasets.beta
 FROM gold.fact_fx_events AS events
-ANY INNER JOIN gold.dim_event_datasets AS datasets
+INNER JOIN gold.dim_event_datasets AS datasets
     ON datasets.event_dataset_id = events.event_dataset_id
 WHERE events.event_dataset_id = %(event_dataset_id)s
 ORDER BY events.event_sequence
@@ -452,4 +452,42 @@ GROUP BY
     physics_mode,
     pricing_policy,
     regime
+"""
+
+FX_HAMILTONIAN_STATE_VIEW_Q = """
+CREATE VIEW IF NOT EXISTS gold.v_fx_hamiltonian_state AS
+SELECT
+    s.run_id,
+    s.comparison_id,
+    s.event_dataset_id,
+    s.model_version,
+    s.physics_mode,
+    s.pricing_policy,
+    s.event_index,
+    s.snapshot_ts,
+
+    any(s.regime) AS regime,
+
+    max(abs(s.phi)) AS max_abs_phi,
+    sqrt(sum(s.phi * s.phi)) AS phi_l2_norm,
+
+    max(s.h_total) AS h_total,
+    max(s.h_quadratic) AS h_quadratic,
+    max(s.h_quartic) AS h_quartic,
+    max(s.h_coupling) AS h_coupling,
+    max(s.h_external) AS h_external
+
+FROM gold.fact_inventory_snapshots AS s
+
+WHERE s.h_total IS NOT NULL
+
+GROUP BY
+    s.run_id,
+    s.comparison_id,
+    s.event_dataset_id,
+    s.model_version,
+    s.physics_mode,
+    s.pricing_policy,
+    s.event_index,
+    s.snapshot_ts
 """

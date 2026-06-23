@@ -14,6 +14,11 @@ from revolut_app.fx_lab.constants import (
 )
 
 
+class HamiltonianPreset(str, Enum):
+    local_v1 = 'local-v1'
+    coupled_v1 = 'coupled-v1'
+
+
 class Currency(str, Enum):
     GBP = 'GBP'
     EUR = 'EUR'

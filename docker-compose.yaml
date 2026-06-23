@@ -42,6 +42,7 @@ services:
       CLICKHOUSE_DATABASE: gold
     volumes:
       - ./src:/opt/airflow/src
+      - ./.git:/opt/airflow/.git:ro
     depends_on:
       postgres_main:
         condition: service_healthy

@@ -97,39 +97,44 @@ def test_observer_does_not_change_policy_result(fx_event_dataset):
         HamiltonianParameters.threshold_v1()
     )
     baseline = engine.compare(
-        policy_names=[
-            QuotePolicyName.inventory_aware
-        ],
+        policy_names=list(QuotePolicyName),
         event_dataset=fx_event_dataset,
         amount_multiplier=500.0,
         snapshot_every_n_events=10,
         hamiltonian_engine=None,
     )
     observer = engine.compare(
-        policy_names=[
-            QuotePolicyName.inventory_aware
-        ],
+        policy_names=list(QuotePolicyName),
         event_dataset=fx_event_dataset,
         amount_multiplier=500.0,
         snapshot_every_n_events=10,
         hamiltonian_engine=hamiltonian_engine,
     )
 
-    baseline_run = baseline.results[0]
-    observer_run = observer.results[0]
-
-    assert baseline_run.accepted_events == observer_run.accepted_events
-    assert baseline_run.rejected_events == observer_run.rejected_events
-    assert baseline_run.net_pnl_usd == observer_run.net_pnl_usd
-    assert (
-        baseline_run.final_inventory_pressure
-        == observer_run.final_inventory_pressure
-    )
-    assert all(
-        snapshot.h_total is None
-        for snapshot in baseline_run.snapshots
-    )
-    assert all(
-        snapshot.h_total is not None
-        for snapshot in observer_run.snapshots
-    )
+    for baseline_run, observer_run in zip(
+        baseline.results,
+        observer.results,
+        strict=True,
+    ):
+        assert baseline_run.policy == observer_run.policy
+        assert baseline_run.accepted_events == observer_run.accepted_events
+        assert baseline_run.rejected_events == observer_run.rejected_events
+        assert baseline_run.net_pnl_usd == observer_run.net_pnl_usd
+        assert baseline_run.funding_cost_usd == observer_run.funding_cost_usd
+        assert (
+            baseline_run.stress_time_fraction
+            == observer_run.stress_time_fraction
+        )
+        assert baseline_run.max_abs_pressure == observer_run.max_abs_pressure
+        assert (
+            baseline_run.final_inventory_pressure
+            == observer_run.final_inventory_pressure
+        )
+        assert all(
+            snapshot.h_total is None
+            for snapshot in baseline_run.snapshots
+        )
+        assert all(
+            snapshot.h_total is not None
+            for snapshot in observer_run.snapshots
+        )

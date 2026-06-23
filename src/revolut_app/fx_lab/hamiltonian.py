@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 from math import sqrt
 
 from revolut_app.fx_lab.constants import EPSILON
-from revolut_app.fx_lab.models import Currency
+from revolut_app.fx_lab.models import Currency, HamiltonianPreset
 
 
 @dataclass(frozen=True)
@@ -107,6 +107,60 @@ class HamiltonianParameters:
             external_strength=0.0,
         )
 
+    @classmethod
+    def threshold_coupled_v1(
+        cls, *,
+        elevated_pressure: float = 0.6,
+        stress_pressure: float = 0.9,
+        elevated_energy: float = 1.0,
+        stress_energy: float = 3.0,
+        coupling_strength: float = 0.2,
+        relation_signs: dict[tuple[Currency, Currency], int] | None = None,
+    ) -> HamiltonianParameters:
+        if relation_signs is None:
+            relation_signs = {
+                (Currency.EUR, Currency.GBP): 1,
+                (Currency.EUR, Currency.USD): -1,
+                (Currency.GBP, Currency.USD): -1,
+            }
+
+        local_parameters = cls.threshold_v1(
+            elevated_pressure=elevated_pressure,
+            stress_pressure=stress_pressure,
+            elevated_energy=elevated_energy,
+            stress_energy=stress_energy,
+        )
+
+        expected_pairs = {
+            (Currency.EUR, Currency.GBP),
+            (Currency.EUR, Currency.USD),
+            (Currency.GBP, Currency.USD),
+        }
+
+        if set(relation_signs) != expected_pairs:
+            raise ValueError(
+                'relation_signs must contain exactly the expected pairs'
+            )
+
+        couplings = tuple(
+            SignedCoupling(
+                left_currency=left,
+                right_currency=right,
+                strength=coupling_strength,
+                relation_sign=relation_sign,
+            )
+            for (left, right), relation_sign in relation_signs.items()
+        )
+
+        return cls(
+            preset_name='threshold-coupled-v1',
+            quadratic=local_parameters.quadratic,
+            quartic=local_parameters.quartic,
+            couplings=couplings,
+            external_field=local_parameters.external_field,
+            external_strength=0.0,
+        )
+
     def as_dict(self):
         return {
             'preset_name': self.preset_name,
@@ -123,7 +177,7 @@ class HamiltonianParameters:
                     'left_currency': (
                         coupling.left_currency.value
                     ),
-                        'right_currency': (
+                    'right_currency': (
                         coupling.right_currency.value
                     ),
                     'strength': (
@@ -255,3 +309,24 @@ class HamiltonianEngine:
             gradient_by_currency=gradient_by_currency,
             gradient_l2_norm=gradient_l2_norm,
         )
+
+
+def build_hamiltonian_parameters(
+    preset: HamiltonianPreset,
+) -> HamiltonianParameters:
+    if preset == HamiltonianPreset.local_v1:
+        return HamiltonianParameters.threshold_v1()
+    if preset == HamiltonianPreset.coupled_v1:
+        return HamiltonianParameters.threshold_coupled_v1()
+
+    raise ValueError(
+        f'Unsupported Hamiltonian preset: {preset}'
+    )
+
+
+def build_hamiltonian_engine(
+    preset: HamiltonianPreset,
+) -> HamiltonianEngine:
+    return HamiltonianEngine(
+        parameters=build_hamiltonian_parameters(preset)
+    )
