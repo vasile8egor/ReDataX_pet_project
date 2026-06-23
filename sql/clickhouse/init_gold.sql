@@ -143,6 +143,10 @@ CREATE TABLE IF NOT EXISTS gold.fact_inventory_snapshots(
     h_coupling Nullable(Float64),
     h_external Nullable(Float64),
 
+    controller_activated Nullable(Bool),
+    controller_h_before_event Nullable(Float64),
+    controller_spread_adjustment_bps Nullable(Float64),
+
     loaded_at DateTime64(6, 'UTC') DEFAULT now64(6)
 )
 ENGINE = MergeTree
