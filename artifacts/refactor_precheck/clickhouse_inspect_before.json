@@ -1,0 +1,335 @@
+[
+    {
+        "Id": "09bb97a87071ae5a31dfd1d57d9bba0e34f26294755f6eb37969466836be8c2a",
+        "Created": "2026-06-23T21:33:57.839706981Z",
+        "Path": "/entrypoint.sh",
+        "Args": [],
+        "State": {
+            "Status": "running",
+            "Running": true,
+            "Paused": false,
+            "Restarting": false,
+            "OOMKilled": false,
+            "Dead": false,
+            "Pid": 925478,
+            "ExitCode": 0,
+            "Error": "",
+            "StartedAt": "2026-06-23T21:33:58.019819139Z",
+            "FinishedAt": "0001-01-01T00:00:00Z",
+            "Health": {
+                "Status": "healthy",
+                "FailingStreak": 0,
+                "Log": [
+                    {
+                        "Start": "2026-06-24T00:53:22.583253104+03:00",
+                        "End": "2026-06-24T00:53:22.619203335+03:00",
+                        "ExitCode": 0,
+                        "Output": ""
+                    },
+                    {
+                        "Start": "2026-06-24T00:53:32.620280129+03:00",
+                        "End": "2026-06-24T00:53:32.661899763+03:00",
+                        "ExitCode": 0,
+                        "Output": ""
+                    },
+                    {
+                        "Start": "2026-06-24T00:53:42.663267052+03:00",
+                        "End": "2026-06-24T00:53:42.700450058+03:00",
+                        "ExitCode": 0,
+                        "Output": ""
+                    },
+                    {
+                        "Start": "2026-06-24T00:53:52.701280214+03:00",
+                        "End": "2026-06-24T00:53:52.738074256+03:00",
+                        "ExitCode": 0,
+                        "Output": ""
+                    },
+                    {
+                        "Start": "2026-06-24T00:54:02.73959501+03:00",
+                        "End": "2026-06-24T00:54:02.776476507+03:00",
+                        "ExitCode": 0,
+                        "Output": ""
+                    }
+                ]
+            }
+        },
+        "Image": "sha256:6d8f358747b59f7db044749eaf951e828e75cc16f9c487f855b114272c44b82c",
+        "ResolvConfPath": "/var/lib/docker/containers/09bb97a87071ae5a31dfd1d57d9bba0e34f26294755f6eb37969466836be8c2a/resolv.conf",
+        "HostnamePath": "/var/lib/docker/containers/09bb97a87071ae5a31dfd1d57d9bba0e34f26294755f6eb37969466836be8c2a/hostname",
+        "HostsPath": "/var/lib/docker/containers/09bb97a87071ae5a31dfd1d57d9bba0e34f26294755f6eb37969466836be8c2a/hosts",
+        "LogPath": "/var/lib/docker/containers/09bb97a87071ae5a31dfd1d57d9bba0e34f26294755f6eb37969466836be8c2a/09bb97a87071ae5a31dfd1d57d9bba0e34f26294755f6eb37969466836be8c2a-json.log",
+        "Name": "/clickhouse",
+        "RestartCount": 0,
+        "Driver": "overlayfs",
+        "Platform": "linux",
+        "MountLabel": "",
+        "ProcessLabel": "",
+        "AppArmorProfile": "docker-default",
+        "ExecIDs": null,
+        "HostConfig": {
+            "Binds": [
+                "/home/vasile8/pet-projects/revolut_pet_project/sql/clickhouse/init_gold.sql:/docker-entrypoint-initdb.d/init_gold.sql:rw",
+                "revolut_pet_project_clickhouse_data:/var/lib/clickhouse:rw"
+            ],
+            "ContainerIDFile": "",
+            "LogConfig": {
+                "Type": "json-file",
+                "Config": {}
+            },
+            "NetworkMode": "revolut_pet_project_revolut_network",
+            "PortBindings": {
+                "8123/tcp": [
+                    {
+                        "HostIp": "",
+                        "HostPort": "8123"
+                    }
+                ],
+                "9000/tcp": [
+                    {
+                        "HostIp": "",
+                        "HostPort": "9000"
+                    }
+                ]
+            },
+            "RestartPolicy": {
+                "Name": "no",
+                "MaximumRetryCount": 0
+            },
+            "AutoRemove": false,
+            "VolumeDriver": "",
+            "VolumesFrom": null,
+            "ConsoleSize": [
+                0,
+                0
+            ],
+            "CapAdd": null,
+            "CapDrop": null,
+            "CgroupnsMode": "private",
+            "Dns": null,
+            "DnsOptions": null,
+            "DnsSearch": null,
+            "ExtraHosts": [],
+            "GroupAdd": null,
+            "IpcMode": "private",
+            "Cgroup": "",
+            "Links": null,
+            "OomScoreAdj": 0,
+            "PidMode": "",
+            "Privileged": false,
+            "PublishAllPorts": false,
+            "ReadonlyRootfs": false,
+            "SecurityOpt": null,
+            "UTSMode": "",
+            "UsernsMode": "",
+            "ShmSize": 67108864,
+            "Runtime": "runc",
+            "Isolation": "",
+            "CpuShares": 0,
+            "Memory": 0,
+            "NanoCpus": 0,
+            "CgroupParent": "",
+            "BlkioWeight": 0,
+            "BlkioWeightDevice": null,
+            "BlkioDeviceReadBps": null,
+            "BlkioDeviceWriteBps": null,
+            "BlkioDeviceReadIOps": null,
+            "BlkioDeviceWriteIOps": null,
+            "CpuPeriod": 0,
+            "CpuQuota": 0,
+            "CpuRealtimePeriod": 0,
+            "CpuRealtimeRuntime": 0,
+            "CpusetCpus": "",
+            "CpusetMems": "",
+            "Devices": null,
+            "DeviceCgroupRules": null,
+            "DeviceRequests": null,
+            "MemoryReservation": 0,
+            "MemorySwap": 0,
+            "MemorySwappiness": null,
+            "OomKillDisable": null,
+            "PidsLimit": null,
+            "Ulimits": null,
+            "CpuCount": 0,
+            "CpuPercent": 0,
+            "IOMaximumIOps": 0,
+            "IOMaximumBandwidth": 0,
+            "MaskedPaths": [
+                "/proc/acpi",
+                "/proc/asound",
+                "/proc/interrupts",
+                "/proc/kcore",
+                "/proc/keys",
+                "/proc/latency_stats",
+                "/proc/sched_debug",
+                "/proc/scsi",
+                "/proc/timer_list",
+                "/proc/timer_stats",
+                "/sys/devices/virtual/powercap",
+                "/sys/firmware",
+                "/sys/devices/system/cpu/cpu0/thermal_throttle",
+                "/sys/devices/system/cpu/cpu1/thermal_throttle",
+                "/sys/devices/system/cpu/cpu2/thermal_throttle",
+                "/sys/devices/system/cpu/cpu3/thermal_throttle",
+                "/sys/devices/system/cpu/cpu4/thermal_throttle",
+                "/sys/devices/system/cpu/cpu5/thermal_throttle",
+                "/sys/devices/system/cpu/cpu6/thermal_throttle",
+                "/sys/devices/system/cpu/cpu7/thermal_throttle"
+            ],
+            "ReadonlyPaths": [
+                "/proc/bus",
+                "/proc/fs",
+                "/proc/irq",
+                "/proc/sys",
+                "/proc/sysrq-trigger"
+            ]
+        },
+        "Storage": {
+            "RootFS": {
+                "Snapshot": {
+                    "Name": "overlayfs"
+                }
+            }
+        },
+        "Mounts": [
+            {
+                "Type": "bind",
+                "Source": "/home/vasile8/pet-projects/revolut_pet_project/sql/clickhouse/init_gold.sql",
+                "Destination": "/docker-entrypoint-initdb.d/init_gold.sql",
+                "Mode": "rw",
+                "RW": true,
+                "Propagation": "rprivate"
+            },
+            {
+                "Type": "volume",
+                "Name": "revolut_pet_project_clickhouse_data",
+                "Source": "/var/lib/docker/volumes/revolut_pet_project_clickhouse_data/_data",
+                "Destination": "/var/lib/clickhouse",
+                "Driver": "local",
+                "Mode": "rw",
+                "RW": true,
+                "Propagation": ""
+            }
+        ],
+        "Config": {
+            "Hostname": "clickhouse",
+            "Domainname": "",
+            "User": "",
+            "AttachStdin": false,
+            "AttachStdout": true,
+            "AttachStderr": true,
+            "ExposedPorts": {
+                "8123/tcp": {},
+                "9000/tcp": {},
+                "9009/tcp": {}
+            },
+            "Tty": false,
+            "OpenStdin": false,
+            "StdinOnce": false,
+            "Env": [
+                "CLICKHOUSE_USER=default",
+                "CLICKHOUSE_PASSWORD=default",
+                "CLICKHOUSE_DB=gold",
+                "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+                "LANG=en_US.UTF-8",
+                "TZ=UTC",
+                "CLICKHOUSE_CONFIG=/etc/clickhouse-server/config.xml"
+            ],
+            "Cmd": null,
+            "Healthcheck": {
+                "Test": [
+                    "CMD",
+                    "wget",
+                    "--spider",
+                    "-q",
+                    "localhost:8123/ping"
+                ],
+                "Interval": 10000000000,
+                "Timeout": 5000000000,
+                "Retries": 5
+            },
+            "Image": "clickhouse/clickhouse-server",
+            "Volumes": {
+                "/var/lib/clickhouse": {}
+            },
+            "WorkingDir": "",
+            "Entrypoint": [
+                "/entrypoint.sh"
+            ],
+            "Labels": {
+                "com.clickhouse.build.version": "26.4.2.10",
+                "com.docker.compose.config-hash": "05a31e2449b77b8a7f765fd3bc0ae2126b9a6f79036309ea903b5c22e625fce0",
+                "com.docker.compose.container-number": "1",
+                "com.docker.compose.depends_on": "postgres_main:service_started:false",
+                "com.docker.compose.image": "sha256:6d8f358747b59f7db044749eaf951e828e75cc16f9c487f855b114272c44b82c",
+                "com.docker.compose.oneoff": "False",
+                "com.docker.compose.project": "revolut_pet_project",
+                "com.docker.compose.project.config_files": "/home/vasile8/pet-projects/revolut_pet_project/docker-compose.yaml",
+                "com.docker.compose.project.working_dir": "/home/vasile8/pet-projects/revolut_pet_project",
+                "com.docker.compose.service": "clickhouse",
+                "com.docker.compose.version": "5.1.4",
+                "org.opencontainers.image.version": "22.04"
+            }
+        },
+        "NetworkSettings": {
+            "SandboxID": "91362a7cceda93902186a7eef9c60dbf112d2e039d64278e6e32e48221b12b70",
+            "SandboxKey": "/var/run/docker/netns/91362a7cceda",
+            "Ports": {
+                "8123/tcp": [
+                    {
+                        "HostIp": "0.0.0.0",
+                        "HostPort": "8123"
+                    },
+                    {
+                        "HostIp": "::",
+                        "HostPort": "8123"
+                    }
+                ],
+                "9000/tcp": [
+                    {
+                        "HostIp": "0.0.0.0",
+                        "HostPort": "9000"
+                    },
+                    {
+                        "HostIp": "::",
+                        "HostPort": "9000"
+                    }
+                ],
+                "9009/tcp": null
+            },
+            "Networks": {
+                "revolut_pet_project_revolut_network": {
+                    "IPAMConfig": null,
+                    "Links": null,
+                    "Aliases": [
+                        "clickhouse",
+                        "clickhouse"
+                    ],
+                    "DriverOpts": null,
+                    "GwPriority": 0,
+                    "NetworkID": "e72927607e8a6894df4036f9fa2fcaa1eaf792d81af7a7263bf391021bea3c8b",
+                    "EndpointID": "109ec4a91f0f4d33a15edcc6ce9b9c3fb9a895911896d164cb9606d9e4c6a310",
+                    "Gateway": "172.19.0.1",
+                    "IPAddress": "172.19.0.3",
+                    "MacAddress": "32:db:37:ed:10:40",
+                    "IPPrefixLen": 16,
+                    "IPv6Gateway": "",
+                    "GlobalIPv6Address": "",
+                    "GlobalIPv6PrefixLen": 0,
+                    "DNSNames": [
+                        "clickhouse",
+                        "09bb97a87071"
+                    ]
+                }
+            }
+        },
+        "ImageManifestDescriptor": {
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "digest": "sha256:d23c606451d38bf4e5b5674bdf8b9074b9ef9cd78a755ea7667c2b27f08d45f4",
+            "size": 2374,
+            "platform": {
+                "architecture": "amd64",
+                "os": "linux"
+            }
+        }
+    }
+]

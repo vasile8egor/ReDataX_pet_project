@@ -3,7 +3,7 @@ from uuid import UUID
 
 import pytest
 
-from revolut_app.fx_lab.hawkes import HawkesLikeFXEventGenerator
+from revolut_app.fx_lab.market.event_generation import HawkesLikeFXEventGenerator
 
 
 @pytest.fixture

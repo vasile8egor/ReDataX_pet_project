@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 from uuid import UUID
 
-from revolut_app.fx_lab.hawkes import HawkesLikeFXEventGenerator
+from revolut_app.fx_lab.market.event_generation import HawkesLikeFXEventGenerator
 
 
 def test_same_seed_and_dataset_id_produce_same_dataset(

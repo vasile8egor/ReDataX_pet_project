@@ -1,7 +1,5 @@
-from enum import Enum
+"""DEPRECATED: use revolut_app.fx_lab.experiments.models instead."""
 
+from revolut_app.fx_lab.experiments.models import PhysicsMode
 
-class PhysicsMode(str, Enum):
-    none = 'none'
-    observer = 'observer'
-    controller = 'controller'
+__all__ = ['PhysicsMode']

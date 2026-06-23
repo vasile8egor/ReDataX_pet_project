@@ -27,7 +27,7 @@ from revolut_app.api_service.schemas.fx import (
     RGFlowResponse,
     RiskSnapshotResponse,
 )
-from revolut_app.fx_lab.constants import (
+from revolut_app.fx_lab.shared.constants import (
     BPS_DENOMINATOR,
     COMPONENT_BPS_PRECISION,
     PNL_PRECISION,
@@ -39,27 +39,30 @@ from revolut_app.fx_lab.execution_constants import (
     EXECUTION_AMOUNT_PRECISION,
     EXECUTION_COST_PRECISION,
 )
-from revolut_app.fx_lab.hawkes import HawkesLikeFXEventGenerator
-from revolut_app.fx_lab.models import (
-    Currency,
-    CustomerSegment,
+from revolut_app.fx_lab.market.event_generation import HawkesLikeFXEventGenerator
+from revolut_app.fx_lab.experiments.models import (
     FXEvent,
     FXEventDataset,
-    FXSide,
-    QuoteRequest,
 )
-from revolut_app.fx_lab.quote_engine import QuoteEngine, StaticMidRateProvider
-from revolut_app.fx_lab.state_engine import InventoryLedger
-from revolut_app.fx_lab.stress import StressRegimeDetect
+from revolut_app.fx_lab.pricing.models import QuoteRequest
+from revolut_app.fx_lab.shared.enums import (
+    Currency,
+    CustomerSegment,
+    FXSide,
+)
+from revolut_app.fx_lab.market.mid_rate import StaticMidRateProvider
+from revolut_app.fx_lab.pricing.quote_engine import QuoteEngine
+from revolut_app.fx_lab.inventory.ledger import InventoryLedger
+from revolut_app.fx_lab.inventory.stress import StressRegimeDetect
 from revolut_app.fx_lab.simulation import (
     DaySimulationEngine,
     DaySimulationResult,
     InventorySnapshotPoint,
 )
-from revolut_app.fx_lab.rg import CoarseGrainingEngine
-from revolut_app.fx_lab.hedging import HedgeEngine, HedgeAction
-from revolut_app.fx_lab.pnl import PnLLedger
-from revolut_app.fx_lab.policy_comparison import (
+from revolut_app.fx_lab.risk.rg import CoarseGrainingEngine
+from revolut_app.fx_lab.inventory.hedging import HedgeEngine, HedgeAction
+from revolut_app.fx_lab.inventory.pnl import PnLLedger
+from revolut_app.fx_lab.experiments import (
     PolicyComparisonEngine,
 )
 from revolut_app.loaders.fx_experiment_loader import (
@@ -69,11 +72,11 @@ from revolut_app.loaders.fx_experiment_loader import (
     InventorySnapshotRecord,
     SimulationRunRecord,
 )
-from revolut_app.fx_lab.experiment_models import PhysicsMode
-from revolut_app.fx_lab.hamiltonian import (
-    HamiltonianPreset,
+from revolut_app.fx_lab.experiments.models import PhysicsMode
+from revolut_app.fx_lab.risk.hamiltonian import (
     build_hamiltonian_engine,
 )
+from revolut_app.fx_lab.shared.enums import HamiltonianPreset
 from revolut_app.core.version import resolve_git_sha
 
 

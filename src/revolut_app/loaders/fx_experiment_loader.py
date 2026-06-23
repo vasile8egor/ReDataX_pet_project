@@ -7,7 +7,7 @@ from datetime import datetime
 from uuid import UUID
 
 from clickhouse_driver import Client
-from revolut_app.fx_lab.constants import (
+from revolut_app.fx_lab.shared.constants import (
     CLICKHOUSE_SNAPSHOT_INSERT_BATCH_SIZE,
     ZERO_INT,
 )

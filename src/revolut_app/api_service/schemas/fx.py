@@ -4,7 +4,7 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 
 from uuid import UUID
 
-from revolut_app.fx_lab.constants import (
+from revolut_app.fx_lab.shared.constants import (
     DEFAULT_AMOUNT_MULTIPLIER,
     DEFAULT_HAWKES_ALPHA,
     DEFAULT_HAWKES_BETA,
@@ -57,17 +57,17 @@ from revolut_app.fx_lab.execution_constants import (
     MIN_HEDGE_ACTIONS,
     MIN_HEDGE_COST_BPS,
 )
-from revolut_app.fx_lab.models import (
+from revolut_app.fx_lab.shared.enums import (
     Currency,
     CustomerSegment,
     FXSide,
     StressRegime,
     HamiltonianPreset,
 )
-from revolut_app.fx_lab.hedging import HedgeAction
-from revolut_app.fx_lab.pnl import PnLEventType
-from revolut_app.fx_lab.policies import QuotePolicyName
-from revolut_app.fx_lab.experiment_models import PhysicsMode
+from revolut_app.fx_lab.inventory.hedging import HedgeAction
+from revolut_app.fx_lab.inventory.pnl import PnLEventType
+from revolut_app.fx_lab.pricing.policies import QuotePolicyName
+from revolut_app.fx_lab.experiments.models import PhysicsMode
 
 
 class FXQuoteRequest(BaseModel):

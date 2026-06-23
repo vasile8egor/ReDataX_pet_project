@@ -1,0 +1,29 @@
+from enum import Enum
+
+
+class HamiltonianPreset(str, Enum):
+    local_v1 = 'local-v1'
+    coupled_v1 = 'coupled-v1'
+
+
+class Currency(str, Enum):
+    GBP = 'GBP'
+    EUR = 'EUR'
+    USD = 'USD'
+
+
+class FXSide(str, Enum):
+    buy = 'buy'
+    sell = 'sell'
+
+
+class CustomerSegment(str, Enum):
+    retail = 'retail'
+    premium = 'premium'
+    business = 'business'
+
+
+class StressRegime(str, Enum):
+    calm = 'calm'
+    elevated = 'elevated'
+    stress = 'stress'
