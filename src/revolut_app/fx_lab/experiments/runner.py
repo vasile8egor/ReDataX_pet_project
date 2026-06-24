@@ -147,12 +147,13 @@ class PolicyExperimentRunner:
 
             pressures_before_event = ledger.pressures()
 
-            controller_hamiltonian = None
             control_decision = None
 
             if hamiltonian_controller is not None:
-                controller_hamiltonian, control_decision = (
-                    hamiltonian_controller.evaluate(pressures_before_event)
+                _, control_decision = (
+                    hamiltonian_controller.evaluate(
+                        pressures=pressures_before_event
+                    )
                 )
 
             hamiltonian_penalty_bps = (
@@ -163,11 +164,7 @@ class PolicyExperimentRunner:
 
             quote = quote_engine.quote(
                 request=request,
-                hamiltonian_penalty_bps=(
-                    control_decision.applied_adjustment_bps
-                    if control_decision is not None
-                    else 0.0
-                ),
+                hamiltonian_penalty_bps=hamiltonian_penalty_bps,
             )
 
             decision = acceptance_model.decide(quote)

@@ -580,15 +580,14 @@ class FXQuoteService:
             )
             dataset_was_reused = True
 
-        # hamiltonian_engine = self._build_hamiltonian_engine(
-        #     physics_mode=request.physics_mode,
-        #     preset=request.hamiltonian_preset,
-        # )
+        hamiltonian_engine = None
+        hamiltonian_controller = None
+
         if request.physics_mode == PhysicsMode.observer:
             hamiltonian_engine = build_hamiltonian_engine(
                 request.hamiltonian_preset
             )
-        if request.physics_mode == PhysicsMode.controller:
+        elif request.physics_mode == PhysicsMode.controller:
             hamiltonian_controller = build_hamiltonian_controller(
                 request.hamiltonian_preset
             )
@@ -662,7 +661,7 @@ class FXQuoteService:
                         'max_adjustment_bps': (
                             hamiltonian_controller
                             .parameters
-                            .max_adjustment
+                            .max_adjustment_bps
                         ),
                     }
                     if hamiltonian_controller is not None

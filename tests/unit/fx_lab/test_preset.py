@@ -6,6 +6,8 @@ from revolut_app.fx_lab.experiments import (
 )
 from revolut_app.fx_lab.pricing.policies import QuotePolicyName
 from revolut_app.fx_lab.risk.hamiltonian import (
+    HamiltonianController,
+    build_hamiltonian_controller,
     build_hamiltonian_parameters,
     build_hamiltonian_engine
 )
@@ -66,6 +68,22 @@ def test_eur_usd_negative_relation():
     aligned = engine.evaluate({'EUR': 0.7, 'GBP': 0.0, 'USD': -0.7, })
     same_sign = engine.evaluate({'EUR': 0.7, 'GBP': 0.0, 'USD': 0.7, })
     assert same_sign.coupling > aligned.coupling
+
+
+def test_build_hamiltonian_controller():
+    controller = build_hamiltonian_controller(
+        HamiltonianPreset.local_v1
+    )
+
+    assert isinstance(
+        controller,
+        HamiltonianController,
+    )
+
+    assert (
+        controller.parameters.activation_energy
+        == pytest.approx(0.70)
+    )
 
 
 def test_coupled_observer_does_not_change_business_results(
@@ -130,4 +148,51 @@ def test_coupled_observer_does_not_change_business_results(
         snapshot.h_coupling is not None
         and snapshot.h_coupling > 0.0
         for snapshot in coupled_run.snapshots
+    )
+
+    assert all(
+        snapshot.controller_activated is None
+        for run in coupled_result.results
+        for snapshot in run.snapshots
+    )
+
+
+def test_controller_snapshots_capture_activation(
+    fx_event_dataset,
+):
+    comparison_engine = PolicyComparisonEngine()
+
+    result = comparison_engine.compare(
+        policy_names=[
+            QuotePolicyName.inventory_aware,
+        ],
+        event_dataset=fx_event_dataset,
+        amount_multiplier=500.0,
+        snapshot_every_n_events=10,
+        hamiltonian_controller=(
+            build_hamiltonian_controller(
+                HamiltonianPreset.local_v1
+            )
+        ),
+    )
+
+    controller_snapshots = [
+        snapshot
+        for run in result.results
+        for snapshot in run.snapshots
+        if snapshot.controller_activated is not None
+    ]
+
+    assert controller_snapshots
+
+    assert any(
+        snapshot.controller_activated
+        for snapshot in controller_snapshots
+    )
+
+    assert any(
+        snapshot.controller_spread_adjustment_bps > 0
+        for snapshot in controller_snapshots
+        if snapshot.controller_spread_adjustment_bps
+        is not None
     )

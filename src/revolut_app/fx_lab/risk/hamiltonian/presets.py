@@ -1,4 +1,7 @@
 from revolut_app.fx_lab.risk.hamiltonian.engine import HamiltonianEngine
+from revolut_app.fx_lab.risk.hamiltonian.controller import (
+    HamiltonianController,
+)
 from revolut_app.fx_lab.risk.hamiltonian.models import (
     HamiltonianParameters,
     HamiltonianControllerParameters,
@@ -27,12 +30,14 @@ def build_hamiltonian_engine(
     )
 
 
-def build_hamiltonian_controller(preset: HamiltonianPreset):
+def build_hamiltonian_controller(
+    preset: HamiltonianPreset,
+) -> HamiltonianController:
     if preset != HamiltonianPreset.local_v1:
         raise ValueError(
             'Controller v1 supports only local_v1'
         )
-    return HamiltonianControllerParameters(
+    return HamiltonianController(
         engine=build_hamiltonian_engine(preset),
         parameters=HamiltonianControllerParameters(
             activation_energy=0.7,
