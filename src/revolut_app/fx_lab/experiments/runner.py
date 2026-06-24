@@ -106,6 +106,15 @@ class PolicyExperimentRunner:
         else:
             initial_hamiltonian = None
 
+        active_hamiltonian_engine = (
+            hamiltonian_engine if hamiltonian_engine is not None
+            else (
+                hamiltonian_controller.engine
+                if hamiltonian_controller is not None
+                else None
+            )
+        )
+
         snapshots.extend(
             capture_inventory_snapshots(
                 event_index=ZERO_INT,
@@ -124,6 +133,7 @@ class PolicyExperimentRunner:
                 controller_activated=None,
                 controller_h_before_event=None,
                 controller_spread_adjustment_bps=None,
+                transition=None
             )
         )
 
@@ -145,7 +155,22 @@ class PolicyExperimentRunner:
                 amount=event.request.amount * amount_multiplier,
             )
 
+            mid_rate = quote_engine.get_mid_rate(request)
+
             pressures_before_event = ledger.pressures()
+
+            transition = None
+
+            if active_hamiltonian_engine is not None:
+                projected_ledger = ledger.project_after_client_fx(
+                    request=request,
+                    mid_rate=mid_rate,
+                )
+
+                transition = active_hamiltonian_engine.evaluate_transition(
+                    pressures_before=pressures_before_event,
+                    pressures_after=projected_ledger.pressures(),
+                )
 
             control_decision = None
 
@@ -164,6 +189,7 @@ class PolicyExperimentRunner:
 
             quote = quote_engine.quote(
                 request=request,
+                mid_rate=mid_rate,
                 hamiltonian_penalty_bps=hamiltonian_penalty_bps,
             )
 
@@ -190,7 +216,7 @@ class PolicyExperimentRunner:
 
                 ledger.apply_client_fx(
                     request=request,
-                    mid_rate=quote.mid_rate,
+                    mid_rate=mid_rate,
                 )
             else:
                 rejected_events += 1
@@ -253,6 +279,7 @@ class PolicyExperimentRunner:
                             spread_revenue_total_usd
                         ),
                         hamiltonian=hamiltonian,
+                        transition=transition,
                         controller_activated=(
                             control_decision.activated
                             if control_decision is not None

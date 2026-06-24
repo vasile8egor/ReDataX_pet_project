@@ -327,6 +327,9 @@ class FXExperimentClickHouseLoader:
                 ),
                 item.controller_h_before_event,
                 item.controller_spread_adjustment_bps,
+                item.transition_h_before_event,
+                item.transition_h_after_if_accepted,
+                item.transition_delta_h_if_accepted,
             )
             for item in snapshots
         ]
@@ -472,3 +475,7 @@ class InventorySnapshotRecord:
     controller_activated: bool | None = None
     controller_h_before_event: float | None = None
     controller_spread_adjustment_bps: float | None = None
+
+    transition_h_before_event: float | None = None
+    transition_h_after_if_accepted: float | None = None
+    transition_delta_h_if_accepted: float | None = None

@@ -7,6 +7,31 @@ from revolut_app.fx_lab.risk.hamiltonian.models import (
     HamiltonianControllerParameters,
 )
 from revolut_app.fx_lab.shared.enums import HamiltonianPreset
+from revolut_app.fx_lab.risk.hamiltonian.directional_controller import (
+    DirectionalHamiltonianController,
+)
+from revolut_app.fx_lab.risk.hamiltonian.models import (
+    DirectionalHamiltonianControllerParameters,
+)
+
+
+def build_directional_hamiltonian_controller(preset: HamiltonianPreset):
+    if preset != HamiltonianPreset.local_v1:
+        raise ValueError(
+            "Directional controller v2 currently "
+            "supports only local-v1"
+        )
+
+    return DirectionalHamiltonianController(
+        engine=build_hamiltonian_engine(preset),
+        parameters=(
+            DirectionalHamiltonianControllerParameters(
+                spread_gain_bps_per_delta_energy=18.0,
+                max_adjustment_bps=6.0,
+                delta_h_epsilon=1e-6,
+            )
+        ),
+    )
 
 
 def build_hamiltonian_parameters(

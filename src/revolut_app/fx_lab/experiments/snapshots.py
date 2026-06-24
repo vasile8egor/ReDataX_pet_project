@@ -3,13 +3,16 @@ from uuid import UUID
 
 from revolut_app.fx_lab.experiments.models import PolicyInventorySnapshot
 from revolut_app.fx_lab.inventory.ledger import InventoryLedger
-from revolut_app.fx_lab.risk.hamiltonian.models import HamiltonianBreakdown
 from revolut_app.fx_lab.shared.constants import (
     EPSILON,
     RATIO_PRECISION,
     ZERO_FLOAT,
 )
 from revolut_app.fx_lab.shared.enums import StressRegime
+from revolut_app.fx_lab.risk.hamiltonian.models import (
+    HamiltonianBreakdown,
+    HamiltonianTransitionEvaluation,
+)
 
 
 def capture_inventory_snapshots(
@@ -29,6 +32,7 @@ def capture_inventory_snapshots(
     controller_activated: bool | None = None,
     controller_h_before_event: float | None = None,
     controller_spread_adjustment_bps: float | None = None,
+    transition: HamiltonianTransitionEvaluation | None = None,
 ):
     result: list[PolicyInventorySnapshot] = []
 
@@ -172,6 +176,31 @@ def capture_inventory_snapshots(
                 controller_spread_adjustment_bps=(
                     round(controller_spread_adjustment_bps, RATIO_PRECISION)
                     if controller_spread_adjustment_bps is not None
+                    else None
+                ),
+                transition_h_before_event=(
+                    round(
+                        transition.h_before,
+                        RATIO_PRECISION,
+                    )
+                    if transition is not None
+                    else None
+                ),
+                transition_h_after_if_accepted=(
+                    round(
+                        transition.h_after,
+                        RATIO_PRECISION,
+                    )
+                    if transition is not None
+                    else None
+                ),
+
+                transition_delta_h_if_accepted=(
+                    round(
+                        transition.delta_total,
+                        RATIO_PRECISION,
+                    )
+                    if transition is not None
                     else None
                 ),
             )

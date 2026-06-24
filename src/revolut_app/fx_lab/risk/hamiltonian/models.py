@@ -234,7 +234,7 @@ class HamiltonianControllerParameters:
 
 
 @dataclass(frozen=True)
-class HamiltonianTransitionEvalution:
+class HamiltonianTransitionEvaluation:
     before: HamiltonianBreakdown
     after: HamiltonianBreakdown
     delta_total: float
@@ -254,3 +254,43 @@ class HamiltonianTransitionEvalution:
     @property
     def is_risk_reducing(self):
         return self.delta_total < 0.0
+
+
+@dataclass(frozen=True)
+class DirectionalHamiltonianControllerParameters:
+    spread_gain_bps_per_delta_energy: float = 18.0
+    max_adjustment_bps: float = 6.0
+    delta_h_epsilon: float = 1e-6
+
+    def __post_init__(self):
+        if self.spread_gain_bps_per_delta_energy < 0.0:
+            raise ValueError(
+                'spread_bps_gain_bps_per_delta_energy must be non negative'
+            )
+
+        if self.max_adjustment_bps < 0.0:
+            raise ValueError(
+                "max_adjustment_bps "
+                "must be non-negative"
+            )
+
+        if self.delta_h_epsilon < 0.0:
+            raise ValueError(
+                "delta_h_epsilon "
+                "must be non-negative"
+            )
+
+
+@dataclass(frozen=True)
+class DirectionalHamiltonianControlDecision:
+    h_before: float
+    h_after_if_accepted: float
+    delta_h_if_accepted: float
+
+    positive_delta_h: float
+
+    raw_adjustment_bps: float
+    applied_adjustment_bps: float
+
+    activated: bool
+    cap_hit: bool

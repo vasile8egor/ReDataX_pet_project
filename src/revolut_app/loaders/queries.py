@@ -145,7 +145,16 @@ ALTER TABLE gold.fact_inventory_snapshots
         AFTER controller_activated,
     ADD COLUMN IF NOT EXISTS
         controller_spread_adjustment_bps Nullable(Float64)
-        AFTER controller_h_before_event
+        AFTER controller_h_before_event,
+    ADD COLUMN IF NOT EXISTS
+        transition_h_before_event Nullable(Float64)
+        AFTER controller_spread_adjustment_bps,
+    ADD COLUMN IF NOT EXISTS
+        transition_h_after_if_accepted Nullable(Float64)
+        AFTER transition_h_before_event,
+    ADD COLUMN IF NOT EXISTS
+        transition_delta_h_if_accepted Nullable(Float64)
+        AFTER transition_h_after_if_accepted
 '''
 
 INSERT_INTO_DIM_EVENT_Q = '''
@@ -244,7 +253,10 @@ INSERT INTO gold.fact_inventory_snapshots(
     h_external,
     controller_activated,
     controller_h_before_event,
-    controller_spread_adjustment_bps
+    controller_spread_adjustment_bps,
+    transition_h_before_event,
+    transition_h_after_if_accepted,
+    transition_delta_h_if_accepted
 )
 VALUES
 '''

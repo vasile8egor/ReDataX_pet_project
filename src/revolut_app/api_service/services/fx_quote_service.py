@@ -814,6 +814,17 @@ class FXQuoteService:
                     controller_spread_adjustment_bps=(
                         snapshot.controller_spread_adjustment_bps
                     ),
+                    transition_h_before_event=(
+                        snapshot.transition_h_before_event
+                    ),
+
+                    transition_h_after_if_accepted=(
+                        snapshot.transition_h_after_if_accepted
+                    ),
+
+                    transition_delta_h_if_accepted=(
+                        snapshot.transition_delta_h_if_accepted
+                    ),
                 )
                 for policy_result in result.results
                 for snapshot in policy_result.snapshots

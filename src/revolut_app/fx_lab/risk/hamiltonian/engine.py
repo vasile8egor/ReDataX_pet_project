@@ -3,7 +3,7 @@ from math import sqrt
 from revolut_app.fx_lab.risk.hamiltonian.models import (
     HamiltonianBreakdown,
     HamiltonianParameters,
-    HamiltonianTransitionEvalution
+    HamiltonianTransitionEvaluation,
 )
 from revolut_app.fx_lab.shared.enums import Currency
 
@@ -107,29 +107,29 @@ class HamiltonianEngine:
         )
 
     def evaluate_transition(
-        self, *,
+        self,
+        *,
         pressures_before: dict[str, float],
-        pressures_after: dict[str, float]
-    ):
+        pressures_after: dict[str, float],
+    ) -> HamiltonianTransitionEvaluation:
         before_keys = set(pressures_before)
         after_keys = set(pressures_after)
 
         if before_keys != after_keys:
-            missing_after = sorted(before_keys-after_keys)
-            unexpected_after = sorted(after_keys-before_keys)
+            missing_after = sorted(before_keys - after_keys)
+            unexpected_after = sorted(after_keys - before_keys)
 
             raise ValueError(
                 'Pressure dimensions do not match: '
                 f'missing_after/unexpected_after='
                 f'{missing_after}/{unexpected_after}'
             )
-        
+
         before = self.evaluate(pressures_before)
         after = self.evaluate(pressures_after)
 
-        return HamiltonianTransitionEvalution(
+        return HamiltonianTransitionEvaluation(
             before=before,
             after=after,
-            delta_total=after.total-before.total,
+            delta_total=after.total - before.total,
         )
-    
