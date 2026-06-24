@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
+from dataclasses import replace
 
 from revolut_app.fx_lab.shared.constants import (
     DEFAULT_CURRENCY_STATES,
@@ -220,6 +221,26 @@ class InventoryLedger:
                 EXECUTION_AMOUNT_PRECISION,
             ),
         }
+
+    def copy(self):
+        copied_states = {
+            currency: replace(state)
+            for currency, state in self.states.items()
+        }
+
+        return InventoryLedger(states=copied_states)
+
+    def project_after_client_fx(
+        self, *,
+        request: QuoteRequest,
+        mid_rate: float,
+    ):
+        projected_ledger = self.copy()
+        projected_ledger.apply_client_fx(
+            request=request,
+            mid_rate=mid_rate,
+        )
+        return projected_ledger
 
     @staticmethod
     def _update_order_flow(

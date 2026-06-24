@@ -34,15 +34,29 @@ class QuoteEngine:
             stress_detect=self.stress_detect
         )
 
+    def get_mid_rate(
+        self,
+        request: QuoteRequest,
+    ) -> float:
+        return self.mid_rate_provider.get_mid_rate(
+            base_currency=request.base_currency,
+            quote_currency=request.quote_currency,
+        )
+
     def quote(
             self,
             request: QuoteRequest,
             hamiltonian_penalty_bps: float = 0.0,
+            mid_rate: float | None = None,
     ) -> FXQuote:
-        mid_rate = self.mid_rate_provider.get_mid_rate(
-            base_currency=request.base_currency,
-            quote_currency=request.quote_currency,
+        resolved_mid_rate = (
+            mid_rate
+            if mid_rate is not None
+            else self.get_mid_rate(request)
         )
+
+        if resolved_mid_rate <= 0.0:
+            raise ValueError('mid_rate must be positive')
 
         pressures = self.ledger.pressures()
         states = {
@@ -69,13 +83,17 @@ class QuoteEngine:
         spread_multiplier = components.total_spread_bps / BPS_DENOMINATOR
 
         if request.side == FXSide.buy:
-            client_rate = mid_rate * (ONE_FLOAT + spread_multiplier)
+            client_rate = resolved_mid_rate * (
+                ONE_FLOAT + spread_multiplier
+            )
         else:
-            client_rate = mid_rate * (ONE_FLOAT - spread_multiplier)
+            client_rate = resolved_mid_rate * (
+                ONE_FLOAT - spread_multiplier
+            )
 
         return FXQuote.new(
             request=request,
-            mid_rate=mid_rate,
+            mid_rate=resolved_mid_rate,
             client_rate=round(client_rate, CLIENT_RATE_PRECISION),
             components=components,
             inventory_pressure=pressures,

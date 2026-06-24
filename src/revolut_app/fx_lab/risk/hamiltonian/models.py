@@ -231,3 +231,26 @@ class HamiltonianControllerParameters:
             raise ValueError(
                 'max_adjustment_bps must be positive'
             )
+
+
+@dataclass(frozen=True)
+class HamiltonianTransitionEvalution:
+    before: HamiltonianBreakdown
+    after: HamiltonianBreakdown
+    delta_total: float
+
+    @property
+    def h_before(self):
+        return self.before.total
+
+    @property
+    def h_after(self):
+        return self.after.total
+
+    @property
+    def is_risk_increasing(self):
+        return self.delta_total > 0.0
+
+    @property
+    def is_risk_reducing(self):
+        return self.delta_total < 0.0

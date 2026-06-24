@@ -7,6 +7,7 @@ from revolut_app.fx_lab.risk.hamiltonian.models import (
     HamiltonianControlDecision,
     HamiltonianControllerParameters,
     HamiltonianParameters,
+    HamiltonianTransitionEvalution,
     SignedCoupling,
 )
 from revolut_app.fx_lab.risk.hamiltonian.presets import (
@@ -22,6 +23,7 @@ __all__ = [
     'HamiltonianControllerParameters',
     'HamiltonianEngine',
     'HamiltonianParameters',
+    'HamiltonianTransitionEvalution',
     'SignedCoupling',
     'build_hamiltonian_controller',
     'build_hamiltonian_engine',
