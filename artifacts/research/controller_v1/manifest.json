@@ -1,0 +1,33 @@
+{
+  "experiment_name": "Hamiltonian Controller V1 Normal Load",
+  "git_commit": "ВСТАВИТЬ_FULL_SHA",
+  "git_tag": "controller-v1-normal-audit-2026-06-24",
+  "created_at": "2026-06-24",
+  "observer_model_version": "hamiltonian-observer-v1-normal",
+  "controller_model_version": "hamiltonian-controller-v1-normal",
+  "physics_mode_observer": "observer",
+  "physics_mode_controller": "controller",
+  "hamiltonian_preset": "local-v1",
+  "policies": [
+    "naive",
+    "inventory_aware",
+    "platform"
+  ],
+  "dataset_count": 10,
+  "amount_multiplier": 150,
+  "snapshot_every_n_events": 20,
+  "hedging_policy": "none",
+  "controller": {
+    "type": "symmetric_state_surcharge",
+    "activation_energy": 0.7,
+    "spread_gain_bps_per_energy": 2.0,
+    "max_adjustment_bps": 8.0,
+    "formula": "min(8, 2 * max(0, H_before - 0.7))"
+  },
+  "notes": [
+    "Observer computes Hamiltonian but does not affect pricing.",
+    "Controller changes spread before acceptance.",
+    "The same immutable event datasets and acceptance random streams are used.",
+    "Snapshot controller diagnostics are sampled every 20 events."
+  ]
+}
