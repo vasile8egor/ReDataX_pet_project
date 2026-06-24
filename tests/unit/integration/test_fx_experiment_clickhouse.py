@@ -1,6 +1,6 @@
 import pytest
 
-from revolut_app.loaders.fx_experiment_loader import FXEventRecord
+from revolut_app.loaders.fx_experiment_loader import FXEventDataset
 
 
 pytestmark = pytest.mark.integration

@@ -24,7 +24,11 @@ from revolut_app.fx_lab.shared.constants import (
     ZERO_FLOAT,
 )
 from revolut_app.fx_lab.pricing.models import FXQuoteComponents, QuoteRequest
-from revolut_app.fx_lab.shared.enums import CustomerSegment, FXSide, StressRegime
+from revolut_app.fx_lab.shared.enums import (
+    CustomerSegment,
+    FXSide,
+    StressRegime
+)
 from revolut_app.fx_lab.inventory.stress import StressRegimeDetect
 
 

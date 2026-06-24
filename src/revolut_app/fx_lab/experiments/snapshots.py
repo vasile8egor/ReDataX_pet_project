@@ -26,6 +26,9 @@ def capture_inventory_snapshots(
     cumulative_rejected_events: int,
     cumulative_spread_revenue_usd: float,
     hamiltonian: HamiltonianBreakdown | None,
+    controller_activated: bool | None = None,
+    controller_h_before_event: float | None = None,
+    controller_spread_adjustment_bps: float | None = None,
 ):
     result: list[PolicyInventorySnapshot] = []
 
@@ -158,6 +161,17 @@ def capture_inventory_snapshots(
                         RATIO_PRECISION,
                     )
                     if hamiltonian is not None
+                    else None
+                ),
+                controller_activated=controller_activated,
+                controller_h_before_event=(
+                    round(controller_h_before_event, RATIO_PRECISION)
+                    if controller_h_before_event is not None
+                    else None
+                ),
+                controller_spread_adjustment_bps=(
+                    round(controller_spread_adjustment_bps, RATIO_PRECISION)
+                    if controller_spread_adjustment_bps is not None
                     else None
                 ),
             )

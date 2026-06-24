@@ -39,7 +39,9 @@ from revolut_app.fx_lab.execution_constants import (
     EXECUTION_AMOUNT_PRECISION,
     EXECUTION_COST_PRECISION,
 )
-from revolut_app.fx_lab.market.event_generation import HawkesLikeFXEventGenerator
+from revolut_app.fx_lab.market.event_generation import (
+    HawkesLikeFXEventGenerator
+)
 from revolut_app.fx_lab.experiments.models import (
     FXEvent,
     FXEventDataset,
@@ -75,6 +77,7 @@ from revolut_app.loaders.fx_experiment_loader import (
 from revolut_app.fx_lab.experiments.models import PhysicsMode
 from revolut_app.fx_lab.risk.hamiltonian import (
     build_hamiltonian_engine,
+    build_hamiltonian_controller,
 )
 from revolut_app.fx_lab.shared.enums import HamiltonianPreset
 from revolut_app.core.version import resolve_git_sha
@@ -577,16 +580,17 @@ class FXQuoteService:
             )
             dataset_was_reused = True
 
-        hamiltonian_engine = self._build_hamiltonian_engine(
-            physics_mode=request.physics_mode,
-            preset=request.hamiltonian_preset,
-        )
+        # hamiltonian_engine = self._build_hamiltonian_engine(
+        #     physics_mode=request.physics_mode,
+        #     preset=request.hamiltonian_preset,
+        # )
+        if request.physics_mode == PhysicsMode.observer:
+            hamiltonian_engine = build_hamiltonian_engine(
+                request.hamiltonian_preset
+            )
         if request.physics_mode == PhysicsMode.controller:
-            raise HTTPException(
-                status_code=status.HTTP_501_NOT_IMPLEMENTED,
-                detail=(
-                    'Hamiltonian controller is not implemented yet'
-                ),
+            hamiltonian_controller = build_hamiltonian_controller(
+                request.hamiltonian_preset
             )
 
         result = self.policy_comparison_engine.compare(
@@ -597,12 +601,22 @@ class FXQuoteService:
                 request.snapshot_every_n_events
             ),
             hamiltonian_engine=hamiltonian_engine,
+            hamiltonian_controller=hamiltonian_controller,
         )
 
         dataset_rows = 0
         run_rows = 0
         snapshot_rows = 0
         event_rows = 0
+        active_hamiltonian_engine = (
+            hamiltonian_engine
+            if hamiltonian_engine is not None
+            else (
+                hamiltonian_controller.engine
+                if hamiltonian_controller is not None
+                else None
+            )
+        )
         if request.persist_result:
             parameters = {
                 'policies': [
@@ -624,13 +638,34 @@ class FXQuoteService:
                 'event_dataset_reused': dataset_was_reused,
                 'git_sha': resolve_git_sha(),
                 'hamiltonian': (
-                    hamiltonian_engine.parameters.as_dict()
-                    if hamiltonian_engine is not None
+                    active_hamiltonian_engine.parameters.as_dict()
+                    if active_hamiltonian_engine is not None
                     else None
                 ),
                 'hamiltonian_preset': (
                     request.hamiltonian_preset.value
                     if request.hamiltonian_preset is not None
+                    else None
+                ),
+                'hamiltonian_controller': (
+                    {
+                        'activation_energy': (
+                            hamiltonian_controller
+                            .parameters
+                            .activation_energy
+                        ),
+                        'spread_gain_bps_per_energy': (
+                            hamiltonian_controller
+                            .parameters
+                            .spread_gain_bps_per_energy
+                        ),
+                        'max_adjustment_bps': (
+                            hamiltonian_controller
+                            .parameters
+                            .max_adjustment
+                        ),
+                    }
+                    if hamiltonian_controller is not None
                     else None
                 ),
             }
@@ -770,6 +805,16 @@ class FXQuoteService:
                     h_quartic=snapshot.h_quartic,
                     h_coupling=snapshot.h_coupling,
                     h_external=snapshot.h_external,
+
+                    controller_activated=(
+                        snapshot.controller_activated
+                    ),
+                    controller_h_before_event=(
+                        snapshot.controller_h_before_event
+                    ),
+                    controller_spread_adjustment_bps=(
+                        snapshot.controller_spread_adjustment_bps
+                    ),
                 )
                 for policy_result in result.results
                 for snapshot in policy_result.snapshots

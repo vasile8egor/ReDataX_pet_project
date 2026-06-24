@@ -126,5 +126,5 @@ class PolicyInventorySnapshot:
     h_external: float | None = None
 
     controller_activated: bool | None = None
-    controller_h_before_event: bool | None = None
-    controller_spread_adjustment_bps: bool | None = None
+    controller_h_before_event: float | None = None
+    controller_spread_adjustment_bps: float | None = None

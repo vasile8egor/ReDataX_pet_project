@@ -131,10 +131,21 @@ ORDER BY (run_id, event_index, currency)
 
 ALTER_INVENTORY_SNAPSHOTS_Q = '''
 ALTER TABLE gold.fact_inventory_snapshots
-    ADD COLUMN IF NOT EXISTS source_event_id Nullable(UUID)
+    ADD COLUMN IF NOT EXISTS
+        source_event_id Nullable(UUID)
         AFTER event_index,
-    ADD COLUMN IF NOT EXISTS source_step_index Nullable(UInt64)
+    ADD COLUMN IF NOT EXISTS
+        source_step_index Nullable(UInt64)
         AFTER source_event_id
+    ADD COLUMN IF NOT EXISTS
+        controller_activated Nullable(bool)
+        AFTER h_external
+    ADD COLUMN IF NOT EXISTS
+        controller_h_before_event Nullable(Float64)
+        AFTER controller_activated
+    ADD COLUMN IF NOT EXISTS
+        controller_spread_adjustment_bps Nullable(Float64)
+        AFTER controller_h_before_event
 '''
 
 INSERT_INTO_DIM_EVENT_Q = '''
@@ -230,7 +241,10 @@ INSERT INTO gold.fact_inventory_snapshots(
     h_quadratic,
     h_quartic,
     h_coupling,
-    h_external
+    h_external,
+    controller_activated,
+    controller_h_before_event,
+    controller_spread_adjustment
 )
 VALUES
 '''
