@@ -14,7 +14,7 @@ class HamiltonianController:
         self.engine = engine
         self.parameters = parameters
 
-    def evalute(self, *, pressures: dict[str, float],):
+    def evaluate(self, *, pressures: dict[str, float],):
         breakdown = self.engine.evaluate(pressures)
         excess_energy = max(
             0.0, (
@@ -30,16 +30,15 @@ class HamiltonianController:
             raw_adjustment_bps, self.parameters.max_adjustment_bps
         )
 
-        return (
-            breakdown,
-            HamiltonianControlDecision(
-                h_total=breakdown.total,
-                activation_energy=self.parameters.activation_energy,
-                raw_adjustment_bps=raw_adjustment_bps,
-                applied_adjustment_bps=applied_adjustment_bps,
-                activated=(
-                    True if applied_adjustment_bps > 0.0
-                    else False
-                ),
+        decision = HamiltonianControlDecision(
+            h_total=breakdown.total,
+            activation_energy=self.parameters.activation_energy,
+            raw_adjustment_bps=raw_adjustment_bps,
+            applied_adjustment_bps=applied_adjustment_bps,
+            activated=(
+                True if applied_adjustment_bps > 0.0
+                else False
             ),
         )
+
+        return breakdown, decision

@@ -8,9 +8,9 @@ from revolut_app.fx_lab.shared.constants import (
 from revolut_app.fx_lab.inventory.ledger import InventoryLedger
 from revolut_app.fx_lab.inventory.stress import StressRegimeDetect
 from revolut_app.fx_lab.market.mid_rate import StaticMidRateProvider
+from revolut_app.fx_lab.shared.enums import FXSide
 from revolut_app.fx_lab.pricing.models import (
     FXQuote,
-    FXSide,
     QuoteRequest,
 )
 from revolut_app.fx_lab.pricing.policies import (

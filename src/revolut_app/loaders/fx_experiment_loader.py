@@ -320,6 +320,13 @@ class FXExperimentClickHouseLoader:
                 item.h_quartic,
                 item.h_coupling,
                 item.h_external,
+                (
+                    int(item.controller_activated)
+                    if item.controller_activated is not None
+                    else None
+                ),
+                item.controller_h_before_event,
+                item.controller_spread_adjustment_bps,
             )
             for item in snapshots
         ]
@@ -461,3 +468,7 @@ class InventorySnapshotRecord:
     h_quartic: float | None = None
     h_coupling: float | None = None
     h_external: float | None = None
+
+    controller_activated: bool | None = None
+    controller_h_before_event: float | None = None
+    controller_spread_adjustment_bps: float | None = None

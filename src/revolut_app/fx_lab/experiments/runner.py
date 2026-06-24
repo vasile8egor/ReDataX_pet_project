@@ -94,11 +94,17 @@ class PolicyExperimentRunner:
                 for currency, state in ledger.get_all_states().items()
             },
         )
-        initial_hamiltonian = (
-            hamiltonian_engine.evaluate(initial_pressures)
-            if hamiltonian_engine is not None
-            else None
-        )
+
+        if hamiltonian_engine is not None:
+            initial_hamiltonian = hamiltonian_engine.evaluate(
+                initial_pressures
+            )
+        elif hamiltonian_controller is not None:
+            initial_hamiltonian = hamiltonian_controller.engine.evaluate(
+                initial_pressures
+            )
+        else:
+            initial_hamiltonian = None
 
         snapshots.extend(
             capture_inventory_snapshots(
@@ -115,6 +121,9 @@ class PolicyExperimentRunner:
                 cumulative_rejected_events=ZERO_INT,
                 cumulative_spread_revenue_usd=ZERO_FLOAT,
                 hamiltonian=initial_hamiltonian,
+                controller_activated=None,
+                controller_h_before_event=None,
+                controller_spread_adjustment_bps=None,
             )
         )
 
@@ -136,19 +145,21 @@ class PolicyExperimentRunner:
                 amount=event.request.amount * amount_multiplier,
             )
 
-            quote = quote_engine.quote(request)
-            decision = acceptance_model.decide(quote)
-
-            total_spread_bps = quote.components.total_spread_bps
-            quoted_spread_values.append(total_spread_bps)
-
             pressures_before_event = ledger.pressures()
+
+            controller_hamiltonian = None
             control_decision = None
 
             if hamiltonian_controller is not None:
-                control_decision = (
-                    hamiltonian_controller.evalute(pressures_before_event)
+                controller_hamiltonian, control_decision = (
+                    hamiltonian_controller.evaluate(pressures_before_event)
                 )
+
+            hamiltonian_penalty_bps = (
+                control_decision.applied_adjustment_bps
+                if control_decision is not None
+                else 0.0
+            )
 
             quote = quote_engine.quote(
                 request=request,
@@ -158,6 +169,12 @@ class PolicyExperimentRunner:
                     else 0.0
                 ),
             )
+
+            decision = acceptance_model.decide(quote)
+
+            total_spread_bps = quote.components.total_spread_bps
+
+            quoted_spread_values.append(total_spread_bps)
 
             if decision.accepted:
                 accepted_events += 1
@@ -211,11 +228,17 @@ class PolicyExperimentRunner:
             )
 
             if should_capture:
-                hamiltonian = (
-                    hamiltonian_engine.evaluate(pressures)
-                    if hamiltonian_engine is not None
-                    else None
-                )
+                if hamiltonian_engine is not None:
+                    hamiltonian = hamiltonian_engine.evaluate(
+                        pressures
+                    )
+                elif hamiltonian_controller is not None:
+                    hamiltonian = hamiltonian_controller.engine.evaluate(
+                        pressures
+                    )
+                else:
+                    hamiltonian = None
+
                 snapshots.extend(
                     capture_inventory_snapshots(
                         event_index=event.event_sequence,
@@ -233,6 +256,21 @@ class PolicyExperimentRunner:
                             spread_revenue_total_usd
                         ),
                         hamiltonian=hamiltonian,
+                        controller_activated=(
+                            control_decision.activated
+                            if control_decision is not None
+                            else None
+                        ),
+                        controller_h_before_event=(
+                            control_decision.h_total
+                            if control_decision is not None
+                            else None
+                        ),
+                        controller_spread_adjustment_bps=(
+                            control_decision.applied_adjustment_bps
+                            if control_decision is not None
+                            else None
+                        ),
                     )
                 )
 
