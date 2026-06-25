@@ -131,27 +131,43 @@ ORDER BY (run_id, event_index, currency)
 
 ALTER_INVENTORY_SNAPSHOTS_Q = '''
 ALTER TABLE gold.fact_inventory_snapshots
+
     ADD COLUMN IF NOT EXISTS
         source_event_id Nullable(UUID)
         AFTER event_index,
+
     ADD COLUMN IF NOT EXISTS
         source_step_index Nullable(UInt64)
         AFTER source_event_id,
+
     ADD COLUMN IF NOT EXISTS
         controller_activated Nullable(Bool)
         AFTER h_external,
+
     ADD COLUMN IF NOT EXISTS
         controller_h_before_event Nullable(Float64)
         AFTER controller_activated,
+
+    ADD COLUMN IF NOT EXISTS
+        controller_raw_adjustment_bps Nullable(Float64)
+        AFTER controller_h_before_event,
+
     ADD COLUMN IF NOT EXISTS
         controller_spread_adjustment_bps Nullable(Float64)
-        AFTER controller_h_before_event,
+        AFTER controller_raw_adjustment_bps,
+
+    ADD COLUMN IF NOT EXISTS
+        controller_cap_hit Nullable(UInt8)
+        AFTER controller_spread_adjustment_bps,
+
     ADD COLUMN IF NOT EXISTS
         transition_h_before_event Nullable(Float64)
-        AFTER controller_spread_adjustment_bps,
+        AFTER controller_cap_hit,
+
     ADD COLUMN IF NOT EXISTS
         transition_h_after_if_accepted Nullable(Float64)
         AFTER transition_h_before_event,
+
     ADD COLUMN IF NOT EXISTS
         transition_delta_h_if_accepted Nullable(Float64)
         AFTER transition_h_after_if_accepted
@@ -253,7 +269,9 @@ INSERT INTO gold.fact_inventory_snapshots(
     h_external,
     controller_activated,
     controller_h_before_event,
+    controller_raw_adjustment_bps,
     controller_spread_adjustment_bps,
+    controller_cap_hit,
     transition_h_before_event,
     transition_h_after_if_accepted,
     transition_delta_h_if_accepted
@@ -516,4 +534,308 @@ GROUP BY
     s.pricing_policy,
     s.event_index,
     s.snapshot_ts
+"""
+
+RG_ANALYSIS_RUNS_Q = """
+CREATE TABLE IF NOT EXISTS gold.fact_rg_analysis_runs
+(
+    analysis_id UUID,
+    analysis_version LowCardinality(String),
+
+    source_model_version LowCardinality(String),
+    hamiltonian_preset LowCardinality(String),
+
+    block_sizes Array(UInt32),
+    stress_pressure_threshold Float64,
+
+    source_run_count UInt32,
+    source_frame_count UInt64,
+
+    parameters_json String,
+
+    started_at DateTime64(6, 'UTC'),
+    finished_at DateTime64(6, 'UTC'),
+
+    loaded_at DateTime64(6, 'UTC')
+        DEFAULT now64(6)
+)
+ENGINE = MergeTree
+ORDER BY
+(
+    analysis_version,
+    source_model_version,
+    started_at,
+    analysis_id
+)
+"""
+
+RG_SCALE_OBSERVABLES_Q = """
+CREATE TABLE IF NOT EXISTS gold.fact_rg_scale_observables
+(
+    analysis_id UUID,
+    analysis_version LowCardinality(String),
+
+    source_run_id UUID,
+    event_dataset_id UUID,
+    source_model_version LowCardinality(String),
+    pricing_policy LowCardinality(String),
+
+    block_size UInt32,
+    block_count UInt32,
+
+    frames_used UInt64,
+    frames_dropped UInt64,
+
+    trace_coarse_covariance Float64,
+    mean_coarse_norm_squared Float64,
+    mean_internal_variance_total Float64,
+
+    mean_max_abs_coarse_pressure Float64,
+    coarse_stress_fraction Float64,
+
+    mean_micro_h_total Nullable(Float64),
+    mean_coarse_h_total Nullable(Float64),
+    mean_unresolved_h_total Nullable(Float64),
+
+    loaded_at DateTime64(6, 'UTC')
+        DEFAULT now64(6)
+)
+ENGINE = MergeTree
+ORDER BY
+(
+    analysis_id,
+    pricing_policy,
+    source_run_id,
+    block_size
+)
+"""
+
+RG_CURRENCY_OBSERVABLES_Q = """
+CREATE TABLE IF NOT EXISTS gold.fact_rg_currency_observables
+(
+    analysis_id UUID,
+    analysis_version LowCardinality(String),
+
+    source_run_id UUID,
+    event_dataset_id UUID,
+    source_model_version LowCardinality(String),
+    pricing_policy LowCardinality(String),
+
+    block_size UInt32,
+    currency LowCardinality(String),
+
+    mean_coarse_pressure Float64,
+    coarse_second_moment Float64,
+    coarse_fourth_moment Float64,
+    coarse_variance Float64,
+
+    mean_micro_second_moment Float64,
+    mean_internal_variance Float64,
+
+    second_moment_decomposition_error Float64,
+
+    loaded_at DateTime64(6, 'UTC')
+        DEFAULT now64(6)
+)
+ENGINE = MergeTree
+ORDER BY
+(
+    analysis_id,
+    pricing_policy,
+    source_run_id,
+    block_size,
+    currency
+)
+"""
+
+RG_VARIANCE_SCALING_Q = """
+CREATE TABLE IF NOT EXISTS gold.fact_rg_variance_scaling
+(
+    analysis_id UUID,
+    analysis_version LowCardinality(String),
+
+    source_run_id UUID,
+    event_dataset_id UUID,
+    source_model_version LowCardinality(String),
+    pricing_policy LowCardinality(String),
+
+    dimension LowCardinality(String),
+
+    from_block_size UInt32,
+    to_block_size UInt32,
+
+    variance_from Float64,
+    variance_to Float64,
+
+    scaling_exponent Nullable(Float64),
+
+    loaded_at DateTime64(6, 'UTC')
+        DEFAULT now64(6)
+)
+ENGINE = MergeTree
+ORDER BY
+(
+    analysis_id,
+    pricing_policy,
+    source_run_id,
+    dimension,
+    from_block_size
+)
+"""
+
+SELECT_RG_SOURCE_RUNS_Q = """
+SELECT
+    argMax(
+        run_id,
+        tuple(loaded_at, run_id)
+    ) AS source_run_id,
+
+    event_dataset_id,
+    pricing_policy,
+
+    argMax(
+        generated_requests,
+        tuple(loaded_at, run_id)
+    ) AS generated_requests
+
+FROM gold.fact_simulation_runs
+
+WHERE model_version =
+    %(source_model_version)s
+
+GROUP BY
+    event_dataset_id,
+    pricing_policy
+
+ORDER BY
+    pricing_policy,
+    event_dataset_id
+"""
+
+SELECT_RG_PRESSURE_OBSERVATIONS_Q = """
+SELECT
+    event_index,
+    currency,
+    phi,
+    h_total
+
+FROM gold.fact_inventory_snapshots
+
+WHERE run_id = %(run_id)s
+  AND event_index > 0
+
+ORDER BY
+    event_index,
+    currency
+"""
+
+SELECT_EXISTING_RG_ANALYSIS_Q = """
+SELECT
+    (
+        SELECT count()
+        FROM gold.fact_rg_analysis_runs
+        WHERE analysis_id = %(analysis_id)s
+    ) AS analysis_rows,
+
+    (
+        SELECT count()
+        FROM gold.fact_rg_scale_observables
+        WHERE analysis_id = %(analysis_id)s
+    ) AS scale_rows,
+
+    (
+        SELECT count()
+        FROM gold.fact_rg_currency_observables
+        WHERE analysis_id = %(analysis_id)s
+    ) AS currency_rows,
+
+    (
+        SELECT count()
+        FROM gold.fact_rg_variance_scaling
+        WHERE analysis_id = %(analysis_id)s
+    ) AS scaling_rows
+"""
+
+INSERT_RG_ANALYSIS_RUN_Q = """
+INSERT INTO gold.fact_rg_analysis_runs
+(
+    analysis_id,
+    analysis_version,
+    source_model_version,
+    hamiltonian_preset,
+    block_sizes,
+    stress_pressure_threshold,
+    source_run_count,
+    source_frame_count,
+    parameters_json,
+    started_at,
+    finished_at
+)
+VALUES
+"""
+
+INSERT_RG_SCALE_OBSERVABLES_Q = """
+INSERT INTO gold.fact_rg_scale_observables
+(
+    analysis_id,
+    analysis_version,
+    source_run_id,
+    event_dataset_id,
+    source_model_version,
+    pricing_policy,
+    block_size,
+    block_count,
+    frames_used,
+    frames_dropped,
+    trace_coarse_covariance,
+    mean_coarse_norm_squared,
+    mean_internal_variance_total,
+    mean_max_abs_coarse_pressure,
+    coarse_stress_fraction,
+    mean_micro_h_total,
+    mean_coarse_h_total,
+    mean_unresolved_h_total
+)
+VALUES
+"""
+
+INSERT_RG_CURRENCY_OBSERVABLES_Q = """
+INSERT INTO gold.fact_rg_currency_observables
+(
+    analysis_id,
+    analysis_version,
+    source_run_id,
+    event_dataset_id,
+    source_model_version,
+    pricing_policy,
+    block_size,
+    currency,
+    mean_coarse_pressure,
+    coarse_second_moment,
+    coarse_fourth_moment,
+    coarse_variance,
+    mean_micro_second_moment,
+    mean_internal_variance,
+    second_moment_decomposition_error
+)
+VALUES
+"""
+
+INSERT_RG_VARIANCE_SCALING_Q = """
+INSERT INTO gold.fact_rg_variance_scaling
+(
+    analysis_id,
+    analysis_version,
+    source_run_id,
+    event_dataset_id,
+    source_model_version,
+    pricing_policy,
+    dimension,
+    from_block_size,
+    to_block_size,
+    variance_from,
+    variance_to,
+    scaling_exponent
+)
+VALUES
 """

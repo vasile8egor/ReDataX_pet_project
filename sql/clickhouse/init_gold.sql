@@ -143,9 +143,11 @@ CREATE TABLE IF NOT EXISTS gold.fact_inventory_snapshots(
     h_coupling Nullable(Float64),
     h_external Nullable(Float64),
 
-    controller_activated Nullable(Bool),
+    controller_activated Nullable(UInt8),
     controller_h_before_event Nullable(Float64),
+    controller_raw_adjustment_bps Nullable(Float64),
     controller_spread_adjustment_bps Nullable(Float64),
+    controller_cap_hit Nullable(UInt8),
 
     transition_h_before_event Nullable(Float64),
     transition_h_after_if_accepted Nullable(Float64),

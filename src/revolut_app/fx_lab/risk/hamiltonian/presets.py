@@ -6,7 +6,10 @@ from revolut_app.fx_lab.risk.hamiltonian.models import (
     HamiltonianParameters,
     HamiltonianControllerParameters,
 )
-from revolut_app.fx_lab.shared.enums import HamiltonianPreset
+from revolut_app.fx_lab.shared.enums import (
+    HamiltonianPreset,
+    HamiltonianControllerPreset,
+)
 from revolut_app.fx_lab.risk.hamiltonian.directional_controller import (
     DirectionalHamiltonianController,
 )
@@ -15,22 +18,57 @@ from revolut_app.fx_lab.risk.hamiltonian.models import (
 )
 
 
-def build_directional_hamiltonian_controller(preset: HamiltonianPreset):
+def build_directional_hamiltonian_controller(
+    preset: HamiltonianPreset,
+    parameters: (
+        DirectionalHamiltonianControllerParameters | None
+    ) = None,
+):
     if preset != HamiltonianPreset.local_v1:
         raise ValueError(
-            "Directional controller v2 currently "
-            "supports only local-v1"
+            'Directional controller v2 supports only local-v1'
         )
-
+    resolved_parameters = (
+        parameters if parameters is not None
+        else DirectionalHamiltonianControllerParameters(
+            spread_gain_bps_per_delta_energy=18.0,
+            max_adjustment_bps=6.0,
+            delta_h_epsilon=1e-6,
+        )
+    )
     return DirectionalHamiltonianController(
         engine=build_hamiltonian_engine(preset),
-        parameters=(
-            DirectionalHamiltonianControllerParameters(
-                spread_gain_bps_per_delta_energy=18.0,
-                max_adjustment_bps=6.0,
-                delta_h_epsilon=1e-6,
+        parameters=resolved_parameters,
+    )
+
+
+def build_selected_hamiltonian_controller(
+    hamiltonian_preset: HamiltonianPreset,
+    controller_preset: HamiltonianControllerPreset,
+    directional_parameters: (
+        DirectionalHamiltonianControllerParameters | None
+    ) = None,
+):
+    if (
+        controller_preset == HamiltonianControllerPreset.symmetric_v1
+    ):
+        if directional_parameters is not None:
+            raise ValueError(
+                'Directional parameters cant be used with symmetric-v1'
             )
-        ),
+        return build_hamiltonian_controller(hamiltonian_preset)
+
+    if (
+        controller_preset == HamiltonianControllerPreset.directional_v2
+    ):
+        return build_directional_hamiltonian_controller(
+            hamiltonian_preset,
+            parameters=directional_parameters
+        )
+
+    raise ValueError(
+        "Unsupported Hamiltonian controller preset: "
+        f"{controller_preset}"
     )
 
 

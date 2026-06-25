@@ -27,6 +27,12 @@ from revolut_app.fx_lab.pricing.quote_engine import QuoteEngine
 from revolut_app.fx_lab.risk.hamiltonian.controller import (
     HamiltonianController,
 )
+from revolut_app.fx_lab.risk.hamiltonian.directional_controller import (
+    DirectionalHamiltonianController
+)
+from revolut_app.fx_lab.risk.hamiltonian.models import (
+    HamiltonianTransitionEvaluation,
+)
 from revolut_app.fx_lab.risk.hamiltonian.engine import HamiltonianEngine
 from revolut_app.fx_lab.shared.constants import (
     ONE_INT,
@@ -47,7 +53,11 @@ class PolicyExperimentRunner:
         acceptance_seed: int | None,
         snapshot_every_n_events: int,
         hamiltonian_engine: HamiltonianEngine | None,
-        hamiltonian_controller: HamiltonianController | None = None,
+        hamiltonian_controller: (
+            HamiltonianController
+            | DirectionalHamiltonianController
+            | None
+        ) = None,
     ) -> PolicyRunResult:
         ledger = InventoryLedger()
         stress_detect = StressRegimeDetect()
@@ -133,7 +143,9 @@ class PolicyExperimentRunner:
                 controller_activated=None,
                 controller_h_before_event=None,
                 controller_spread_adjustment_bps=None,
-                transition=None
+                controller_raw_adjustment_bps=None,
+                controller_cap_hit=None,
+                transition=None,
             )
         )
 
@@ -175,10 +187,10 @@ class PolicyExperimentRunner:
             control_decision = None
 
             if hamiltonian_controller is not None:
-                _, control_decision = (
-                    hamiltonian_controller.evaluate(
-                        pressures=pressures_before_event
-                    )
+                control_decision = self._evaluate_hamiltonian_controller(
+                    controller=hamiltonian_controller,
+                    pressures_before=pressures_before_event,
+                    transition=transition,
                 )
 
             hamiltonian_penalty_bps = (
@@ -286,12 +298,22 @@ class PolicyExperimentRunner:
                             else None
                         ),
                         controller_h_before_event=(
-                            control_decision.h_total
+                            control_decision.h_before
                             if control_decision is not None
                             else None
                         ),
                         controller_spread_adjustment_bps=(
                             control_decision.applied_adjustment_bps
+                            if control_decision is not None
+                            else None
+                        ),
+                        controller_raw_adjustment_bps=(
+                            control_decision.raw_adjustment_bps
+                            if control_decision is not None
+                            else None
+                        ),
+                        controller_cap_hit=(
+                            control_decision.cap_hit
                             if control_decision is not None
                             else None
                         ),
@@ -393,4 +415,27 @@ class PolicyExperimentRunner:
             ),
             final_inventory_pressure=final_pressures,
             snapshots=snapshots,
+        )
+
+    def _evaluate_hamiltonian_controller(
+        self,
+        controller: HamiltonianController | DirectionalHamiltonianController,
+        pressures_before: dict[str, float],
+        transition: HamiltonianTransitionEvaluation | None,
+    ):
+        if isinstance(controller, DirectionalHamiltonianController):
+            if transition is None:
+                raise RuntimeError(
+                    'Directional Hamiltonian controller '
+                    'requires transition evaluation'
+                )
+            return controller.evaluate(transition=transition)
+
+        if isinstance(controller, HamiltonianController):
+            _, decision = controller.evaluate(pressures=pressures_before)
+            return decision
+
+        raise TypeError(
+            'Unsupported Hamiltonian controller type:'
+            f'{type(controller).__name__}'
         )

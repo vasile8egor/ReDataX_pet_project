@@ -63,6 +63,7 @@ from revolut_app.fx_lab.shared.enums import (
     FXSide,
     StressRegime,
     HamiltonianPreset,
+    HamiltonianControllerPreset,
 )
 from revolut_app.fx_lab.inventory.hedging import HedgeAction
 from revolut_app.fx_lab.inventory.pnl import PnLEventType
@@ -376,6 +377,21 @@ class PnLSnapshotResponse(BaseModel):
     last_events: list[PnLEventResponse]
 
 
+class DirectionalControllerParametersRequest(BaseModel):
+    spread_gain_bps_per_delta_energy: float = Field(
+        default=18.0,
+        ge=0.0,
+    )
+    max_adjustment_bps: float = Field(
+        default=6.0,
+        ge=0.0,
+    )
+    delta_h_epsilon: float = Field(
+        default=1e-6,
+        ge=0.0,
+    )
+
+
 class PolicyComparisonRequest(BaseModel):
     policies: list[QuotePolicyName] = Field(
         default_factory=lambda: [
@@ -436,6 +452,25 @@ class PolicyComparisonRequest(BaseModel):
     event_dataset_id: UUID | None = None
     simulation_start_at: datetime | None = None
     hamiltonian_preset: HamiltonianPreset | None = None
+    controller_preset: HamiltonianControllerPreset = (
+        HamiltonianControllerPreset.symmetric_v1
+    )
+    directional_controller_parameters: (
+        DirectionalControllerParametersRequest | None
+    ) = None
+
+    @model_validator(mode='after')
+    def validate_controller_parameters(self):
+        if (
+            self.directional_controller_parameters is not None
+            and self.controller_preset
+            != HamiltonianControllerPreset.directional_v2
+        ):
+            raise ValueError(
+                'Directional parameters can be used '
+                'only with directional-v2'
+            )
+        return self
 
     @model_validator(mode='after')
     def validate_hamiltonian_configuration(self):

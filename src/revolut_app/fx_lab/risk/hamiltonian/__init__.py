@@ -24,6 +24,7 @@ from revolut_app.fx_lab.risk.hamiltonian.models import (
 )
 from revolut_app.fx_lab.risk.hamiltonian.presets import (
     build_directional_hamiltonian_controller,
+    build_selected_hamiltonian_controller,
 )
 
 __all__ = [
@@ -39,6 +40,7 @@ __all__ = [
     'HamiltonianTransitionEvaluation',
     'SignedCoupling',
     'build_directional_hamiltonian_controller',
+    'build_selected_hamiltonian_controller',
     'build_hamiltonian_controller',
     'build_hamiltonian_engine',
     'build_hamiltonian_parameters',

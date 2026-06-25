@@ -1,6 +1,10 @@
 import pytest
 
-from revolut_app.fx_lab.shared.enums import HamiltonianPreset, Currency
+from revolut_app.fx_lab.shared.enums import (
+    Currency,
+    HamiltonianControllerPreset,
+    HamiltonianPreset,
+)
 from revolut_app.fx_lab.experiments import (
     PolicyComparisonEngine,
 )
@@ -9,7 +13,8 @@ from revolut_app.fx_lab.risk.hamiltonian import (
     HamiltonianController,
     build_hamiltonian_controller,
     build_hamiltonian_parameters,
-    build_hamiltonian_engine
+    build_hamiltonian_engine,
+    build_selected_hamiltonian_controller,
 )
 
 
@@ -195,4 +200,100 @@ def test_controller_snapshots_capture_activation(
         for snapshot in controller_snapshots
         if snapshot.controller_spread_adjustment_bps
         is not None
+    )
+
+
+def test_directional_controller_reducing_transition_has_no_penalty(
+    fx_event_dataset,
+):
+    comparison_engine = PolicyComparisonEngine()
+
+    result = comparison_engine.compare(
+        policy_names=[
+            QuotePolicyName.inventory_aware,
+        ],
+        event_dataset=fx_event_dataset,
+        amount_multiplier=500.0,
+        snapshot_every_n_events=1,
+        hamiltonian_controller=(
+            build_selected_hamiltonian_controller(
+                hamiltonian_preset=HamiltonianPreset.local_v1,
+                controller_preset=(
+                    HamiltonianControllerPreset.directional_v2
+                ),
+            )
+        ),
+    )
+
+    reducing_snapshots = [
+        snapshot
+        for snapshot in result.results[0].snapshots
+        if snapshot.transition_delta_h_if_accepted is not None
+        and snapshot.transition_delta_h_if_accepted < 0.0
+    ]
+
+    assert reducing_snapshots
+
+    snapshot = reducing_snapshots[0]
+
+    assert snapshot.transition_delta_h_if_accepted < 0.0
+    assert snapshot.controller_activated is False
+    assert (
+        snapshot.controller_spread_adjustment_bps
+        == pytest.approx(0.0)
+    )
+
+
+def test_directional_controller_increasing_transition_penalty(
+    fx_event_dataset,
+):
+    comparison_engine = PolicyComparisonEngine()
+
+    result = comparison_engine.compare(
+        policy_names=[
+            QuotePolicyName.inventory_aware,
+        ],
+        event_dataset=fx_event_dataset,
+        amount_multiplier=500.0,
+        snapshot_every_n_events=1,
+        hamiltonian_controller=(
+            build_selected_hamiltonian_controller(
+                hamiltonian_preset=HamiltonianPreset.local_v1,
+                controller_preset=(
+                    HamiltonianControllerPreset.directional_v2
+                ),
+            )
+        ),
+    )
+
+    increasing_snapshots = [
+        snapshot
+        for snapshot in result.results[0].snapshots
+        if snapshot.transition_delta_h_if_accepted is not None
+        and snapshot.transition_delta_h_if_accepted > 0.0
+    ]
+
+    assert increasing_snapshots
+
+    snapshot = increasing_snapshots[0]
+    transition_delta = snapshot.transition_delta_h_if_accepted
+    expected = min(
+        6.0,
+        18.0 * transition_delta,
+    )
+
+    assert transition_delta > 0.0
+    assert (
+        snapshot.controller_spread_adjustment_bps
+        == pytest.approx(expected)
+    )
+    assert snapshot.controller_h_before_event == pytest.approx(
+        snapshot.transition_h_before_event
+    )
+    assert (
+        snapshot.controller_cap_hit
+        == (
+            snapshot.controller_raw_adjustment_bps
+            > snapshot.controller_spread_adjustment_bps
+        )
     )

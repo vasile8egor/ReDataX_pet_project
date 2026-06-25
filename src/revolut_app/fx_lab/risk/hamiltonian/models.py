@@ -211,6 +211,14 @@ class HamiltonianControlDecision:
 
     activated: bool
 
+    @property
+    def h_before(self):
+        return self.h_total
+
+    @property
+    def cap_hit(self):
+        return self.raw_adjustment_bps > self.applied_adjustment_bps
+
 
 @dataclass(frozen=True)
 class HamiltonianControllerParameters:

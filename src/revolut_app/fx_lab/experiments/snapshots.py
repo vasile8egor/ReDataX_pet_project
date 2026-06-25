@@ -33,6 +33,8 @@ def capture_inventory_snapshots(
     controller_h_before_event: float | None = None,
     controller_spread_adjustment_bps: float | None = None,
     transition: HamiltonianTransitionEvaluation | None = None,
+    controller_raw_adjustment_bps: float | None = None,
+    controller_cap_hit: bool | None = None,
 ):
     result: list[PolicyInventorySnapshot] = []
 
@@ -203,6 +205,15 @@ def capture_inventory_snapshots(
                     if transition is not None
                     else None
                 ),
-            )
+                controller_raw_adjustment_bps=(
+                    round(
+                        controller_raw_adjustment_bps,
+                        RATIO_PRECISION,
+                    )
+                    if controller_raw_adjustment_bps is not None
+                    else None
+                ),
+                controller_cap_hit=controller_cap_hit,
+            ),
         )
     return result

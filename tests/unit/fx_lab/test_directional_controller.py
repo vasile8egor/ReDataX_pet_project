@@ -2,12 +2,15 @@ import pytest
 
 from revolut_app.fx_lab.risk.hamiltonian import (
     DirectionalHamiltonianController,
+    DirectionalHamiltonianControllerParameters,
     HamiltonianBreakdown,
     HamiltonianTransitionEvaluation,
     build_directional_hamiltonian_controller,
+    build_selected_hamiltonian_controller,
 )
 from revolut_app.fx_lab.shared.enums import (
     Currency,
+    HamiltonianControllerPreset,
     HamiltonianPreset,
 )
 
@@ -178,3 +181,55 @@ def test_directional_controller_factory():
         controller.parameters.max_adjustment_bps
         == pytest.approx(6.0)
     )
+
+
+def test_directional_controller_default_parameters():
+    controller = build_directional_hamiltonian_controller(
+        HamiltonianPreset.local_v1
+    )
+
+    assert (
+        controller.parameters
+        .spread_gain_bps_per_delta_energy
+        == pytest.approx(18.0)
+    )
+
+    assert (
+        controller.parameters.max_adjustment_bps
+        == pytest.approx(6.0)
+    )
+
+
+def test_directional_controller_parameter_override():
+    parameters = DirectionalHamiltonianControllerParameters(
+        spread_gain_bps_per_delta_energy=12.0,
+        max_adjustment_bps=4.0,
+        delta_h_epsilon=1e-6,
+    )
+
+    controller = build_directional_hamiltonian_controller(
+        HamiltonianPreset.local_v1,
+        parameters=parameters,
+    )
+
+    assert controller.parameters == parameters
+
+
+def test_directional_parameters_rejected_for_symmetric_controller():
+    parameters = DirectionalHamiltonianControllerParameters(
+        spread_gain_bps_per_delta_energy=12.0,
+        max_adjustment_bps=4.0,
+        delta_h_epsilon=1e-6,
+    )
+
+    with pytest.raises(
+        ValueError,
+        match='Directional parameters',
+    ):
+        build_selected_hamiltonian_controller(
+            hamiltonian_preset=HamiltonianPreset.local_v1,
+            controller_preset=(
+                HamiltonianControllerPreset.symmetric_v1
+            ),
+            directional_parameters=parameters,
+        )

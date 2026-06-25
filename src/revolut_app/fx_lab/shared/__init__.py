@@ -3,6 +3,7 @@ from revolut_app.fx_lab.shared.enums import (
     CustomerSegment,
     FXSide,
     HamiltonianPreset,
+    HamiltonianControllerPreset,
     StressRegime,
 )
 
@@ -11,5 +12,6 @@ __all__ = [
     'CustomerSegment',
     'FXSide',
     'HamiltonianPreset',
+    'HamiltonianControllerPreset',
     'StressRegime',
 ]

@@ -1,4 +1,5 @@
 import json
+from dataclasses import asdict
 from datetime import timedelta
 from uuid import UUID
 from fastapi import HTTPException, status
@@ -77,7 +78,8 @@ from revolut_app.loaders.fx_experiment_loader import (
 from revolut_app.fx_lab.experiments.models import PhysicsMode
 from revolut_app.fx_lab.risk.hamiltonian import (
     build_hamiltonian_engine,
-    build_hamiltonian_controller,
+    build_selected_hamiltonian_controller,
+    DirectionalHamiltonianControllerParameters,
 )
 from revolut_app.fx_lab.shared.enums import HamiltonianPreset
 from revolut_app.core.version import resolve_git_sha
@@ -582,14 +584,42 @@ class FXQuoteService:
 
         hamiltonian_engine = None
         hamiltonian_controller = None
+        directional_parameters = None
+
+        if request.directional_controller_parameters is not None:
+            directional_parameters = (
+                DirectionalHamiltonianControllerParameters(
+                    spread_gain_bps_per_delta_energy=(
+                        request
+                        .directional_controller_parameters
+                        .spread_gain_bps_per_delta_energy
+                    ),
+                    max_adjustment_bps=(
+                        request
+                        .directional_controller_parameters
+                        .max_adjustment_bps
+                    ),
+                    delta_h_epsilon=(
+                        request
+                        .directional_controller_parameters
+                        .delta_h_epsilon
+                    ),
+                )
+            )
 
         if request.physics_mode == PhysicsMode.observer:
             hamiltonian_engine = build_hamiltonian_engine(
                 request.hamiltonian_preset
             )
         elif request.physics_mode == PhysicsMode.controller:
-            hamiltonian_controller = build_hamiltonian_controller(
-                request.hamiltonian_preset
+            hamiltonian_controller = (
+                build_selected_hamiltonian_controller(
+                    hamiltonian_preset=(
+                        request.hamiltonian_preset
+                    ),
+                    controller_preset=request.controller_preset,
+                    directional_parameters=directional_parameters,
+                )
             )
 
         result = self.policy_comparison_engine.compare(
@@ -648,20 +678,11 @@ class FXQuoteService:
                 ),
                 'hamiltonian_controller': (
                     {
-                        'activation_energy': (
-                            hamiltonian_controller
-                            .parameters
-                            .activation_energy
+                        'controller_preset': (
+                            request.controller_preset.value
                         ),
-                        'spread_gain_bps_per_energy': (
-                            hamiltonian_controller
-                            .parameters
-                            .spread_gain_bps_per_energy
-                        ),
-                        'max_adjustment_bps': (
-                            hamiltonian_controller
-                            .parameters
-                            .max_adjustment_bps
+                        'parameters': asdict(
+                            hamiltonian_controller.parameters
                         ),
                     }
                     if hamiltonian_controller is not None
@@ -811,8 +832,14 @@ class FXQuoteService:
                     controller_h_before_event=(
                         snapshot.controller_h_before_event
                     ),
+                    controller_raw_adjustment_bps=(
+                        snapshot.controller_raw_adjustment_bps
+                    ),
                     controller_spread_adjustment_bps=(
                         snapshot.controller_spread_adjustment_bps
+                    ),
+                    controller_cap_hit=(
+                        snapshot.controller_cap_hit
                     ),
                     transition_h_before_event=(
                         snapshot.transition_h_before_event
@@ -1055,7 +1082,7 @@ class FXQuoteService:
             raise HTTPException(
                 status_code=status.HTTP_501_NOT_IMPLEMENTED,
                 detail=(
-                    'Hamiltonian controller doesnt exist now'
+                    'Hamiltonian controller does not exist now'
                 ),
             )
         return build_hamiltonian_engine(preset)
