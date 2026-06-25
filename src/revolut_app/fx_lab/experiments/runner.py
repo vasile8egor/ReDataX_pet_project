@@ -34,6 +34,11 @@ from revolut_app.fx_lab.risk.hamiltonian.models import (
     HamiltonianTransitionEvaluation,
 )
 from revolut_app.fx_lab.risk.hamiltonian.engine import HamiltonianEngine
+from revolut_app.fx_lab.risk.rg import (
+    ScaleAwareTransitionDiagnostic,
+    ScaleAwareTransitionEvaluator,
+    build_scale_aware_transition_diagnostic,
+)
 from revolut_app.fx_lab.shared.constants import (
     ONE_INT,
     RATIO_PRECISION,
@@ -58,6 +63,10 @@ class PolicyExperimentRunner:
             | DirectionalHamiltonianController
             | None
         ) = None,
+        scale_aware_evaluator: (
+            ScaleAwareTransitionEvaluator | None
+        ) = None,
+        scale_aware_diagnostic_epsilon: float = 1e-6,
     ) -> PolicyRunResult:
         ledger = InventoryLedger()
         stress_detect = StressRegimeDetect()
@@ -80,6 +89,9 @@ class PolicyExperimentRunner:
         )
 
         snapshots: list[PolicyInventorySnapshot] = []
+        diagnostic_records: list[
+            ScaleAwareTransitionDiagnostic
+        ] = []
 
         accepted_events = 0
         rejected_events = 0
@@ -170,18 +182,60 @@ class PolicyExperimentRunner:
             mid_rate = quote_engine.get_mid_rate(request)
 
             pressures_before_event = ledger.pressures()
+            projected_ledger = None
+            projected_pressures = pressures_before_event
 
             transition = None
 
-            if active_hamiltonian_engine is not None:
-                projected_ledger = ledger.project_after_client_fx(
-                    request=request,
-                    mid_rate=mid_rate,
+            if (
+                active_hamiltonian_engine is not None
+                or scale_aware_evaluator is not None
+            ):
+                projected_ledger = (
+                    ledger.project_after_client_fx(
+                        request=request,
+                        mid_rate=mid_rate,
+                    )
+                )
+                projected_pressures = (
+                    projected_ledger.pressures()
                 )
 
+            if active_hamiltonian_engine is not None:
                 transition = active_hamiltonian_engine.evaluate_transition(
                     pressures_before=pressures_before_event,
-                    pressures_after=projected_ledger.pressures(),
+                    pressures_after=projected_pressures,
+                )
+
+            coarse_transition = None
+
+            if scale_aware_evaluator is not None:
+                if active_hamiltonian_engine is None:
+                    raise RuntimeError(
+                        'Scale-aware diagnostics require '
+                        'an active Hamiltonian engine'
+                    )
+
+                local_h_before = (
+                    active_hamiltonian_engine
+                    .evaluate(pressures_before_event)
+                    .total
+                )
+                local_projected_h_after = (
+                    active_hamiltonian_engine
+                    .evaluate(projected_pressures)
+                    .total
+                )
+                coarse_transition = (
+                    scale_aware_evaluator
+                    .evaluate_projected_transition(
+                        current_pressures=(
+                            pressures_before_event
+                        ),
+                        projected_pressures=(
+                            projected_pressures
+                        )
+                    )
                 )
 
             control_decision = None
@@ -230,8 +284,32 @@ class PolicyExperimentRunner:
                     request=request,
                     mid_rate=mid_rate,
                 )
+                actual_pressures = projected_pressures
             else:
                 rejected_events += 1
+                actual_pressures = pressures_before_event
+
+            if scale_aware_evaluator is not None:
+                diagnostic_records.append(
+                    build_scale_aware_transition_diagnostic(
+                        event_index=event.event_sequence,
+                        request_accepted=decision.accepted,
+                        local_h_before=local_h_before,
+                        local_projected_h_after=(
+                            local_projected_h_after
+                        ),
+                        coarse_transition=(
+                            coarse_transition
+                        ),
+                        epsilon=(
+                            scale_aware_diagnostic_epsilon
+                        ),
+                    )
+                )
+
+                scale_aware_evaluator.commit(
+                    actual_pressures=actual_pressures
+                )
 
             pressures = ledger.pressures()
 
@@ -415,6 +493,9 @@ class PolicyExperimentRunner:
             ),
             final_inventory_pressure=final_pressures,
             snapshots=snapshots,
+            scale_aware_transition_diagnostics=tuple(
+                diagnostic_records
+            ),
         )
 
     def _evaluate_hamiltonian_controller(

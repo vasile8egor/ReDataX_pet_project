@@ -1,6 +1,10 @@
 from enum import Enum
 
 
+class ScaleAwareDiagnosticPreset(str, Enum):
+    RG_LOCAL_B16_V1 = "rg-local-b16-v1"
+
+
 class HamiltonianControllerPreset(str, Enum):
     symmetric_v1 = 'symmetric-v1'
     directional_v2 = 'directional-v2'

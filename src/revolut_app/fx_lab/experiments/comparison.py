@@ -22,7 +22,13 @@ from revolut_app.fx_lab.risk.hamiltonian.controller import (
 )
 from revolut_app.fx_lab.risk.hamiltonian.engine import HamiltonianEngine
 from revolut_app.fx_lab.risk.hamiltonian.models import HamiltonianBreakdown
-from revolut_app.fx_lab.shared.enums import StressRegime
+from revolut_app.fx_lab.risk.rg.factory import (
+    build_scale_aware_transition_evaluator,
+)
+from revolut_app.fx_lab.shared.enums import (
+    ScaleAwareDiagnosticPreset,
+    StressRegime,
+)
 
 
 class PolicyComparisonEngine:
@@ -38,6 +44,10 @@ class PolicyComparisonEngine:
         snapshot_every_n_events: int,
         hamiltonian_engine: HamiltonianEngine | None = None,
         hamiltonian_controller: HamiltonianController | None = None,
+        scale_aware_diagnostic_preset: (
+            ScaleAwareDiagnosticPreset | None
+        ) = None,
+        scale_aware_diagnostic_epsilon: float = 1e-6,
     ) -> PolicyComparisonResult:
         if (
             hamiltonian_engine is not None
@@ -60,6 +70,17 @@ class PolicyComparisonEngine:
                 snapshot_every_n_events=snapshot_every_n_events,
                 hamiltonian_engine=hamiltonian_engine,
                 hamiltonian_controller=hamiltonian_controller,
+                scale_aware_evaluator=(
+                    build_scale_aware_transition_evaluator(
+                        scale_aware_diagnostic_preset
+                    )
+                    if scale_aware_diagnostic_preset
+                    is not None
+                    else None
+                ),
+                scale_aware_diagnostic_epsilon=(
+                    scale_aware_diagnostic_epsilon
+                ),
             )
             for policy_name in policy_names
         ]

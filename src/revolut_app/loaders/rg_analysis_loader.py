@@ -14,14 +14,61 @@ from revolut_app.loaders.queries import (
     INSERT_RG_CURRENCY_OBSERVABLES_Q,
     INSERT_RG_SCALE_OBSERVABLES_Q,
     INSERT_RG_VARIANCE_SCALING_Q,
+    INSERT_RG_EFFECTIVE_HAMILTONIAN_FITS_Q,
     RG_ANALYSIS_RUNS_Q,
     RG_CURRENCY_OBSERVABLES_Q,
     RG_SCALE_OBSERVABLES_Q,
+    RG_EFFECTIVE_HAMILTONIAN_FITS_Q,
     RG_VARIANCE_SCALING_Q,
     SELECT_EXISTING_RG_ANALYSIS_Q,
     SELECT_RG_PRESSURE_OBSERVATIONS_Q,
     SELECT_RG_SOURCE_RUNS_Q,
+    SELECT_EXISTING_RG_EFFECTIVE_FITS_Q,
+    SELECT_RG_SOURCE_ANALYSIS_Q,
 )
+
+
+@dataclass(frozen=True)
+class RgEffectiveHamiltonianFitRecord:
+    fit_analysis_id: UUID
+    fit_version: str
+
+    source_analysis_id: UUID
+    source_model_version: str
+
+    pricing_policy: str
+    block_size: int
+
+    operator_basis: str
+
+    intercept: float
+    quadratic_coefficient: float
+    quartic_coefficient: float
+
+    observation_count: int
+    trajectory_count: int
+
+    design_rank: int
+    standardized_condition_number: float
+
+    train_rmse: float
+    train_mae: float
+    train_r_squared: float | None
+
+    cv_rmse: float
+    cv_mae: float
+    cv_r_squared: float | None
+
+    parameters_json: str
+
+
+@dataclass(frozen=True)
+class RgSourceAnalysis:
+    analysis_id: UUID
+    block_sizes: tuple[int, ...]
+    stress_pressure_threshold: float
+    source_run_count: int
+    source_frame_count: int
 
 
 @dataclass(frozen=True)
@@ -178,6 +225,9 @@ class RgAnalysisClickHouseLoader:
         )
         self.client.execute(
             RG_VARIANCE_SCALING_Q
+        )
+        self.client.execute(
+            RG_EFFECTIVE_HAMILTONIAN_FITS_Q
         )
 
     def load_source_runs(
@@ -380,4 +430,125 @@ class RgAnalysisClickHouseLoader:
         self.client.execute(
             INSERT_RG_ANALYSIS_RUN_Q,
             analysis_row,
+        )
+
+    def load_source_analysis(
+        self, *,
+        analysis_version: str,
+        source_model_version: str,
+    ) -> RgSourceAnalysis:
+        self.ensure_schema()
+
+        rows = self.client.execute(
+            SELECT_RG_SOURCE_ANALYSIS_Q,
+            {
+                "analysis_version":
+                    analysis_version,
+                "source_model_version":
+                    source_model_version,
+            },
+        )
+
+        if not rows:
+            raise ValueError(
+                "RG source analysis was not found: "
+                f"analysis_version={analysis_version}, "
+                f"source_model_version="
+                f"{source_model_version}"
+            )
+
+        row = rows[0]
+
+        return RgSourceAnalysis(
+            analysis_id=row[0],
+            block_sizes=tuple(row[1]),
+            stress_pressure_threshold=row[2],
+            source_run_count=row[3],
+            source_frame_count=row[4],
+        )
+
+    def ensure_effective_fit_not_persisted(
+        self, *,
+        fit_analysis_id: UUID,
+    ) -> None:
+        count = self.client.execute(
+            SELECT_EXISTING_RG_EFFECTIVE_FITS_Q,
+            {
+                "fit_analysis_id":
+                    fit_analysis_id,
+            },
+        )[0][0]
+
+        if count > 0:
+            raise ValueError(
+                "Effective Hamiltonian fit "
+                "already exists: "
+                f"fit_analysis_id="
+                f"{fit_analysis_id}, "
+                f"rows={count}"
+            )
+
+    def persist_effective_hamiltonian_fits(
+        self, *,
+        records: list[
+            RgEffectiveHamiltonianFitRecord
+        ],
+    ) -> None:
+        if not records:
+            raise ValueError(
+                "Effective Hamiltonian fit "
+                "records cannot be empty"
+            )
+
+        fit_analysis_ids = {
+            record.fit_analysis_id
+            for record in records
+        }
+
+        if len(fit_analysis_ids) != 1:
+            raise ValueError(
+                "All fit records must have "
+                "the same fit_analysis_id"
+            )
+
+        fit_analysis_id = next(
+            iter(fit_analysis_ids)
+        )
+
+        self.ensure_schema()
+
+        self.ensure_effective_fit_not_persisted(
+            fit_analysis_id=fit_analysis_id
+        )
+
+        rows = [
+            (
+                record.fit_analysis_id,
+                record.fit_version,
+                record.source_analysis_id,
+                record.source_model_version,
+                record.pricing_policy,
+                record.block_size,
+                record.operator_basis,
+                record.intercept,
+                record.quadratic_coefficient,
+                record.quartic_coefficient,
+                record.observation_count,
+                record.trajectory_count,
+                record.design_rank,
+                record.standardized_condition_number,
+                record.train_rmse,
+                record.train_mae,
+                record.train_r_squared,
+                record.cv_rmse,
+                record.cv_mae,
+                record.cv_r_squared,
+                record.parameters_json,
+            )
+            for record in records
+        ]
+
+        self.client.execute(
+            INSERT_RG_EFFECTIVE_HAMILTONIAN_FITS_Q,
+            rows,
         )

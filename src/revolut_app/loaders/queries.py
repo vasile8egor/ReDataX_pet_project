@@ -839,3 +839,180 @@ INSERT INTO gold.fact_rg_variance_scaling
 )
 VALUES
 """
+
+RG_EFFECTIVE_HAMILTONIAN_FITS_Q = """
+CREATE TABLE IF NOT EXISTS gold.fact_rg_effective_hamiltonian_fits
+(
+    fit_analysis_id UUID,
+    fit_version LowCardinality(String),
+
+    source_analysis_id UUID,
+    source_model_version LowCardinality(String),
+
+    pricing_policy LowCardinality(String),
+    block_size UInt32,
+
+    operator_basis LowCardinality(String),
+
+    intercept Float64,
+    quadratic_coefficient Float64,
+    quartic_coefficient Float64,
+
+    observation_count UInt64,
+    trajectory_count UInt32,
+
+    design_rank UInt32,
+    standardized_condition_number Float64,
+
+    train_rmse Float64,
+    train_mae Float64,
+    train_r_squared Nullable(Float64),
+
+    cv_rmse Float64,
+    cv_mae Float64,
+    cv_r_squared Nullable(Float64),
+
+    parameters_json String,
+
+    loaded_at DateTime64(6, 'UTC')
+        DEFAULT now64(6)
+)
+ENGINE = MergeTree
+ORDER BY
+(
+    fit_analysis_id,
+    pricing_policy,
+    block_size
+)
+"""
+
+SELECT_RG_SOURCE_ANALYSIS_Q = """
+SELECT
+    analysis_id,
+    block_sizes,
+    stress_pressure_threshold,
+    source_run_count,
+    source_frame_count
+
+FROM gold.fact_rg_analysis_runs
+
+WHERE analysis_version =
+    %(analysis_version)s
+
+  AND source_model_version =
+    %(source_model_version)s
+
+ORDER BY loaded_at DESC
+
+LIMIT 1
+"""
+
+SELECT_EXISTING_RG_EFFECTIVE_FITS_Q = """
+SELECT count()
+FROM gold.fact_rg_effective_hamiltonian_fits
+WHERE fit_analysis_id =
+    %(fit_analysis_id)s
+"""
+
+INSERT_RG_EFFECTIVE_HAMILTONIAN_FITS_Q = """
+INSERT INTO gold.fact_rg_effective_hamiltonian_fits
+(
+    fit_analysis_id,
+    fit_version,
+    source_analysis_id,
+    source_model_version,
+    pricing_policy,
+    block_size,
+    operator_basis,
+    intercept,
+    quadratic_coefficient,
+    quartic_coefficient,
+    observation_count,
+    trajectory_count,
+    design_rank,
+    standardized_condition_number,
+    train_rmse,
+    train_mae,
+    train_r_squared,
+    cv_rmse,
+    cv_mae,
+    cv_r_squared,
+    parameters_json
+)
+VALUES
+"""
+
+RG_TRANSITION_DIAGNOSTICS_Q = """
+CREATE TABLE IF NOT EXISTS gold.fact_rg_transition_diagnostics
+(
+    run_id UUID,
+    event_dataset_id UUID,
+
+    model_version LowCardinality(String),
+    pricing_policy LowCardinality(String),
+
+    event_index UInt64,
+    block_size UInt32,
+
+    history_ready UInt8,
+    request_accepted UInt8,
+
+    local_h_before Float64,
+    local_projected_h_after Float64,
+    local_delta_h Float64,
+
+    coarse_h_before Float64,
+
+    coarse_temporal_drift_delta_h Float64,
+    normalized_coarse_temporal_drift_delta_h Float64,
+
+    coarse_request_delta_h Float64,
+    normalized_coarse_request_delta_h Float64,
+
+    coarse_total_accepted_delta_h Float64,
+    normalized_coarse_total_accepted_delta_h Float64,
+
+    local_sign LowCardinality(String),
+    coarse_sign LowCardinality(String),
+    sign_agreement UInt8,
+
+    loaded_at DateTime64(6, 'UTC')
+        DEFAULT now64(6)
+)
+ENGINE = MergeTree
+ORDER BY
+(
+    model_version,
+    pricing_policy,
+    run_id,
+    event_index
+)
+"""
+
+INSERT_RG_TRANSITION_DIAGNOSTICS_Q = """
+INSERT INTO gold.fact_rg_transition_diagnostics
+(
+    run_id,
+    event_dataset_id,
+    model_version,
+    pricing_policy,
+    event_index,
+    block_size,
+    history_ready,
+    request_accepted,
+    local_h_before,
+    local_projected_h_after,
+    local_delta_h,
+    coarse_h_before,
+    coarse_temporal_drift_delta_h,
+    normalized_coarse_temporal_drift_delta_h,
+    coarse_request_delta_h,
+    normalized_coarse_request_delta_h,
+    coarse_total_accepted_delta_h,
+    normalized_coarse_total_accepted_delta_h,
+    local_sign,
+    coarse_sign,
+    sign_agreement
+)
+VALUES
+"""

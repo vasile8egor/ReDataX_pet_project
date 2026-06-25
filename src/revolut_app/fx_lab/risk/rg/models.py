@@ -1,6 +1,91 @@
 from dataclasses import dataclass
 from math import isfinite
 from typing import Mapping
+from enum import Enum
+
+
+class TransitionRiskSign(str, Enum):
+    NEGATIVE = "negative"
+    ZERO = "zero"
+    POSITIVE = "positive"
+
+
+@dataclass(frozen=True)
+class ScaleAwareTransitionDiagnostic:
+    event_index: int
+    block_size: int
+    history_ready: bool
+
+    request_accepted: bool
+
+    local_h_before: float
+    local_projected_h_after: float
+    local_delta_h: float
+
+    coarse_h_before: float
+
+    coarse_temporal_drift_delta_h: float
+    normalized_coarse_temporal_drift_delta_h: float
+
+    coarse_request_delta_h: float
+    normalized_coarse_request_delta_h: float
+
+    coarse_total_accepted_delta_h: float
+    normalized_coarse_total_accepted_delta_h: float
+
+    local_sign: TransitionRiskSign
+    coarse_sign: TransitionRiskSign
+    sign_agreement: bool
+
+
+@dataclass(frozen=True)
+class EffectiveHamiltonianCoefficients:
+    block_size: int
+
+    intercept: float
+    quadratic: float
+    quartic: float
+
+    def __post_init__(self) -> None:
+        if self.block_size <= 0:
+            raise ValueError(
+                "block_size must be positive"
+            )
+
+        for label, value in (
+            ("intercept", self.intercept),
+            ("quadratic", self.quadratic),
+            ("quartic", self.quartic),
+        ):
+            if not isfinite(value):
+                raise ValueError(
+                    "Effective Hamiltonian "
+                    "coefficient must be finite: "
+                    f"{label}={value}"
+                )
+
+
+@dataclass(frozen=True)
+class ScaleAwareTransition:
+    block_size: int
+    history_ready: bool
+
+    coarse_pressure_before: dict[str, float]
+
+    coarse_pressure_after_if_rejected: dict[str, float]
+    coarse_pressure_after_if_accepted: dict[str, float]
+
+    coarse_h_before: float
+    coarse_h_after_if_rejected: float
+    coarse_h_after_if_accepted: float
+
+    temporal_drift_delta_h: float
+    request_delta_h: float
+    total_accepted_delta_h: float
+
+    normalized_temporal_drift_delta_h: float
+    normalized_request_delta_h: float
+    normalized_total_accepted_delta_h: float
 
 
 @dataclass(frozen=True)

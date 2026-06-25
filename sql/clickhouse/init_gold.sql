@@ -164,6 +164,51 @@ ORDER BY (
 );
 
 
+CREATE TABLE IF NOT EXISTS gold.fact_rg_transition_diagnostics
+(
+    run_id UUID,
+    event_dataset_id UUID,
+
+    model_version LowCardinality(String),
+    pricing_policy LowCardinality(String),
+
+    event_index UInt64,
+    block_size UInt32,
+
+    history_ready UInt8,
+    request_accepted UInt8,
+
+    local_h_before Float64,
+    local_projected_h_after Float64,
+    local_delta_h Float64,
+
+    coarse_h_before Float64,
+
+    coarse_temporal_drift_delta_h Float64,
+    normalized_coarse_temporal_drift_delta_h Float64,
+
+    coarse_request_delta_h Float64,
+    normalized_coarse_request_delta_h Float64,
+
+    coarse_total_accepted_delta_h Float64,
+    normalized_coarse_total_accepted_delta_h Float64,
+
+    local_sign LowCardinality(String),
+    coarse_sign LowCardinality(String),
+    sign_agreement UInt8,
+
+    loaded_at DateTime64(6, 'UTC') DEFAULT now64(6)
+)
+ENGINE = MergeTree
+ORDER BY
+(
+    model_version,
+    pricing_policy,
+    run_id,
+    event_index
+);
+
+
 CREATE TABLE IF NOT EXISTS gold.fact_fx_events(
     event_dataset_id UUID,
     event_id UUID,

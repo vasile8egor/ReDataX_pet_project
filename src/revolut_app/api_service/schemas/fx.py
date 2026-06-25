@@ -1,4 +1,5 @@
 from datetime import datetime
+from math import isfinite
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
@@ -62,6 +63,7 @@ from revolut_app.fx_lab.shared.enums import (
     CustomerSegment,
     FXSide,
     StressRegime,
+    ScaleAwareDiagnosticPreset,
     HamiltonianPreset,
     HamiltonianControllerPreset,
 )
@@ -458,6 +460,19 @@ class PolicyComparisonRequest(BaseModel):
     directional_controller_parameters: (
         DirectionalControllerParametersRequest | None
     ) = None
+    scale_aware_diagnostic_preset: (
+        ScaleAwareDiagnosticPreset | None
+    ) = None
+    scale_aware_diagnostic_epsilon: float = 1e-6
+
+    @field_validator('scale_aware_diagnostic_epsilon')
+    @classmethod
+    def validate_scale_aware_epsilon(cls, value: float):
+        if not isfinite(value) or value < 0.0:
+            raise ValueError(
+                'scale_aware_diagnostic_epsilon must be non negative'
+            )
+        return value
 
     @model_validator(mode='after')
     def validate_controller_parameters(self):

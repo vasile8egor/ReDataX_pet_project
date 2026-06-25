@@ -75,6 +75,10 @@ from revolut_app.loaders.fx_experiment_loader import (
     InventorySnapshotRecord,
     SimulationRunRecord,
 )
+from revolut_app.loaders.rg_transition_diagnostics_loader import (
+    RgTransitionDiagnosticRecord,
+    RgTransitionDiagnosticsLoader,
+)
 from revolut_app.fx_lab.experiments.models import PhysicsMode
 from revolut_app.fx_lab.risk.hamiltonian import (
     build_hamiltonian_engine,
@@ -103,6 +107,9 @@ class FXQuoteService:
         self.pnl_ledger = PnLLedger()
         self.policy_comparison_engine = PolicyComparisonEngine()
         self.experiment_loader = FXExperimentClickHouseLoader()
+        self.rg_transition_diagnostics_loader = (
+            RgTransitionDiagnosticsLoader()
+        )
 
     def quote(self, request: FXQuoteRequest) -> FXQuoteResponse:
         domain_request = QuoteRequest(
@@ -631,6 +638,12 @@ class FXQuoteService:
             ),
             hamiltonian_engine=hamiltonian_engine,
             hamiltonian_controller=hamiltonian_controller,
+            scale_aware_diagnostic_preset=(
+                request.scale_aware_diagnostic_preset
+            ),
+            scale_aware_diagnostic_epsilon=(
+                request.scale_aware_diagnostic_epsilon
+            ),
         )
 
         dataset_rows = 0
@@ -862,6 +875,81 @@ class FXQuoteService:
                 if not dataset_was_reused
                 else []
             )
+            rg_transition_diagnostics = [
+                RgTransitionDiagnosticRecord(
+                    run_id=UUID(policy_result.run_id),
+                    event_dataset_id=UUID(
+                        result.event_dataset_id
+                    ),
+                    model_version=request.model_version,
+                    pricing_policy=(
+                        policy_result.policy.value
+                    ),
+                    event_index=(
+                        diagnostic.event_index
+                    ),
+                    block_size=(
+                        diagnostic.block_size
+                    ),
+                    history_ready=(
+                        diagnostic.history_ready
+                    ),
+                    request_accepted=(
+                        diagnostic.request_accepted
+                    ),
+                    local_h_before=(
+                        diagnostic.local_h_before
+                    ),
+                    local_projected_h_after=(
+                        diagnostic
+                        .local_projected_h_after
+                    ),
+                    local_delta_h=(
+                        diagnostic.local_delta_h
+                    ),
+                    coarse_h_before=(
+                        diagnostic.coarse_h_before
+                    ),
+                    coarse_temporal_drift_delta_h=(
+                        diagnostic
+                        .coarse_temporal_drift_delta_h
+                    ),
+                    normalized_coarse_temporal_drift_delta_h=(
+                        diagnostic
+                        .normalized_coarse_temporal_drift_delta_h
+                    ),
+                    coarse_request_delta_h=(
+                        diagnostic
+                        .coarse_request_delta_h
+                    ),
+                    normalized_coarse_request_delta_h=(
+                        diagnostic
+                        .normalized_coarse_request_delta_h
+                    ),
+                    coarse_total_accepted_delta_h=(
+                        diagnostic
+                        .coarse_total_accepted_delta_h
+                    ),
+                    normalized_coarse_total_accepted_delta_h=(
+                        diagnostic
+                        .normalized_coarse_total_accepted_delta_h
+                    ),
+                    local_sign=(
+                        diagnostic.local_sign.value
+                    ),
+                    coarse_sign=(
+                        diagnostic.coarse_sign.value
+                    ),
+                    sign_agreement=(
+                        diagnostic.sign_agreement
+                    ),
+                )
+                for policy_result in result.results
+                for diagnostic in (
+                    policy_result
+                    .scale_aware_transition_diagnostics
+                )
+            ]
 
             try:
                 dataset_rows, run_rows, snapshot_rows, event_rows = (
@@ -872,6 +960,9 @@ class FXQuoteService:
                         events=event_records_to_persist,
                         persist_event_dataset=not dataset_was_reused,
                     )
+                )
+                self.rg_transition_diagnostics_loader.persist(
+                    records=rg_transition_diagnostics
                 )
             except Exception as exc:
                 raise HTTPException(

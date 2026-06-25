@@ -5,6 +5,9 @@ from uuid import UUID
 
 from revolut_app.fx_lab.pricing.models import QuoteRequest
 from revolut_app.fx_lab.pricing.policies import QuotePolicyName
+from revolut_app.fx_lab.risk.rg.models import (
+    ScaleAwareTransitionDiagnostic,
+)
 from revolut_app.fx_lab.shared.enums import Currency, StressRegime
 
 
@@ -64,6 +67,10 @@ class PolicyRunResult:
     stress_time_fraction: float
     final_inventory_pressure: dict[str, float]
     snapshots: list['PolicyInventorySnapshot']
+    scale_aware_transition_diagnostics: tuple[
+        ScaleAwareTransitionDiagnostic,
+        ...
+    ] = ()
 
 
 @dataclass(frozen=True)
