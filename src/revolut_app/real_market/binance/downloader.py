@@ -157,7 +157,7 @@ def _download_atomic(
     url: str,
     destination: Path,
     timeout_seconds: int,
-) -> None:
+):
     temporary_path = destination.with_suffix(
         destination.suffix + ".part"
     )
