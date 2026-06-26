@@ -221,3 +221,5 @@ test_rev.py
 cred.py
 jars/
 *.jar 
+*.zip.CHECKSUM
+data/real_market/
