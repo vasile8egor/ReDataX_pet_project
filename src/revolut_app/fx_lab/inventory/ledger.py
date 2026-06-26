@@ -20,7 +20,7 @@ from revolut_app.fx_lab.shared.constants import (
     ONE_FLOAT,
     ZERO_FLOAT,
 )
-from revolut_app.fx_lab.execution_constants import (
+from revolut_app.fx_lab.shared.execution_constants import (
     EXECUTION_AMOUNT_PRECISION,
 )
 from revolut_app.fx_lab.inventory.models import CurrencyState

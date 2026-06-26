@@ -13,6 +13,8 @@ x-airflow-common: &airflow-common
     AIRFLOW_CONN_MINIO_CONN: 'aws://minioadmin:minioadmin@?endpoint_url=http%3A%2F%2Fminio%3A9000'
   volumes:
     - ./dags:/opt/airflow/dags
+    - ./data:/opt/airflow/data
+    - ./.git:opt/airflow/.git:ro
     - ./src:/opt/airflow/src
     - ./sql:/opt/airflow/sql
     - ./logs:/opt/airflow/logs

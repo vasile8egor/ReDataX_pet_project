@@ -50,7 +50,7 @@ from revolut_app.fx_lab.shared.constants import (
     MIN_SIMULATION_STEPS,
     MAX_POLICY_SNAPSHOT_EVERY_N_EVENTS,
 )
-from revolut_app.fx_lab.execution_constants import (
+from revolut_app.fx_lab.shared.execution_constants import (
     DEFAULT_HEDGE_COST_BPS,
     DEFAULT_MAX_HEDGE_ACTIONS,
     MAX_HEDGE_ACTIONS,

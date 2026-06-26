@@ -36,7 +36,7 @@ from revolut_app.fx_lab.shared.constants import (
     STATE_VALUE_PRECISION,
     ZERO_FLOAT,
 )
-from revolut_app.fx_lab.execution_constants import (
+from revolut_app.fx_lab.shared.execution_constants import (
     EXECUTION_AMOUNT_PRECISION,
     EXECUTION_COST_PRECISION,
 )

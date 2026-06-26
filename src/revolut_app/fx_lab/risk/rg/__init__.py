@@ -68,6 +68,7 @@ __all__ = [
     'ScaleAwareTransitionDiagnostic',
     'TemporalCoarseGrainingParameters',
     'TrajectoryExtractionParameters',
+    'TransitionRiskSign',
     'VarianceScalingExponent',
     'analyze_multiscale_trajectory',
     'build_effective_hamiltonian_observations',
