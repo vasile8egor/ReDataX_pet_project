@@ -1,3 +1,8 @@
+from revolut_app.real_market.loaders.clickhouse import (
+    RealMarketAggTradeRecord,
+    RealMarketAggTradesLoader,
+    build_real_market_record,
+)
 from revolut_app.real_market.binance.downloader import (
     calculate_sha256,
     download_binance_agg_trades_archive,
@@ -12,6 +17,9 @@ from revolut_app.real_market.binance.validation import (
 )
 
 __all__ = [
+    'RealMarketAggTradeRecord',
+    'RealMarketAggTradesLoader',
+    'build_real_market_record',
     'calculate_sha256',
     'download_binance_agg_trades_archive',
     'parse_checksum_file',

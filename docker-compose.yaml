@@ -45,6 +45,7 @@ services:
     volumes:
       - ./src:/opt/airflow/src
       - ./.git:/opt/airflow/.git:ro
+      - ./data:/opt/airflow/data
     depends_on:
       postgres_main:
         condition: service_healthy
