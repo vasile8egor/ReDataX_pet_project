@@ -88,14 +88,17 @@ def main() -> None:
         batch_size=arguments.batch_size,
     )
 
-    total_inserted = 0
-
-    for symbol in arguments.symbols:
-        spec = BinanceAggTradeArchiveSpec(
+    specs = [
+        BinanceAggTradeArchiveSpec(
             symbol=symbol,
             trade_date=arguments.date,
         )
+        for symbol in arguments.symbols
+    ]
 
+    archive_paths = {}
+
+    for spec in specs:
         archive_path = (
             arguments.data_directory
             / 'spot'
@@ -109,6 +112,18 @@ def main() -> None:
             raise FileNotFoundError(
                 f'Archive not found: {archive_path}'
             )
+
+        archive_paths[spec.symbol] = archive_path
+
+    loader.delete_day(
+        trade_date=arguments.date,
+        symbols=[spec.symbol for spec in specs],
+    )
+
+    total_inserted = 0
+
+    for spec in specs:
+        archive_path = archive_paths[spec.symbol]
 
         archive_sha256 = calculate_sha256(
             archive_path

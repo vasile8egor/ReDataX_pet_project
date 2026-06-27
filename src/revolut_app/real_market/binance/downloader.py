@@ -1,7 +1,10 @@
 import hashlib
 import os
 import shutil
+import sys
+import time
 from pathlib import Path
+from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 from revolut_app.real_market.models import (
@@ -10,9 +13,34 @@ from revolut_app.real_market.models import (
 )
 
 
-BINANCE_PUBLIC_DATA_BASE_URL = 'https://data.binance.vision'
+BINANCE_PUBLIC_DATA_BASE_URL = os.getenv(
+    'BINANCE_PUBLIC_DATA_BASE_URL',
+    'https://data.binance.vision',
+).rstrip('/')
 
 DOWNLOAD_CHUNK_SIZE = 1024 * 1024
+
+DEFAULT_DOWNLOAD_ATTEMPTS = int(
+    os.getenv(
+        'BINANCE_DOWNLOAD_ATTEMPTS',
+        '8',
+    )
+)
+DEFAULT_RETRY_BACKOFF_SECONDS = float(
+    os.getenv(
+        'BINANCE_RETRY_BACKOFF_SECONDS',
+        '10',
+    )
+)
+
+RETRYABLE_HTTP_STATUS_CODES = {
+    408,
+    429,
+    500,
+    502,
+    503,
+    504,
+}
 
 
 def calculate_sha256(path: Path):
@@ -70,10 +98,22 @@ def download_binance_agg_trades_archive(
     spec: BinanceAggTradeArchiveSpec,
     output_directory: Path,
     timeout_seconds: int = 180,
+    download_attempts: int = DEFAULT_DOWNLOAD_ATTEMPTS,
+    retry_backoff_seconds: float = DEFAULT_RETRY_BACKOFF_SECONDS,
 ) -> DownloadedBinanceArchive:
     if timeout_seconds <= 0:
         raise ValueError(
             'timeout_seconds must be positive'
+        )
+
+    if download_attempts <= 0:
+        raise ValueError(
+            'download_attempts must be positive'
+        )
+
+    if retry_backoff_seconds < 0:
+        raise ValueError(
+            'retry_backoff_seconds must be non-negative'
         )
 
     symbol_directory = (
@@ -111,6 +151,8 @@ def download_binance_agg_trades_archive(
         url=checksum_url,
         destination=checksum_path,
         timeout_seconds=timeout_seconds,
+        attempts=download_attempts,
+        retry_backoff_seconds=retry_backoff_seconds,
     )
 
     if archive_path.exists():
@@ -136,6 +178,8 @@ def download_binance_agg_trades_archive(
         url=archive_url,
         destination=archive_path,
         timeout_seconds=timeout_seconds,
+        attempts=download_attempts,
+        retry_backoff_seconds=retry_backoff_seconds,
     )
 
     expected, actual = verify_sha256(
@@ -153,6 +197,53 @@ def download_binance_agg_trades_archive(
 
 
 def _download_atomic(
+    *,
+    url: str,
+    destination: Path,
+    timeout_seconds: int,
+    attempts: int = DEFAULT_DOWNLOAD_ATTEMPTS,
+    retry_backoff_seconds: float = DEFAULT_RETRY_BACKOFF_SECONDS,
+):
+    last_error: BaseException | None = None
+
+    for attempt_number in range(1, attempts + 1):
+        try:
+            _download_atomic_once(
+                url=url,
+                destination=destination,
+                timeout_seconds=timeout_seconds,
+            )
+            return
+        except Exception as error:
+            last_error = error
+
+            if (
+                attempt_number == attempts
+                or not _is_retryable_download_error(error)
+            ):
+                raise
+
+            sleep_seconds = (
+                retry_backoff_seconds
+                * attempt_number
+            )
+
+            print(
+                'Download failed, retrying: '
+                f'url={url}, '
+                f'attempt={attempt_number}/{attempts}, '
+                f'sleep_seconds={sleep_seconds}, '
+                f'error={error!r}',
+                file=sys.stderr,
+            )
+
+            time.sleep(sleep_seconds)
+
+    if last_error is not None:
+        raise last_error
+
+
+def _download_atomic_once(
     *,
     url: str,
     destination: Path,
@@ -193,3 +284,23 @@ def _download_atomic(
     except Exception:
         temporary_path.unlink(missing_ok=True)
         raise
+
+
+def _is_retryable_download_error(
+    error: BaseException,
+) -> bool:
+    if isinstance(error, HTTPError):
+        return (
+            error.code
+            in RETRYABLE_HTTP_STATUS_CODES
+        )
+
+    return isinstance(
+        error,
+        (
+            ConnectionError,
+            OSError,
+            TimeoutError,
+            URLError,
+        ),
+    )

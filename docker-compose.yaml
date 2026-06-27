@@ -20,6 +20,9 @@ x-airflow-common: &airflow-common
     - ./logs:/opt/airflow/logs
     # - ./plugins:/opt/airflow/plugins
   user: "${AIRFLOW_UID:-50000}:0"
+  dns:
+    - 1.1.1.1
+    - 8.8.8.8
   networks:
     - revolut_network
 
@@ -46,6 +49,7 @@ services:
       - ./src:/opt/airflow/src
       - ./.git:/opt/airflow/.git:ro
       - ./data:/opt/airflow/data
+    user: "${AIRFLOW_UID:-50000}:0"
     depends_on:
       postgres_main:
         condition: service_healthy
@@ -53,6 +57,9 @@ services:
         condition: service_healthy
     networks:
       - revolut_network
+    dns:
+      - 1.1.1.1
+      - 8.8.8.8
     profiles:
       - api
 
