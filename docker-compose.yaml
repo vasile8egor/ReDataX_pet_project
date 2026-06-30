@@ -14,7 +14,7 @@ x-airflow-common: &airflow-common
   volumes:
     - ./dags:/opt/airflow/dags
     - ./data:/opt/airflow/data
-    - ./.git:opt/airflow/.git:ro
+    - ./.git:/opt/airflow/.git:ro
     - ./src:/opt/airflow/src
     - ./sql:/opt/airflow/sql
     - ./logs:/opt/airflow/logs
