@@ -16,7 +16,7 @@ class HamiltonianEngine:
         self._quartic = dict(parameters.quartic)
         self._external_field = dict(parameters.external_field)
 
-    def evaluate(self, pressures: dict[str, float]) -> HamiltonianBreakdown:
+    def evaluate(self, pressures: dict[str, float]):
         phi = {
             currency: (float(pressures.get(currency.value, 0.0)))
             for currency in Currency
@@ -111,7 +111,7 @@ class HamiltonianEngine:
         *,
         pressures_before: dict[str, float],
         pressures_after: dict[str, float],
-    ) -> HamiltonianTransitionEvaluation:
+    ):
         before_keys = set(pressures_before)
         after_keys = set(pressures_after)
 

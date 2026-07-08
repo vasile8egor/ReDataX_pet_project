@@ -22,7 +22,7 @@ def iter_binance_spot_agg_trades(
     *,
     archive_path: Path,
     spec: BinanceAggTradeArchiveSpec,
-) -> Iterator[BinanceAggTrade]:
+):
     try:
         archive = ZipFile(
             archive_path,
@@ -54,12 +54,12 @@ def iter_binance_spot_agg_trades(
 
         with archive.open(
             member,
-            mode="r",
+            mode='r',
         ) as binary_stream:
             with TextIOWrapper(
                 binary_stream,
                 encoding='utf-8-sig',
-                newline="",
+                newline='',
             ) as text_stream:
                 reader = csv.reader(
                     text_stream
@@ -141,7 +141,7 @@ def _parse_row(
     row: list[str],
     line_number: int,
     spec: BinanceAggTradeArchiveSpec,
-) -> BinanceAggTrade:
+):
     if len(row) != (
         EXPECTED_SPOT_AGG_TRADE_COLUMNS
     ):
@@ -255,7 +255,7 @@ def _normalize_timestamp_us(
     *,
     raw_timestamp: int,
     trade_date: date,
-) -> int:
+):
     if trade_date >= (
         MICROSECOND_ARCHIVE_START_DATE
     ):
@@ -290,7 +290,7 @@ def _normalize_timestamp_us(
 
 def _parse_boolean(
     value: str,
-) -> bool:
+):
     normalized = value.strip().lower()
 
     if normalized in {
@@ -312,7 +312,7 @@ def _parse_boolean(
 
 def _is_header_row(
     row: list[str],
-) -> bool:
+):
     first_value = ''.join(
         character
         for character in row[0].lower()

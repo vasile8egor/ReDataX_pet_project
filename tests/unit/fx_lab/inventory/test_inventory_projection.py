@@ -11,7 +11,7 @@ from revolut_app.fx_lab.shared.enums import (
 )
 
 
-def build_request() -> QuoteRequest:
+def build_request():
     return QuoteRequest(
         customer_id='projection-test',
         base_currency=Currency.EUR,
@@ -140,7 +140,7 @@ def test_buy_and_sell_projections_have_opposite_direction():
     ledger = InventoryLedger()
 
     buy_request = QuoteRequest(
-        customer_id="buy",
+        customer_id='buy',
         base_currency=Currency.EUR,
         quote_currency=Currency.USD,
         side=FXSide.buy,
@@ -149,7 +149,7 @@ def test_buy_and_sell_projections_have_opposite_direction():
     )
 
     sell_request = QuoteRequest(
-        customer_id="sell",
+        customer_id='sell',
         base_currency=Currency.EUR,
         quote_currency=Currency.USD,
         side=FXSide.sell,

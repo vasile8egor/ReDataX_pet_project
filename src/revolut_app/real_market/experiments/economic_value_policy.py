@@ -23,9 +23,9 @@ DEFAULT_NOTIONAL_BUDGETS = (0.005, 0.01, 0.02, 0.05, 0.10)
 DEFAULT_MIN_NET_MARGINS_BPS = (0.0, 0.05, 0.10, 0.20)
 
 POLICY_NAMES = (
-    "no_action",
-    "probability_budget",
-    "economic_value_policy",
+    'no_action',
+    'probability_budget',
+    'economic_value_policy',
 )
 
 
@@ -36,18 +36,18 @@ class EconomicScenario:
     internalization_rate: float
     action_cost_bps: float
 
-    def __post_init__(self) -> None:
+    def __post_init__(self):
         if not self.name.strip():
-            raise ValueError("scenario name cannot be empty")
+            raise ValueError('scenario name cannot be empty')
         if not 0.0 <= self.mitigation_efficiency <= 1.0:
-            raise ValueError("mitigation_efficiency must be in [0, 1]")
+            raise ValueError('mitigation_efficiency must be in [0, 1]')
         if not 0.0 <= self.internalization_rate <= 1.0:
-            raise ValueError("internalization_rate must be in [0, 1]")
+            raise ValueError('internalization_rate must be in [0, 1]')
         if self.action_cost_bps < 0.0:
-            raise ValueError("action_cost_bps cannot be negative")
+            raise ValueError('action_cost_bps cannot be negative')
 
     @property
-    def protection_fraction(self) -> float:
+    def protection_fraction(self):
         return self.mitigation_efficiency * self.internalization_rate
 
 
@@ -58,11 +58,11 @@ class ValueModelSpec:
     notional_weight_power: float
 
     @property
-    def model_id(self) -> str:
+    def model_id(self):
         return (
-            f"alpha={self.alpha:g}|"
-            f"clip={self.target_clip_bps:g}|"
-            f"weight={self.notional_weight_power:g}"
+            f'''alpha={self.alpha:g}|'''
+            f'''clip={self.target_clip_bps:g}|'''
+            f'''weight={self.notional_weight_power:g}'''
         )
 
 
@@ -72,10 +72,10 @@ class PolicySpec:
     min_expected_net_margin_bps: float
 
     @property
-    def policy_id(self) -> str:
+    def policy_id(self):
         return (
-            f"budget={self.notional_budget_fraction:g}|"
-            f"margin={self.min_expected_net_margin_bps:g}"
+            f'''budget={self.notional_budget_fraction:g}|'''
+            f'''margin={self.min_expected_net_margin_bps:g}'''
         )
 
 
@@ -135,11 +135,11 @@ class CandidateSummary:
     development_profitable: bool
 
 
-def parse_scenario(value: str) -> EconomicScenario:
-    parts = value.split(":")
+def parse_scenario(value: str):
+    parts = value.split(':')
     if len(parts) != 4:
         raise argparse.ArgumentTypeError(
-            "scenario must be NAME:MITIGATION:INTERNALIZATION:ACTION_COST_BPS"
+            'scenario must be NAME:MITIGATION:INTERNALIZATION:ACTION_COST_BPS'
         )
     name, mitigation, internalization, cost = parts
     try:
@@ -153,36 +153,36 @@ def parse_scenario(value: str) -> EconomicScenario:
         raise argparse.ArgumentTypeError(str(exc)) from exc
 
 
-def parse_positive_float(value: str) -> float:
+def parse_positive_float(value: str):
     result = float(value)
     if result <= 0.0:
-        raise argparse.ArgumentTypeError("value must be positive")
+        raise argparse.ArgumentTypeError('value must be positive')
     return result
 
 
-def parse_non_negative_float(value: str) -> float:
+def parse_non_negative_float(value: str):
     result = float(value)
     if result < 0.0:
-        raise argparse.ArgumentTypeError("value cannot be negative")
+        raise argparse.ArgumentTypeError('value cannot be negative')
     return result
 
 
-def parse_fraction(value: str) -> float:
+def parse_fraction(value: str):
     result = float(value)
     if not 0.0 < result <= 1.0:
-        raise argparse.ArgumentTypeError("fraction must be in (0, 1]")
+        raise argparse.ArgumentTypeError('fraction must be in (0, 1]')
     return result
 
 
-def new_value_regressor(alpha: float) -> SGDRegressor:
+def new_value_regressor(alpha: float):
     if alpha <= 0.0:
-        raise ValueError("alpha must be positive")
+        raise ValueError('alpha must be positive')
     return SGDRegressor(
-        loss="huber",
+        loss='huber',
         epsilon=1.35,
-        penalty="l2",
+        penalty='l2',
         alpha=alpha,
-        learning_rate="invscaling",
+        learning_rate='invscaling',
         eta0=0.01,
         power_t=0.25,
         average=True,
@@ -195,7 +195,7 @@ def build_model_specs(
     alphas: Iterable[float],
     target_clips_bps: Iterable[float],
     notional_weight_powers: Iterable[float],
-) -> tuple[ValueModelSpec, ...]:
+):
     specs = tuple(
         ValueModelSpec(
             alpha=float(alpha),
@@ -207,21 +207,21 @@ def build_model_specs(
         for power in sorted(set(notional_weight_powers))
     )
     if not specs:
-        raise ValueError("empty value-model grid")
+        raise ValueError('empty value-model grid')
     for spec in specs:
         if spec.alpha <= 0.0:
-            raise ValueError("alpha must be positive")
+            raise ValueError('alpha must be positive')
         if spec.target_clip_bps <= 0.0:
-            raise ValueError("target clip must be positive")
+            raise ValueError('target clip must be positive')
         if spec.notional_weight_power < 0.0:
-            raise ValueError("notional weight power cannot be negative")
+            raise ValueError('notional weight power cannot be negative')
     return specs
 
 
 def build_policy_specs(
     notional_budgets: Iterable[float],
     minimum_net_margins_bps: Iterable[float],
-) -> tuple[PolicySpec, ...]:
+):
     specs = tuple(
         PolicySpec(
             notional_budget_fraction=float(budget),
@@ -231,35 +231,35 @@ def build_policy_specs(
         for margin in sorted(set(minimum_net_margins_bps))
     )
     if not specs:
-        raise ValueError("empty policy grid")
+        raise ValueError('empty policy grid')
     for spec in specs:
         if not 0.0 < spec.notional_budget_fraction <= 1.0:
-            raise ValueError("notional budget must be in (0, 1]")
+            raise ValueError('notional budget must be in (0, 1]')
         if spec.min_expected_net_margin_bps < 0.0:
-            raise ValueError("minimum margin cannot be negative")
+            raise ValueError('minimum margin cannot be negative')
     return specs
 
 
 def fit_feature_scaler(
     datasets: dict[date, business.BusinessDayDataset],
     dates: list[date],
-) -> StandardScaler:
+):
     scaler = StandardScaler()
     for trade_date in dates:
-        scaler.partial_fit(datasets[trade_date].features["rg_no_j"])
+        scaler.partial_fit(datasets[trade_date].features['rg_no_j'])
     return scaler
 
 
 def training_notional_scale(
     datasets: dict[date, business.BusinessDayDataset],
     dates: list[date],
-) -> float:
+):
     notionals = np.concatenate(
         [datasets[trade_date].notional_usdt for trade_date in dates]
     )
     median = float(np.median(notionals))
     if not np.isfinite(median) or median <= 0.0:
-        raise ValueError("invalid training notional median")
+        raise ValueError('invalid training notional median')
     return median
 
 
@@ -268,7 +268,7 @@ def notional_sample_weights(
     *,
     scale: float,
     power: float,
-) -> np.ndarray:
+):
     if power == 0.0:
         return np.ones(notional_usdt.size, dtype=np.float64)
     weights = np.power(
@@ -283,7 +283,7 @@ def fit_value_candidates(
     datasets: dict[date, business.BusinessDayDataset],
     train_dates: list[date],
     specs: tuple[ValueModelSpec, ...],
-) -> dict[str, ValueModelState]:
+):
     scaler = fit_feature_scaler(datasets, train_dates)
     notional_scale = training_notional_scale(datasets, train_dates)
 
@@ -299,7 +299,7 @@ def fit_value_candidates(
 
     for trade_date in train_dates:
         dataset = datasets[trade_date]
-        transformed = scaler.transform(dataset.features["rg_no_j"])
+        transformed = scaler.transform(dataset.features['rg_no_j'])
         positive_markout = np.maximum(dataset.markout_bps, 0.0)
 
         weight_cache: dict[float, np.ndarray] = {}
@@ -329,7 +329,7 @@ def fit_single_value_state(
     datasets: dict[date, business.BusinessDayDataset],
     fit_dates: list[date],
     spec: ValueModelSpec,
-) -> ValueModelState:
+):
     return fit_value_candidates(
         datasets,
         fit_dates,
@@ -340,7 +340,7 @@ def fit_single_value_state(
 def predict_positive_markout_bps(
     state: ValueModelState,
     features: np.ndarray,
-) -> np.ndarray:
+):
     transformed = state.scaler.transform(features)
     prediction = state.regressor.predict(transformed)
     return np.clip(
@@ -355,14 +355,14 @@ def fit_probability_state(
     fit_dates: list[date],
     *,
     alpha: float,
-) -> ProbabilityState:
+):
     scaler = fit_feature_scaler(datasets, fit_dates)
     classifier = coupled.new_classifier(alpha)
     classes = np.array([0, 1], dtype=np.uint8)
 
     for trade_date in fit_dates:
         dataset = datasets[trade_date]
-        transformed = scaler.transform(dataset.features["rg_no_j"])
+        transformed = scaler.transform(dataset.features['rg_no_j'])
         labels = (dataset.markout_bps > 0.0).astype(np.uint8)
         classifier.partial_fit(
             transformed,
@@ -380,7 +380,7 @@ def fit_probability_state(
 def predict_toxic_probability(
     state: ProbabilityState,
     features: np.ndarray,
-) -> np.ndarray:
+):
     transformed = state.scaler.transform(features)
     return state.classifier.predict_proba(transformed)[:, 1]
 
@@ -391,24 +391,24 @@ def fractional_notional_allocation(
     *,
     budget_fraction: float,
     eligible: np.ndarray | None = None,
-) -> np.ndarray:
-    """
+):
+    '''
     Fractional-knapsack allocation under a total-notional budget.
 
     `priority_score` is value per unit of notional. The last selected
     observation can be partially acted on, representing a partial hedge
     or another proportional intervention.
-    """
+    '''
     if priority_score.shape != notional_usdt.shape:
-        raise ValueError("score and notional shapes differ")
+        raise ValueError('score and notional shapes differ')
     if priority_score.ndim != 1 or priority_score.size == 0:
-        raise ValueError("allocation arrays must be non-empty vectors")
+        raise ValueError('allocation arrays must be non-empty vectors')
     if np.any(~np.isfinite(priority_score)):
-        raise ValueError("priority score contains non-finite values")
+        raise ValueError('priority score contains non-finite values')
     if np.any(~np.isfinite(notional_usdt)) or np.any(notional_usdt <= 0.0):
-        raise ValueError("notional must be finite and positive")
+        raise ValueError('notional must be finite and positive')
     if not 0.0 <= budget_fraction <= 1.0:
-        raise ValueError("budget fraction must be in [0, 1]")
+        raise ValueError('budget fraction must be in [0, 1]')
 
     action_fraction = np.zeros(priority_score.size, dtype=np.float64)
     if budget_fraction == 0.0:
@@ -417,14 +417,14 @@ def fractional_notional_allocation(
     if eligible is None:
         eligible = np.ones(priority_score.size, dtype=bool)
     if eligible.shape != priority_score.shape:
-        raise ValueError("eligible mask shape differs")
+        raise ValueError('eligible mask shape differs')
 
     candidates = np.flatnonzero(eligible)
     if candidates.size == 0:
         return action_fraction
 
     order = candidates[
-        np.argsort(priority_score[candidates], kind="stable")[::-1]
+        np.argsort(priority_score[candidates], kind='stable')[::-1]
     ]
     total_budget = float(np.sum(notional_usdt)) * budget_fraction
     remaining = total_budget
@@ -446,7 +446,7 @@ def economic_action_fractions(
     *,
     scenario: EconomicScenario,
     policy: PolicySpec,
-) -> tuple[np.ndarray, np.ndarray]:
+):
     predicted_gross_benefit_bps = (
         scenario.protection_fraction
         * predicted_positive_markout_bps
@@ -473,7 +473,7 @@ def probability_action_fractions(
     notional_usdt: np.ndarray,
     *,
     notional_budget_fraction: float,
-) -> np.ndarray:
+):
     return fractional_notional_allocation(
         probability,
         notional_usdt,
@@ -487,19 +487,19 @@ def calculate_policy_metrics(
     losses_usdt: np.ndarray,
     notional_usdt: np.ndarray,
     scenario: EconomicScenario,
-) -> PolicyMetrics:
+):
     if not (
         action_fraction.shape
         == losses_usdt.shape
         == notional_usdt.shape
     ):
-        raise ValueError("policy metric array shapes differ")
+        raise ValueError('policy metric array shapes differ')
     if np.any((action_fraction < 0.0) | (action_fraction > 1.0)):
-        raise ValueError("action fractions must be in [0, 1]")
+        raise ValueError('action fractions must be in [0, 1]')
     if np.any(losses_usdt < 0.0):
-        raise ValueError("losses cannot be negative")
+        raise ValueError('losses cannot be negative')
     if np.any(notional_usdt <= 0.0):
-        raise ValueError("notional must be positive")
+        raise ValueError('notional must be positive')
 
     acted = action_fraction > 0.0
     observations = int(action_fraction.size)
@@ -590,9 +590,9 @@ def aggregate_policy_metrics(
     daily_metrics: list[PolicyMetrics],
     *,
     scenario: EconomicScenario,
-) -> PolicyMetrics:
+):
     if not daily_metrics:
-        raise ValueError("daily metrics cannot be empty")
+        raise ValueError('daily metrics cannot be empty')
 
     observations = sum(item.observations for item in daily_metrics)
     acted_observations = sum(
@@ -679,7 +679,7 @@ def summarize_candidate(
     daily_metrics: list[PolicyMetrics],
     risk_penalty: float,
     minimum_positive_day_fraction: float,
-) -> CandidateSummary:
+):
     values = np.asarray(
         [item.net_value_per_million_usdt for item in daily_metrics],
         dtype=np.float64,
@@ -712,7 +712,7 @@ def summarize_candidate(
 
 def select_candidate(
     candidates: list[CandidateSummary],
-) -> CandidateSummary | None:
+):
     profitable = [
         item for item in candidates if item.development_profitable
     ]
@@ -736,10 +736,10 @@ def paired_day_bootstrap(
     *,
     samples: int,
     seed: int,
-) -> dict[str, float | int]:
+):
     values = np.asarray(daily_differences, dtype=np.float64)
     if values.size == 0 or np.any(~np.isfinite(values)):
-        raise ValueError("bootstrap values must be finite and non-empty")
+        raise ValueError('bootstrap values must be finite and non-empty')
     rng = np.random.default_rng(seed)
     indices = rng.integers(
         0,
@@ -748,11 +748,11 @@ def paired_day_bootstrap(
     )
     means = np.mean(values[indices], axis=1)
     return {
-        "days": int(values.size),
-        "mean": float(np.mean(values)),
-        "ci_025": float(np.quantile(means, 0.025)),
-        "ci_975": float(np.quantile(means, 0.975)),
-        "positive_day_fraction": float(np.mean(values > 0.0)),
+        'days': int(values.size),
+        'mean': float(np.mean(values)),
+        'ci_025': float(np.quantile(means, 0.025)),
+        'ci_975': float(np.quantile(means, 0.975)),
+        'positive_day_fraction': float(np.mean(values > 0.0)),
     }
 
 
@@ -762,11 +762,11 @@ def load_target_datasets(
     *,
     target_symbol: str,
     market_cache: dict[date, coupled.MarketDay],
-) -> dict[date, business.BusinessDayDataset]:
+):
     datasets: dict[date, business.BusinessDayDataset] = {}
     for trade_date in dates:
         print(
-            f"{target_symbol}: building economic dataset {trade_date}",
+            f'''{target_symbol}: building economic dataset {trade_date}''',
             flush=True,
         )
         second_notional = business.load_second_notional(
@@ -789,13 +789,13 @@ def evaluate_value_candidate_on_dates(
     datasets: dict[date, business.BusinessDayDataset],
     dates: list[date],
     scenario: EconomicScenario,
-) -> list[PolicyMetrics]:
+):
     output: list[PolicyMetrics] = []
     for trade_date in dates:
         dataset = datasets[trade_date]
         prediction = predict_positive_markout_bps(
             state,
-            dataset.features["rg_no_j"],
+            dataset.features['rg_no_j'],
         )
         action_fraction, _ = economic_action_fractions(
             prediction,
@@ -823,7 +823,7 @@ def evaluate_final_policies(
     final_dates: list[date],
     scenario: EconomicScenario,
     bootstrap_samples: int,
-) -> dict[str, Any]:
+):
     daily_output: list[dict[str, Any]] = []
     collected: dict[str, list[PolicyMetrics]] = {
         name: [] for name in POLICY_NAMES
@@ -848,7 +848,7 @@ def evaluate_final_policies(
         else:
             probability = predict_toxic_probability(
                 probability_state,
-                dataset.features["rg_no_j"],
+                dataset.features['rg_no_j'],
             )
             probability_action = probability_action_fractions(
                 probability,
@@ -859,7 +859,7 @@ def evaluate_final_policies(
             )
             predicted_loss = predict_positive_markout_bps(
                 value_state,
-                dataset.features["rg_no_j"],
+                dataset.features['rg_no_j'],
             )
             value_action, _ = economic_action_fractions(
                 predicted_loss,
@@ -882,29 +882,29 @@ def evaluate_final_policies(
         )
 
         policy_metrics = {
-            "no_action": no_action_metrics,
-            "probability_budget": probability_metrics,
-            "economic_value_policy": value_metrics,
+            'no_action': no_action_metrics,
+            'probability_budget': probability_metrics,
+            'economic_value_policy': value_metrics,
         }
         for name, metrics in policy_metrics.items():
             collected[name].append(metrics)
 
         daily_output.append(
             {
-                "date": trade_date.isoformat(),
-                "policies": {
+                'date': trade_date.isoformat(),
+                'policies': {
                     name: asdict(metrics)
                     for name, metrics in policy_metrics.items()
                 },
-                "comparisons": {
-                    "value_minus_probability": {
-                        "net_value_per_million_usdt": (
+                'comparisons': {
+                    'value_minus_probability': {
+                        'net_value_per_million_usdt': (
                             value_metrics.net_value_per_million_usdt
                             - probability_metrics.net_value_per_million_usdt
                         )
                     },
-                    "value_minus_no_action": {
-                        "net_value_per_million_usdt": (
+                    'value_minus_no_action': {
+                        'net_value_per_million_usdt': (
                             value_metrics.net_value_per_million_usdt
                         )
                     },
@@ -921,12 +921,12 @@ def evaluate_final_policies(
 
     bootstrap = {}
     for comparison in (
-        "value_minus_probability",
-        "value_minus_no_action",
+        'value_minus_probability',
+        'value_minus_no_action',
     ):
         values = [
-            day["comparisons"][comparison][
-                "net_value_per_million_usdt"
+            day['comparisons'][comparison][
+                'net_value_per_million_usdt'
             ]
             for day in daily_output
         ]
@@ -937,19 +937,19 @@ def evaluate_final_policies(
         )
 
     return {
-        "daily": daily_output,
-        "aggregate": aggregate,
-        "bootstrap": bootstrap,
+        'daily': daily_output,
+        'aggregate': aggregate,
+        'bootstrap': bootstrap,
     }
 
 
-def write_json(path: str | Path, payload: dict[str, Any]) -> None:
+def write_json(path: str | Path, payload: dict[str, Any]):
     output = Path(path)
     output.parent.mkdir(parents=True, exist_ok=True)
-    temporary = output.with_suffix(output.suffix + ".part")
-    with temporary.open("w", encoding="utf-8") as stream:
+    temporary = output.with_suffix(output.suffix + '.part')
+    with temporary.open('w', encoding='utf-8') as stream:
         json.dump(payload, stream, ensure_ascii=False, indent=2)
-        stream.write("\n")
+        stream.write('\n')
     os.replace(temporary, output)
 
 
@@ -957,78 +957,78 @@ def validate_splits(
     train_dates: list[date],
     development_dates: list[date],
     final_dates: list[date],
-) -> None:
+):
     combined = train_dates + development_dates + final_dates
     if len(set(combined)) != len(combined):
-        raise ValueError("train, development and final dates overlap")
+        raise ValueError('train, development and final dates overlap')
     if not train_dates or not development_dates or not final_dates:
-        raise ValueError("all temporal splits must be non-empty")
+        raise ValueError('all temporal splits must be non-empty')
     if max(train_dates) >= min(development_dates):
-        raise ValueError("development must follow training")
+        raise ValueError('development must follow training')
     if max(development_dates) >= min(final_dates):
-        raise ValueError("final test must follow development")
+        raise ValueError('final test must follow development')
 
 
-def main() -> None:
+def main():
     parser = argparse.ArgumentParser(
         description=(
-            "Train an RG-noJ expected-loss model and select an "
-            "economically rational notional-constrained intervention "
-            "policy on development data."
+            'Train an RG-noJ expected-loss model and select an '
+            'economically rational notional-constrained intervention '
+            'policy on development data.'
         )
     )
-    parser.add_argument("--target-symbols", nargs="+", default=["BTCUSDT", "ETHUSDT"])
-    parser.add_argument("--train-start", type=date.fromisoformat, required=True)
-    parser.add_argument("--train-end", type=date.fromisoformat, required=True)
-    parser.add_argument("--development-start", type=date.fromisoformat, required=True)
-    parser.add_argument("--development-end", type=date.fromisoformat, required=True)
-    parser.add_argument("--final-test-start", type=date.fromisoformat, required=True)
-    parser.add_argument("--final-test-end", type=date.fromisoformat, required=True)
+    parser.add_argument('--target-symbols', nargs='+', default=['BTCUSDT', 'ETHUSDT'])
+    parser.add_argument('--train-start', type=date.fromisoformat, required=True)
+    parser.add_argument('--train-end', type=date.fromisoformat, required=True)
+    parser.add_argument('--development-start', type=date.fromisoformat, required=True)
+    parser.add_argument('--development-end', type=date.fromisoformat, required=True)
+    parser.add_argument('--final-test-start', type=date.fromisoformat, required=True)
+    parser.add_argument('--final-test-end', type=date.fromisoformat, required=True)
 
     parser.add_argument(
-        "--scenario",
+        '--scenario',
         type=parse_scenario,
-        default=parse_scenario("base:0.50:0.25:0.50"),
+        default=parse_scenario('base:0.50:0.25:0.50'),
     )
     parser.add_argument(
-        "--alphas",
-        nargs="+",
+        '--alphas',
+        nargs='+',
         type=parse_positive_float,
         default=list(DEFAULT_ALPHAS),
     )
     parser.add_argument(
-        "--target-clips-bps",
-        nargs="+",
+        '--target-clips-bps',
+        nargs='+',
         type=parse_positive_float,
         default=list(DEFAULT_TARGET_CLIPS_BPS),
     )
     parser.add_argument(
-        "--notional-weight-powers",
-        nargs="+",
+        '--notional-weight-powers',
+        nargs='+',
         type=parse_non_negative_float,
         default=list(DEFAULT_NOTIONAL_WEIGHT_POWERS),
     )
     parser.add_argument(
-        "--notional-budget-fractions",
-        nargs="+",
+        '--notional-budget-fractions',
+        nargs='+',
         type=parse_fraction,
         default=list(DEFAULT_NOTIONAL_BUDGETS),
     )
     parser.add_argument(
-        "--minimum-net-margins-bps",
-        nargs="+",
+        '--minimum-net-margins-bps',
+        nargs='+',
         type=parse_non_negative_float,
         default=list(DEFAULT_MIN_NET_MARGINS_BPS),
     )
-    parser.add_argument("--probability-alpha", type=parse_positive_float, default=1e-3)
-    parser.add_argument("--risk-penalty", type=parse_non_negative_float, default=0.50)
+    parser.add_argument('--probability-alpha', type=parse_positive_float, default=1e-3)
+    parser.add_argument('--risk-penalty', type=parse_non_negative_float, default=0.50)
     parser.add_argument(
-        "--minimum-positive-day-fraction",
+        '--minimum-positive-day-fraction',
         type=parse_fraction,
         default=5.0 / 7.0,
     )
-    parser.add_argument("--bootstrap-samples", type=int, default=5000)
-    parser.add_argument("--output", required=True)
+    parser.add_argument('--bootstrap-samples', type=int, default=5000)
+    parser.add_argument('--output', required=True)
     arguments = parser.parse_args()
 
     train_dates = coupled.date_range(arguments.train_start, arguments.train_end)
@@ -1045,7 +1045,7 @@ def main() -> None:
     targets = tuple(dict.fromkeys(arguments.target_symbols))
     invalid = [item for item in targets if item not in coupled.TARGET_SYMBOLS]
     if invalid:
-        raise ValueError(f"unsupported target symbols: {invalid}")
+        raise ValueError(f'''unsupported target symbols: {invalid}''')
 
     model_specs = build_model_specs(
         arguments.alphas,
@@ -1062,46 +1062,46 @@ def main() -> None:
     all_dates = train_dates + development_dates + final_dates
     market_cache: dict[date, coupled.MarketDay] = {}
     for trade_date in all_dates:
-        print(f"Loading synchronized market day {trade_date}", flush=True)
+        print(f'''Loading synchronized market day {trade_date}''', flush=True)
         market_cache[trade_date] = coupled.load_market_day(
             clickhouse,
             trade_date,
         )
 
     output: dict[str, Any] = {
-        "configuration": {
-            "targets": list(targets),
-            "feature_model": "rg_no_j",
-            "prediction_target": "positive aggressor-aligned markout in bps",
-            "decision_rule": (
-                "predicted protection_fraction * positive_markout_bps "
-                "- action_cost_bps; act only above selected safety margin"
+        'configuration': {
+            'targets': list(targets),
+            'feature_model': 'rg_no_j',
+            'prediction_target': 'positive aggressor-aligned markout in bps',
+            'decision_rule': (
+                'predicted protection_fraction * positive_markout_bps '
+                '- action_cost_bps; act only above selected safety margin'
             ),
-            "capital_constraint": "fraction of total daily target-market notional",
-            "partial_action_interpretation": "partial hedge or proportional intervention",
-            "scenario": asdict(scenario),
-            "train_dates": [item.isoformat() for item in train_dates],
-            "development_dates": [item.isoformat() for item in development_dates],
-            "final_test_dates": [item.isoformat() for item in final_dates],
-            "candidate_value_models": [asdict(item) for item in model_specs],
-            "candidate_policies": [asdict(item) for item in policy_specs],
-            "risk_penalty": arguments.risk_penalty,
-            "minimum_positive_day_fraction": (
+            'capital_constraint': 'fraction of total daily target-market notional',
+            'partial_action_interpretation': 'partial hedge or proportional intervention',
+            'scenario': asdict(scenario),
+            'train_dates': [item.isoformat() for item in train_dates],
+            'development_dates': [item.isoformat() for item in development_dates],
+            'final_test_dates': [item.isoformat() for item in final_dates],
+            'candidate_value_models': [asdict(item) for item in model_specs],
+            'candidate_policies': [asdict(item) for item in policy_specs],
+            'risk_penalty': arguments.risk_penalty,
+            'minimum_positive_day_fraction': (
                 arguments.minimum_positive_day_fraction
             ),
-            "fallback": (
-                "no_action when no development candidate has positive "
-                "risk-adjusted value"
+            'fallback': (
+                'no_action when no development candidate has positive '
+                'risk-adjusted value'
             ),
-            "interpretation": (
-                "scenario-adjusted potential value, not realized bank PnL"
+            'interpretation': (
+                'scenario-adjusted potential value, not realized bank PnL'
             ),
         },
-        "targets": {},
+        'targets': {},
     }
 
     for target_symbol in targets:
-        print(f"{target_symbol}: loading target datasets", flush=True)
+        print(f'''{target_symbol}: loading target datasets''', flush=True)
         datasets = load_target_datasets(
             clickhouse,
             all_dates,
@@ -1109,7 +1109,7 @@ def main() -> None:
             market_cache=market_cache,
         )
 
-        print(f"{target_symbol}: fitting value-model candidates", flush=True)
+        print(f'''{target_symbol}: fitting value-model candidates''', flush=True)
         candidate_states = fit_value_candidates(
             datasets,
             train_dates,
@@ -1147,19 +1147,19 @@ def main() -> None:
 
         if selected is None:
             print(
-                f"{target_symbol}: no robust profitable development policy; "
-                "falling back to no_action",
+                f'''{target_symbol}: no robust profitable development policy; '''
+                'falling back to no_action',
                 flush=True,
             )
             final_value_state = None
             selected_policy = None
         else:
             print(
-                f"{target_symbol}: selected {selected.model_spec.model_id} "
-                f"{selected.policy_spec.policy_id}; "
-                f"development mean="
-                f"{selected.mean_daily_net_value_per_million:+.4f} "
-                f"robust={selected.robust_score:+.4f}",
+                f'''{target_symbol}: selected {selected.model_spec.model_id} '''
+                f'''{selected.policy_spec.policy_id}; '''
+                f'''development mean='''
+                f'''{selected.mean_daily_net_value_per_million:+.4f} '''
+                f'''robust={selected.robust_score:+.4f}''',
                 flush=True,
             )
             final_value_state = fit_single_value_state(
@@ -1185,35 +1185,35 @@ def main() -> None:
         )
 
         target_output = {
-            "selected_candidate": (
+            'selected_candidate': (
                 asdict(selected) if selected is not None else None
             ),
-            "development_status": (
-                "profitable_policy_selected"
+            'development_status': (
+                'profitable_policy_selected'
                 if selected is not None
-                else "no_action_fallback"
+                else 'no_action_fallback'
             ),
-            "development_leaderboard_top20": [
+            'development_leaderboard_top20': [
                 asdict(item) for item in leaderboard_sorted[:20]
             ],
-            "final_test": final_evaluation,
+            'final_test': final_evaluation,
         }
-        output["targets"][target_symbol] = target_output
+        output['targets'][target_symbol] = target_output
         write_json(arguments.output, output)
 
-        aggregate = final_evaluation["aggregate"]["economic_value_policy"]
-        bootstrap = final_evaluation["bootstrap"]["value_minus_no_action"]
+        aggregate = final_evaluation['aggregate']['economic_value_policy']
+        bootstrap = final_evaluation['bootstrap']['value_minus_no_action']
         print(
-            f"{target_symbol}: final net value="
-            f"{aggregate['net_value_per_million_usdt']:+.4f} USDT/$1M; "
-            f"CI=[{bootstrap['ci_025']:+.4f}, "
-            f"{bootstrap['ci_975']:+.4f}]; "
-            f"positive days={bootstrap['positive_day_fraction']:.2%}",
+            f'''{target_symbol}: final net value='''
+            f'''{aggregate['net_value_per_million_usdt']:+.4f} USDT/$1M; '''
+            f'''CI=[{bootstrap['ci_025']:+.4f}, '''
+            f'''{bootstrap['ci_975']:+.4f}]; '''
+            f'''positive days={bootstrap['positive_day_fraction']:.2%}''',
             flush=True,
         )
 
     write_json(arguments.output, output)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

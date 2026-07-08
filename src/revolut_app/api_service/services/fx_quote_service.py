@@ -111,7 +111,7 @@ class FXQuoteService:
             RgTransitionDiagnosticsLoader()
         )
 
-    def quote(self, request: FXQuoteRequest) -> FXQuoteResponse:
+    def quote(self, request: FXQuoteRequest):
         domain_request = QuoteRequest(
             customer_id=request.customer_id,
             base_currency=request.base_currency,
@@ -159,7 +159,7 @@ class FXQuoteService:
             executed=quote.executed,
         )
 
-    def risk_snapshot(self) -> RiskSnapshotResponse:
+    def risk_snapshot(self):
         pressures = self.ledger.pressures()
         states_by_currency = self.ledger.get_all_states()
 
@@ -211,14 +211,14 @@ class FXQuoteService:
         *,
         volatility_multiplier: float,
         hedge_capacity_multiplier: float,
-    ) -> RiskSnapshotResponse:
+    ):
         self.ledger.apply_market_shock(
             volatility_multiplier=volatility_multiplier,
             hedge_capacity_multiplier=hedge_capacity_multiplier,
         )
         return self.risk_snapshot()
 
-    def reset_state(self) -> None:
+    def reset_state(self):
         self.ledger = InventoryLedger()
         self.stress_detect = StressRegimeDetect()
         self.quote_engine = QuoteEngine(
@@ -232,7 +232,7 @@ class FXQuoteService:
     def simulate_day(
         self,
         request: DaySimulationRequest,
-    ) -> DaySimulationResponse:
+    ):
         if request.reset_state:
             self.reset_state()
 
@@ -290,7 +290,7 @@ class FXQuoteService:
             ],
         )
 
-    def rg_flow(self, request: RGFlowRequest) -> RGFlowResponse:
+    def rg_flow(self, request: RGFlowRequest):
         if self.last_simulation_result is None:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
@@ -327,7 +327,7 @@ class FXQuoteService:
     def hedge_recommendation(
         self,
         request: HedgeRecommendationRequest,
-    ) -> HedgeRecommendationResponse:
+    ):
         pressures = self.ledger.pressures()
         states = self.ledger.get_all_states()
 
@@ -377,7 +377,7 @@ class FXQuoteService:
     def execute_hedge(
         self,
         request: HedgeExecutionRequest,
-    ) -> HedgeExecutionResponse:
+    ):
         before = self.risk_snapshot()
         pressures_before = self.ledger.pressures()
         states = self.ledger.get_all_states()
@@ -523,7 +523,7 @@ class FXQuoteService:
             message=message,
         )
 
-    def pnl_snapshot(self) -> PnLSnapshotResponse:
+    def pnl_snapshot(self):
         snapshot = self.pnl_ledger.snapshot(
             funding_cost_usd=self._estimated_funding_cost_usd(),
         )
@@ -551,7 +551,7 @@ class FXQuoteService:
     def policy_comparison(
         self,
         request: PolicyComparisonRequest,
-    ) -> PolicyComparisonResponse:
+    ):
         if request.event_dataset_id is None:
             generator = HawkesLikeFXEventGenerator(seed=request.seed)
             event_dataset = generator.simulate_event_dataset(
@@ -968,8 +968,8 @@ class FXQuoteService:
                 raise HTTPException(
                     status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                     detail=(
-                        "Policy comparison completed, but ClickHouse "
-                        f"persistence failed: {exc}"
+                        'Policy comparison completed, but ClickHouse '
+                        f'''persistence failed: {exc}'''
                     ),
                 ) from exc
 
@@ -1035,7 +1035,7 @@ class FXQuoteService:
     @staticmethod
     def _event_records_from_dataset(
         event_dataset: FXEventDataset,
-    ) -> list[FXEventRecord]:
+    ):
         return [
             FXEventRecord(
                 event_dataset_id=event_dataset.event_dataset_id,
@@ -1064,7 +1064,7 @@ class FXQuoteService:
     @staticmethod
     def _event_dataset_from_records(
         records: list[FXEventRecord],
-    ) -> FXEventDataset:
+    ):
         first = records[0]
         started_at = first.event_ts - timedelta(
             seconds=first.source_step_index * first.dt_seconds,
@@ -1105,7 +1105,7 @@ class FXQuoteService:
             events=events,
         )
 
-    def _estimated_funding_cost_usd(self) -> float:
+    def _estimated_funding_cost_usd(self):
         total_cost = ZERO_FLOAT
 
         for currency, state in self.ledger.get_all_states().items():
@@ -1121,7 +1121,7 @@ class FXQuoteService:
         return round(total_cost, PNL_PRECISION)
 
     @staticmethod
-    def _notional_usd(currency: Currency, amount: float) -> float:
+    def _notional_usd(currency: Currency, amount: float):
         usd_mark = StaticMidRateProvider.USD_MARKS[currency.value]
         return amount * usd_mark
 
@@ -1130,7 +1130,7 @@ class FXQuoteService:
         currency: Currency,
         amount: float,
         hedge_cost_bps: float,
-    ) -> float:
+    ):
         usd_mark = StaticMidRateProvider.USD_MARKS[currency.value]
         notional_usd = amount * usd_mark
         return notional_usd * hedge_cost_bps / BPS_DENOMINATOR
@@ -1138,7 +1138,7 @@ class FXQuoteService:
     @staticmethod
     def _extract_phi_series_from_snapshots(
         snapshots: list[InventorySnapshotPoint],
-    ) -> dict[str, list[float]]:
+    ):
         phi_by_currency: dict[str, list[float]] = {}
 
         for snapshot in snapshots:

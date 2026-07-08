@@ -1,1 +1,1 @@
-"""Shared ETL support utilities."""
+'''Shared ETL support utilities.'''

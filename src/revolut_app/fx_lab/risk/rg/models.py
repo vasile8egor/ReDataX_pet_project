@@ -5,9 +5,9 @@ from enum import Enum
 
 
 class TransitionRiskSign(str, Enum):
-    NEGATIVE = "negative"
-    ZERO = "zero"
-    POSITIVE = "positive"
+    NEGATIVE = 'negative'
+    ZERO = 'zero'
+    POSITIVE = 'positive'
 
 
 @dataclass(frozen=True)
@@ -46,22 +46,22 @@ class EffectiveHamiltonianCoefficients:
     quadratic: float
     quartic: float
 
-    def __post_init__(self) -> None:
+    def __post_init__(self):
         if self.block_size <= 0:
             raise ValueError(
-                "block_size must be positive"
+                'block_size must be positive'
             )
 
         for label, value in (
-            ("intercept", self.intercept),
-            ("quadratic", self.quadratic),
-            ("quartic", self.quartic),
+            ('intercept', self.intercept),
+            ('quadratic', self.quadratic),
+            ('quartic', self.quartic),
         ):
             if not isfinite(value):
                 raise ValueError(
-                    "Effective Hamiltonian "
-                    "coefficient must be finite: "
-                    f"{label}={value}"
+                    'Effective Hamiltonian '
+                    'coefficient must be finite: '
+                    f'''{label}={value}'''
                 )
 
 
@@ -127,11 +127,11 @@ class EffectiveHamiltonianFitParameters:
     require_full_rank: bool = True
     minimum_trajectories_for_cv: int = 2
 
-    def __post_init__(self) -> None:
+    def __post_init__(self):
         if self.minimum_trajectories_for_cv < 2:
             raise ValueError(
-                "minimum_trajectories_for_cv "
-                "must be at least 2"
+                'minimum_trajectories_for_cv '
+                'must be at least 2'
             )
 
 
@@ -204,10 +204,10 @@ class MultiscaleAnalysisParameters:
     )
     stress_pressure_threshold: float = 0.9
 
-    def __post_init__(self) -> None:
+    def __post_init__(self):
         if not self.block_sizes:
             raise ValueError(
-                "block_sizes cannot be empty"
+                'block_sizes cannot be empty'
             )
 
         if any(
@@ -215,21 +215,21 @@ class MultiscaleAnalysisParameters:
             for block_size in self.block_sizes
         ):
             raise ValueError(
-                "Every block size must be positive"
+                'Every block size must be positive'
             )
 
         if len(set(self.block_sizes)) != len(
             self.block_sizes
         ):
             raise ValueError(
-                "block_sizes must be unique"
+                'block_sizes must be unique'
             )
 
         if tuple(sorted(self.block_sizes)) != (
             self.block_sizes
         ):
             raise ValueError(
-                "block_sizes must be increasing"
+                'block_sizes must be increasing'
             )
 
         if (
@@ -237,8 +237,8 @@ class MultiscaleAnalysisParameters:
             or self.stress_pressure_threshold <= 0.0
         ):
             raise ValueError(
-                "stress_pressure_threshold "
-                "must be positive"
+                'stress_pressure_threshold '
+                'must be positive'
             )
 
 

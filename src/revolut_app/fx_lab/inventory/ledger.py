@@ -36,7 +36,7 @@ class InventoryLedger:
         self.states = states or self._default_states()
 
     @staticmethod
-    def _default_states() -> dict[Currency, CurrencyState]:
+    def _default_states():
         return {
             Currency(currency): CurrencyState(
                 currency=Currency(currency),
@@ -45,15 +45,15 @@ class InventoryLedger:
             for currency, params in DEFAULT_CURRENCY_STATES.items()
         }
 
-    def get_state(self, currency: Currency) -> CurrencyState:
+    def get_state(self, currency: Currency):
         if currency not in self.states:
             self.states[currency] = CurrencyState(currency=currency)
         return self.states[currency]
 
-    def get_all_states(self) -> dict[Currency, CurrencyState]:
+    def get_all_states(self):
         return self.states
 
-    def pressure(self, currency: Currency) -> float:
+    def pressure(self, currency: Currency):
         state = self.get_state(currency)
 
         position_pressure = self._div_zero(
@@ -82,13 +82,13 @@ class InventoryLedger:
             RATIO_PRECISION
         )
 
-    def pressures(self) -> dict[str, float]:
+    def pressures(self):
         return {
             currency.value: self.pressure(currency)
             for currency in self.states
         }
 
-    def apply_client_fx(self, request: QuoteRequest, mid_rate: float) -> None:
+    def apply_client_fx(self, request: QuoteRequest, mid_rate: float):
         base_state = self.get_state(request.base_currency)
         quote_state = self.get_state(request.quote_currency)
 
@@ -136,7 +136,7 @@ class InventoryLedger:
         hedge_capacity_multiplier: float = (
             DEFAULT_STRESS_HEDGE_CAPACITY_MULTIPLIER
         ),
-    ) -> None:
+    ):
         for state in self.states.values():
             state.market_volatility *= volatility_multiplier
             state.hedge_capacity *= hedge_capacity_multiplier
@@ -249,7 +249,7 @@ class InventoryLedger:
         buy_amount: float,
         sell_amount: float,
         decay: float = ORDER_FLOW_DECAY,
-    ) -> None:
+    ):
         norm_buy = buy_amount / ORDER_FLOW_NORMALIZER
         norm_sell = sell_amount / ORDER_FLOW_NORMALIZER
 
@@ -264,7 +264,7 @@ class InventoryLedger:
         )
 
     @staticmethod
-    def _div_zero(numerator: float, denominator: float) -> float:
+    def _div_zero(numerator: float, denominator: float):
         if abs(denominator) < EPSILON:
             return ZERO_FLOAT
         return numerator / denominator

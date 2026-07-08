@@ -1,14 +1,14 @@
-CREATE_RAW_DATABASE_Q = """
+CREATE_RAW_DATABASE_Q = '''
 CREATE DATABASE IF NOT EXISTS raw
-"""
+'''
 
 
-CREATE_SILVER_DATABASE_Q = """
+CREATE_SILVER_DATABASE_Q = '''
 CREATE DATABASE IF NOT EXISTS silver
-"""
+'''
 
 
-CREATE_REAL_MARKET_AGG_TRADES_Q = """
+CREATE_REAL_MARKET_AGG_TRADES_Q = '''
 CREATE TABLE IF NOT EXISTS
     raw.fact_real_market_agg_trades
 (
@@ -63,10 +63,10 @@ ORDER BY (
     symbol,
     aggregate_trade_id
 )
-"""
+'''
 
 
-INSERT_REAL_MARKET_AGG_TRADES_Q = """
+INSERT_REAL_MARKET_AGG_TRADES_Q = '''
 INSERT INTO raw.fact_real_market_agg_trades (
     venue,
     market_type,
@@ -86,7 +86,7 @@ INSERT INTO raw.fact_real_market_agg_trades (
     source_archive_sha256
 )
 VALUES
-"""
+'''
 
 DELETE_REAL_MARKET_DAY_Q = '''
 ALTER TABLE raw.fact_real_market_agg_trades
@@ -97,7 +97,7 @@ DELETE WHERE
     AND symbol IN %(symbols)s
 '''
 
-CREATE_REAL_MARKET_INVENTORY_EVENTS_Q = """
+CREATE_REAL_MARKET_INVENTORY_EVENTS_Q = '''
 CREATE TABLE IF NOT EXISTS
     silver.fact_real_market_inventory_events
 (
@@ -144,9 +144,9 @@ ORDER BY
     trade_date,
     event_index
 )
-"""
+'''
 
-INSERT_REAL_MARKET_INVENTORY_EVENTS_Q = """
+INSERT_REAL_MARKET_INVENTORY_EVENTS_Q = '''
 INSERT INTO
     silver.fact_real_market_inventory_events
 (
@@ -169,4 +169,4 @@ INSERT INTO
     replay_model_version
 )
 VALUES
-"""
+'''

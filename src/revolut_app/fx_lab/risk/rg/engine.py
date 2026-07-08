@@ -16,7 +16,7 @@ class CoarseGrainingEngine:
         phi_by_currency: dict[str, list[float]],
         window_sizes: list[int],
         stress_threshold: float = DEFAULT_RG_STRESS_THRESHOLD,
-    ) -> list[RGFlowPoint]:
+    ):
         result: list[RGFlowPoint] = []
 
         for currency, values in phi_by_currency.items():
@@ -52,7 +52,7 @@ class CoarseGrainingEngine:
         return result
 
     @staticmethod
-    def _coarse_grain(arr: np.ndarray, window_size: int) -> np.ndarray:
+    def _coarse_grain(arr: np.ndarray, window_size: int):
         if window_size <= 1:
             return arr
 
@@ -67,7 +67,7 @@ class CoarseGrainingEngine:
         return blocks.mean(axis=1)
 
     @staticmethod
-    def _autocorr_lag1(arr: np.ndarray) -> float:
+    def _autocorr_lag1(arr: np.ndarray):
         if arr.size < 2:
             return ZERO_FLOAT
 

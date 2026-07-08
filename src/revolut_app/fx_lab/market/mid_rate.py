@@ -12,7 +12,7 @@ class StaticMidRateProvider:
         self,
         base_currency: Currency,
         quote_currency: Currency,
-    ) -> float:
+    ):
         base_usd = self.USD_MARKS[base_currency.value]
         quote_usd = self.USD_MARKS[quote_currency.value]
         return round(base_usd / quote_usd, MID_RATE_PRECISION)

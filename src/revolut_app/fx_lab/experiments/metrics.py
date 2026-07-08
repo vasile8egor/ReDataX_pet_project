@@ -39,7 +39,7 @@ def funding_cost_interval(
 def spread_revenue_usd(
     request: QuoteRequest,
     spread_bps: float,
-) -> float:
+):
     base_usd_mark = USD_MARKS[request.base_currency.value]
     notional_usd = request.amount * base_usd_mark
 

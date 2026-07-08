@@ -33,11 +33,11 @@ DEFAULT_SYMBOLS = (
 )
 
 
-def main() -> None:
+def main():
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
-        "--date",
+        '--date',
         required=True,
         type=date.fromisoformat,
     )

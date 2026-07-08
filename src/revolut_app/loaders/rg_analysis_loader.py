@@ -10,6 +10,7 @@ from revolut_app.fx_lab.risk.rg import (
 )
 
 from revolut_app.loaders.queries import (
+    CREATE_GOLD_DATABASE_Q,
     INSERT_RG_ANALYSIS_RUN_Q,
     INSERT_RG_CURRENCY_OBSERVABLES_Q,
     INSERT_RG_SCALE_OBSERVABLES_Q,
@@ -179,39 +180,39 @@ class RgAnalysisClickHouseLoader:
         port: int | None = None,
         user: str | None = None,
         password: str | None = None,
-    ) -> None:
+    ):
         self.client = Client(
             host=host or os.getenv(
-                "CLICKHOUSE_HOST",
-                "clickhouse",
+                'CLICKHOUSE_HOST',
+                'clickhouse',
             ),
             port=port or int(
                 os.getenv(
-                    "CLICKHOUSE_PORT",
-                    "9000",
+                    'CLICKHOUSE_PORT',
+                    '9000',
                 )
             ),
             user=user or os.getenv(
-                "CLICKHOUSE_USER",
-                "default",
+                'CLICKHOUSE_USER',
+                'default',
             ),
             password=(
                 password
                 if password is not None
                 else os.getenv(
-                    "CLICKHOUSE_PASSWORD",
-                    "default",
+                    'CLICKHOUSE_PASSWORD',
+                    'default',
                 )
             ),
             database=os.getenv(
-                "CLICKHOUSE_DATABASE",
-                "gold",
+                'CLICKHOUSE_DATABASE',
+                'gold',
             ),
         )
 
-    def ensure_schema(self) -> None:
+    def ensure_schema(self):
         self.client.execute(
-            "CREATE DATABASE IF NOT EXISTS gold"
+            CREATE_GOLD_DATABASE_Q
         )
 
         self.client.execute(
@@ -233,13 +234,13 @@ class RgAnalysisClickHouseLoader:
     def load_source_runs(
         self, *,
         source_model_version: str,
-    ) -> list[RgSourceRun]:
+    ):
         self.ensure_schema()
 
         rows = self.client.execute(
             SELECT_RG_SOURCE_RUNS_Q,
             {
-                "source_model_version":
+                'source_model_version':
                     source_model_version,
             },
         )
@@ -258,11 +259,11 @@ class RgAnalysisClickHouseLoader:
         self,
         *,
         source_run: RgSourceRun,
-    ) -> list[PressureObservation]:
+    ):
         rows = self.client.execute(
             SELECT_RG_PRESSURE_OBSERVATIONS_Q,
             {
-                "run_id": source_run.run_id,
+                'run_id': source_run.run_id,
             },
         )
 
@@ -283,19 +284,19 @@ class RgAnalysisClickHouseLoader:
         self,
         *,
         analysis_id: UUID,
-    ) -> None:
+    ):
         counts = self.client.execute(
             SELECT_EXISTING_RG_ANALYSIS_Q,
             {
-                "analysis_id": analysis_id,
+                'analysis_id': analysis_id,
             },
         )[0]
 
         labels = (
-            "analysis",
-            "scale",
-            "currency",
-            "scaling",
+            'analysis',
+            'scale',
+            'currency',
+            'scaling',
         )
 
         existing = {
@@ -307,10 +308,10 @@ class RgAnalysisClickHouseLoader:
 
         if existing:
             raise ValueError(
-                "RG analysis already contains "
-                "persisted rows: "
-                f"analysis_id={analysis_id}, "
-                f"counts={existing}"
+                'RG analysis already contains '
+                'persisted rows: '
+                f'''analysis_id={analysis_id}, '''
+                f'''counts={existing}'''
             )
 
     def persist_analysis(
@@ -326,7 +327,7 @@ class RgAnalysisClickHouseLoader:
         scaling: list[
             RgVarianceScalingRecord
         ],
-    ) -> None:
+    ):
         self.ensure_schema()
 
         self.ensure_analysis_not_persisted(
@@ -436,25 +437,25 @@ class RgAnalysisClickHouseLoader:
         self, *,
         analysis_version: str,
         source_model_version: str,
-    ) -> RgSourceAnalysis:
+    ):
         self.ensure_schema()
 
         rows = self.client.execute(
             SELECT_RG_SOURCE_ANALYSIS_Q,
             {
-                "analysis_version":
+                'analysis_version':
                     analysis_version,
-                "source_model_version":
+                'source_model_version':
                     source_model_version,
             },
         )
 
         if not rows:
             raise ValueError(
-                "RG source analysis was not found: "
-                f"analysis_version={analysis_version}, "
-                f"source_model_version="
-                f"{source_model_version}"
+                'RG source analysis was not found: '
+                f'''analysis_version={analysis_version}, '''
+                f'''source_model_version='''
+                f'''{source_model_version}'''
             )
 
         row = rows[0]
@@ -470,22 +471,22 @@ class RgAnalysisClickHouseLoader:
     def ensure_effective_fit_not_persisted(
         self, *,
         fit_analysis_id: UUID,
-    ) -> None:
+    ):
         count = self.client.execute(
             SELECT_EXISTING_RG_EFFECTIVE_FITS_Q,
             {
-                "fit_analysis_id":
+                'fit_analysis_id':
                     fit_analysis_id,
             },
         )[0][0]
 
         if count > 0:
             raise ValueError(
-                "Effective Hamiltonian fit "
-                "already exists: "
-                f"fit_analysis_id="
-                f"{fit_analysis_id}, "
-                f"rows={count}"
+                'Effective Hamiltonian fit '
+                'already exists: '
+                f'''fit_analysis_id='''
+                f'''{fit_analysis_id}, '''
+                f'''rows={count}'''
             )
 
     def persist_effective_hamiltonian_fits(
@@ -493,11 +494,11 @@ class RgAnalysisClickHouseLoader:
         records: list[
             RgEffectiveHamiltonianFitRecord
         ],
-    ) -> None:
+    ):
         if not records:
             raise ValueError(
-                "Effective Hamiltonian fit "
-                "records cannot be empty"
+                'Effective Hamiltonian fit '
+                'records cannot be empty'
             )
 
         fit_analysis_ids = {
@@ -507,8 +508,8 @@ class RgAnalysisClickHouseLoader:
 
         if len(fit_analysis_ids) != 1:
             raise ValueError(
-                "All fit records must have "
-                "the same fit_analysis_id"
+                'All fit records must have '
+                'the same fit_analysis_id'
             )
 
         fit_analysis_id = next(

@@ -19,7 +19,7 @@ def make_event(
     side: str,
     price: str,
     quantity: str,
-) -> UnifiedMarketEvent:
+):
     price_decimal = Decimal(price)
     quantity_decimal = Decimal(quantity)
 
@@ -39,7 +39,7 @@ def make_event(
     )
 
 
-def test_btcusdt_aggressor_buy() -> None:
+def test_btcusdt_aggressor_buy():
     event = make_event(
         event_index=1,
         symbol='BTCUSDT',
@@ -57,7 +57,7 @@ def test_btcusdt_aggressor_buy() -> None:
     assert delta.usdt == Decimal('10000')
 
 
-def test_btcusdt_aggressor_sell() -> None:
+def test_btcusdt_aggressor_sell():
     event = make_event(
         event_index=1,
         symbol='BTCUSDT',
@@ -74,7 +74,7 @@ def test_btcusdt_aggressor_sell() -> None:
     assert delta.usdt == Decimal('-10000')
 
 
-def test_ethbtc_aggressor_buy() -> None:
+def test_ethbtc_aggressor_buy():
     event = make_event(
         event_index=1,
         symbol='ETHBTC',
@@ -92,7 +92,7 @@ def test_ethbtc_aggressor_buy() -> None:
     assert delta.usdt == Decimal('0')
 
 
-def test_replay_accumulates_inventory() -> None:
+def test_replay_accumulates_inventory():
     events = [
         make_event(
             event_index=1,
@@ -119,7 +119,7 @@ def test_replay_accumulates_inventory() -> None:
     assert final.inventory_usdt == Decimal('10000')
 
 
-def test_rejects_non_contiguous_indices() -> None:
+def test_rejects_non_contiguous_indices():
     events = [
         make_event(
             event_index=1,

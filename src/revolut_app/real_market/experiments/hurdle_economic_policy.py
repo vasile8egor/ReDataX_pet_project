@@ -24,18 +24,18 @@ DEFAULT_NOTIONAL_BUDGETS = (0.01, 0.02, 0.05, 0.10)
 DEFAULT_MIN_NET_MARGINS_BPS = (0.0, 0.05, 0.10)
 DEFAULT_MIN_BREAK_EVEN_PROBABILITIES = (0.0, 0.40, 0.50, 0.60)
 DEFAULT_PREDICTION_MULTIPLIERS = (1.0, 1.25, 1.50)
-DEFAULT_MODEL_PRESETS = ("compact", "medium")
+DEFAULT_MODEL_PRESETS = ('compact', 'medium')
 
 RETURN_LOOKBACKS_SECONDS = (5, 10, 30, 60, 120, 300, 600)
 VOLATILITY_WINDOWS_SECONDS = (10, 30, 60, 120, 300, 600)
 FLOW_WINDOWS_SECONDS = (10, 30, 60, 120, 300, 600)
 
 POLICY_NAMES = (
-    "no_action",
-    "probability_budget",
-    "direct_economic",
-    "hurdle_economic",
-    "oracle_upper_bound",
+    'no_action',
+    'probability_budget',
+    'direct_economic',
+    'hurdle_economic',
+    'oracle_upper_bound',
 )
 
 
@@ -46,24 +46,24 @@ class EconomicScenario:
     internalization_rate: float
     action_cost_bps: float
 
-    def __post_init__(self) -> None:
+    def __post_init__(self):
         if not self.name.strip():
-            raise ValueError("scenario name cannot be empty")
+            raise ValueError('scenario name cannot be empty')
         if not 0.0 <= self.mitigation_efficiency <= 1.0:
-            raise ValueError("mitigation_efficiency must be in [0, 1]")
+            raise ValueError('mitigation_efficiency must be in [0, 1]')
         if not 0.0 <= self.internalization_rate <= 1.0:
-            raise ValueError("internalization_rate must be in [0, 1]")
+            raise ValueError('internalization_rate must be in [0, 1]')
         if self.action_cost_bps < 0.0:
-            raise ValueError("action_cost_bps cannot be negative")
+            raise ValueError('action_cost_bps cannot be negative')
 
     @property
-    def protection_fraction(self) -> float:
+    def protection_fraction(self):
         return self.mitigation_efficiency * self.internalization_rate
 
     @property
-    def break_even_markout_bps(self) -> float:
+    def break_even_markout_bps(self):
         if self.protection_fraction <= 0.0:
-            return float("inf")
+            return float('inf')
         return self.action_cost_bps / self.protection_fraction
 
 
@@ -92,12 +92,12 @@ class ModelSpec:
     notional_weight_power: float
 
     @property
-    def model_id(self) -> str:
+    def model_id(self):
         return (
-            f"{self.preset}|leaf={self.max_leaf_nodes}|"
-            f"minleaf={self.min_samples_leaf}|"
-            f"iter={self.max_iter}|clip={self.target_clip_bps:g}|"
-            f"weight={self.notional_weight_power:g}"
+            f'''{self.preset}|leaf={self.max_leaf_nodes}|'''
+            f'''minleaf={self.min_samples_leaf}|'''
+            f'''iter={self.max_iter}|clip={self.target_clip_bps:g}|'''
+            f'''weight={self.notional_weight_power:g}'''
         )
 
 
@@ -109,12 +109,12 @@ class PolicySpec:
     prediction_multiplier: float
 
     @property
-    def policy_id(self) -> str:
+    def policy_id(self):
         return (
-            f"budget={self.notional_budget_fraction:g}|"
-            f"margin={self.min_expected_net_margin_bps:g}|"
-            f"pbe={self.min_break_even_probability:g}|"
-            f"mult={self.prediction_multiplier:g}"
+            f'''budget={self.notional_budget_fraction:g}|'''
+            f'''margin={self.min_expected_net_margin_bps:g}|'''
+            f'''pbe={self.min_break_even_probability:g}|'''
+            f'''mult={self.prediction_multiplier:g}'''
         )
 
 
@@ -178,12 +178,12 @@ class CandidateSummary:
     accepted: bool
 
 
-def parse_scenario(value: str) -> EconomicScenario:
-    parts = value.split(":")
+def parse_scenario(value: str):
+    parts = value.split(':')
     if len(parts) != 4:
         raise argparse.ArgumentTypeError(
-            "scenario must be "
-            "NAME:MITIGATION:INTERNALIZATION:ACTION_COST_BPS"
+            'scenario must be '
+            'NAME:MITIGATION:INTERNALIZATION:ACTION_COST_BPS'
         )
     name, mitigation, internalization, cost = parts
     try:
@@ -197,43 +197,43 @@ def parse_scenario(value: str) -> EconomicScenario:
         raise argparse.ArgumentTypeError(str(exc)) from exc
 
 
-def parse_positive_int(value: str) -> int:
+def parse_positive_int(value: str):
     result = int(value)
     if result <= 0:
-        raise argparse.ArgumentTypeError("value must be positive")
+        raise argparse.ArgumentTypeError('value must be positive')
     return result
 
 
-def parse_fraction(value: str) -> float:
+def parse_fraction(value: str):
     result = float(value)
     if not 0.0 < result <= 1.0:
-        raise argparse.ArgumentTypeError("fraction must be in (0, 1]")
+        raise argparse.ArgumentTypeError('fraction must be in (0, 1]')
     return result
 
 
-def parse_probability(value: str) -> float:
+def parse_probability(value: str):
     result = float(value)
     if not 0.0 <= result <= 1.0:
-        raise argparse.ArgumentTypeError("probability must be in [0, 1]")
+        raise argparse.ArgumentTypeError('probability must be in [0, 1]')
     return result
 
 
-def parse_non_negative_float(value: str) -> float:
+def parse_non_negative_float(value: str):
     result = float(value)
     if result < 0.0:
-        raise argparse.ArgumentTypeError("value cannot be negative")
+        raise argparse.ArgumentTypeError('value cannot be negative')
     return result
 
 
-def parse_positive_float(value: str) -> float:
+def parse_positive_float(value: str):
     result = float(value)
     if result <= 0.0:
-        raise argparse.ArgumentTypeError("value must be positive")
+        raise argparse.ArgumentTypeError('value must be positive')
     return result
 
 
-def model_spec_from_preset(name: str) -> ModelSpec:
-    if name == "compact":
+def model_spec_from_preset(name: str):
+    if name == 'compact':
         return ModelSpec(
             preset=name,
             learning_rate=0.06,
@@ -244,7 +244,7 @@ def model_spec_from_preset(name: str) -> ModelSpec:
             target_clip_bps=50.0,
             notional_weight_power=0.25,
         )
-    if name == "medium":
+    if name == 'medium':
         return ModelSpec(
             preset=name,
             learning_rate=0.05,
@@ -255,13 +255,13 @@ def model_spec_from_preset(name: str) -> ModelSpec:
             target_clip_bps=100.0,
             notional_weight_power=0.25,
         )
-    raise ValueError(f"unknown model preset: {name}")
+    raise ValueError(f'''unknown model preset: {name}''')
 
 
-def build_model_specs(presets: Iterable[str]) -> tuple[ModelSpec, ...]:
+def build_model_specs(presets: Iterable[str]):
     unique = tuple(dict.fromkeys(presets))
     if not unique:
-        raise ValueError("at least one model preset is required")
+        raise ValueError('at least one model preset is required')
     return tuple(model_spec_from_preset(name) for name in unique)
 
 
@@ -270,7 +270,7 @@ def build_policy_specs(
     margins: Iterable[float],
     probabilities: Iterable[float],
     multipliers: Iterable[float],
-) -> tuple[PolicySpec, ...]:
+):
     specs = tuple(
         PolicySpec(
             notional_budget_fraction=float(budget),
@@ -284,13 +284,13 @@ def build_policy_specs(
         for multiplier in sorted(set(multipliers))
     )
     if not specs:
-        raise ValueError("policy grid cannot be empty")
+        raise ValueError('policy grid cannot be empty')
     return specs
 
 
-def forward_fill_prices(vwap: np.ndarray) -> np.ndarray:
+def forward_fill_prices(vwap: np.ndarray):
     if vwap.ndim != 2:
-        raise ValueError("vwap must have shape (time, symbols)")
+        raise ValueError('vwap must have shape (time, symbols)')
     count, components = vwap.shape
     output = np.full((count, components), np.nan, dtype=np.float64)
 
@@ -312,11 +312,11 @@ def forward_fill_prices(vwap: np.ndarray) -> np.ndarray:
     return output
 
 
-def rolling_sum(values: np.ndarray, window: int) -> np.ndarray:
+def rolling_sum(values: np.ndarray, window: int):
     if values.ndim != 2:
-        raise ValueError("values must have shape (time, columns)")
+        raise ValueError('values must have shape (time, columns)')
     if window <= 0:
-        raise ValueError("window must be positive")
+        raise ValueError('window must be positive')
 
     count, columns = values.shape
     output = np.full((count, columns), np.nan, dtype=np.float64)
@@ -335,15 +335,15 @@ def rolling_sum(values: np.ndarray, window: int) -> np.ndarray:
     return output
 
 
-def rolling_mean(values: np.ndarray, window: int) -> np.ndarray:
+def rolling_mean(values: np.ndarray, window: int):
     return rolling_sum(values, window) / float(window)
 
 
-def rolling_std(values: np.ndarray, window: int) -> np.ndarray:
+def rolling_std(values: np.ndarray, window: int):
     if values.ndim != 2:
-        raise ValueError("values must have shape (time, columns)")
+        raise ValueError('values must have shape (time, columns)')
     if window <= 0:
-        raise ValueError("window must be positive")
+        raise ValueError('window must be positive')
 
     mean = rolling_mean(values, window)
     mean_square = rolling_mean(values * values, window)
@@ -356,14 +356,14 @@ def _append_columns(
     names: list[str],
     values: np.ndarray,
     value_names: Iterable[str],
-) -> None:
+):
     if values.ndim == 1:
         values = values[:, None]
     if values.ndim != 2:
-        raise ValueError("feature values must be one- or two-dimensional")
+        raise ValueError('feature values must be one- or two-dimensional')
     value_names_tuple = tuple(value_names)
     if values.shape[1] != len(value_names_tuple):
-        raise ValueError("feature names and columns differ")
+        raise ValueError('feature names and columns differ')
     for index, name in enumerate(value_names_tuple):
         columns.append(values[:, index].astype(np.float32, copy=False))
         names.append(name)
@@ -376,13 +376,13 @@ def build_hurdle_day_dataset(
     horizon_seconds: int,
     decision_stride_seconds: int,
     scenario: EconomicScenario,
-) -> HurdleDayDataset:
+):
     if target_symbol not in coupled.TARGET_SYMBOLS:
-        raise ValueError(f"unsupported target symbol: {target_symbol}")
+        raise ValueError(f'''unsupported target symbol: {target_symbol}''')
     if horizon_seconds <= 0:
-        raise ValueError("horizon_seconds must be positive")
+        raise ValueError('horizon_seconds must be positive')
     if decision_stride_seconds <= 0:
-        raise ValueError("decision_stride_seconds must be positive")
+        raise ValueError('decision_stride_seconds must be positive')
 
     target_index = coupled.SYMBOLS.index(target_symbol)
     seconds = np.arange(coupled.SECONDS_PER_DAY, dtype=np.int64)
@@ -424,8 +424,8 @@ def build_hurdle_day_dataset(
     indices = np.flatnonzero(valid)
     if indices.size == 0:
         raise ValueError(
-            f"no valid observations for {target_symbol}, "
-            f"{day.trade_date}, H={horizon_seconds}"
+            f'''no valid observations for {target_symbol}, '''
+            f'''{day.trade_date}, H={horizon_seconds}'''
         )
 
     side_valid = side[indices].astype(np.float64, copy=False)
@@ -442,7 +442,7 @@ def build_hurdle_day_dataset(
         columns,
         names,
         day.log_volume[indices],
-        (f"log_volume[{symbol}]" for symbol in coupled.SYMBOLS),
+        (f'''log_volume[{symbol}]''' for symbol in coupled.SYMBOLS),
     )
 
     for scale_index, scale in enumerate(coupled.SCALES_SECONDS):
@@ -459,10 +459,10 @@ def build_hurdle_day_dataset(
                     )
                 ),
                 (
-                    f"h[{symbol},B={scale}]",
-                    f"abs_phi[{symbol},B={scale}]",
-                    f"phi2[{symbol},B={scale}]",
-                    f"phi4[{symbol},B={scale}]",
+                    f'''h[{symbol},B={scale}]''',
+                    f'''abs_phi[{symbol},B={scale}]''',
+                    f'''phi2[{symbol},B={scale}]''',
+                    f'''phi4[{symbol},B={scale}]''',
                 ),
             )
 
@@ -485,7 +485,7 @@ def build_hurdle_day_dataset(
             names,
             aligned_return,
             (
-                f"aligned_return_bps[{symbol},L={lookback}]"
+                f'''aligned_return_bps[{symbol},L={lookback}]'''
                 for symbol in coupled.SYMBOLS
             ),
         )
@@ -494,7 +494,7 @@ def build_hurdle_day_dataset(
             names,
             np.abs(lagged_return),
             (
-                f"abs_return_bps[{symbol},L={lookback}]"
+                f'''abs_return_bps[{symbol},L={lookback}]'''
                 for symbol in coupled.SYMBOLS
             ),
         )
@@ -509,7 +509,7 @@ def build_hurdle_day_dataset(
             names,
             volatility,
             (
-                f"realized_vol_bps[{symbol},W={window}]"
+                f'''realized_vol_bps[{symbol},W={window}]'''
                 for symbol in coupled.SYMBOLS
             ),
         )
@@ -530,7 +530,7 @@ def build_hurdle_day_dataset(
             names,
             aligned_imbalance,
             (
-                f"aligned_volume_imbalance[{symbol},W={window}]"
+                f'''aligned_volume_imbalance[{symbol},W={window}]'''
                 for symbol in coupled.SYMBOLS
             ),
         )
@@ -539,7 +539,7 @@ def build_hurdle_day_dataset(
             names,
             np.log1p(total_sum),
             (
-                f"log_rolling_quote[{symbol},W={window}]"
+                f'''log_rolling_quote[{symbol},W={window}]'''
                 for symbol in coupled.SYMBOLS
             ),
         )
@@ -558,15 +558,15 @@ def build_hurdle_day_dataset(
             names,
             acceleration,
             (
-                f"aligned_flow_acceleration[{symbol},"
-                f"{short_scale}-{long_scale}]"
+                f'''aligned_flow_acceleration[{symbol},'''
+                f'''{short_scale}-{long_scale}]'''
                 for symbol in coupled.SYMBOLS
             ),
         )
 
-    btc_index = coupled.SYMBOLS.index("BTCUSDT")
-    eth_index = coupled.SYMBOLS.index("ETHUSDT")
-    cross_index = coupled.SYMBOLS.index("ETHBTC")
+    btc_index = coupled.SYMBOLS.index('BTCUSDT')
+    eth_index = coupled.SYMBOLS.index('ETHUSDT')
+    cross_index = coupled.SYMBOLS.index('ETHBTC')
     triangular_residual = (
         log_price[:, eth_index]
         - log_price[:, cross_index]
@@ -587,8 +587,8 @@ def build_hurdle_day_dataset(
                 )
             ),
             (
-                f"triangular_residual_change_bps[L={lookback}]",
-                f"aligned_triangular_residual_change_bps[L={lookback}]",
+                f'''triangular_residual_change_bps[L={lookback}]''',
+                f'''aligned_triangular_residual_change_bps[L={lookback}]''',
             ),
         )
 
@@ -598,7 +598,7 @@ def build_hurdle_day_dataset(
         columns,
         names,
         np.column_stack((np.sin(angle), np.cos(angle))),
-        ("time_of_day_sin", "time_of_day_cos"),
+        ('time_of_day_sin', 'time_of_day_cos'),
     )
 
     feature_matrix = np.column_stack(columns).astype(
@@ -622,7 +622,7 @@ def build_hurdle_day_dataset(
         * 10_000.0
     )
     if np.any(~np.isfinite(markout)):
-        raise ValueError("non-finite markout after filtering")
+        raise ValueError('non-finite markout after filtering')
 
     positive = (markout > 0.0).astype(np.uint8)
     break_even = (
@@ -649,12 +649,12 @@ def build_hurdle_day_dataset(
 
 def concatenate_datasets(
     datasets: list[HurdleDayDataset],
-) -> HurdleDayDataset:
+):
     if not datasets:
-        raise ValueError("datasets cannot be empty")
+        raise ValueError('datasets cannot be empty')
     feature_names = datasets[0].feature_names
     if any(item.feature_names != feature_names for item in datasets):
-        raise ValueError("feature schemas differ")
+        raise ValueError('feature schemas differ')
 
     return HurdleDayDataset(
         trade_date=datasets[-1].trade_date,
@@ -690,12 +690,12 @@ def build_datasets_for_dates(
     horizon_seconds: int,
     decision_stride_seconds: int,
     scenario: EconomicScenario,
-) -> dict[date, HurdleDayDataset]:
+):
     output: dict[date, HurdleDayDataset] = {}
     for trade_date in dates:
         print(
-            f"{target_symbol} H={horizon_seconds}s: "
-            f"building {trade_date}",
+            f'''{target_symbol} H={horizon_seconds}s: '''
+            f'''building {trade_date}''',
             flush=True,
         )
         output[trade_date] = build_hurdle_day_dataset(
@@ -713,11 +713,11 @@ def notional_sample_weights(
     *,
     scale: float,
     power: float,
-) -> np.ndarray:
+):
     if scale <= 0.0:
-        raise ValueError("notional scale must be positive")
+        raise ValueError('notional scale must be positive')
     if power < 0.0:
-        raise ValueError("notional weight power cannot be negative")
+        raise ValueError('notional weight power cannot be negative')
     if power == 0.0:
         return np.ones(notional_usdt.size, dtype=np.float64)
     raw = np.power(
@@ -731,9 +731,9 @@ def _new_classifier(
     spec: ModelSpec,
     *,
     seed_offset: int,
-) -> HistGradientBoostingClassifier:
+):
     return HistGradientBoostingClassifier(
-        loss="log_loss",
+        loss='log_loss',
         learning_rate=spec.learning_rate,
         max_iter=spec.max_iter,
         max_leaf_nodes=spec.max_leaf_nodes,
@@ -749,9 +749,9 @@ def _new_regressor(
     spec: ModelSpec,
     *,
     seed_offset: int,
-) -> HistGradientBoostingRegressor:
+):
     return HistGradientBoostingRegressor(
-        loss="squared_error",
+        loss='squared_error',
         learning_rate=spec.learning_rate,
         max_iter=spec.max_iter,
         max_leaf_nodes=spec.max_leaf_nodes,
@@ -766,19 +766,19 @@ def _new_regressor(
 def fit_hurdle_state(
     training: HurdleDayDataset,
     spec: ModelSpec,
-) -> HurdleState:
+):
     if np.unique(training.positive_labels).size != 2:
-        raise ValueError("positive classifier requires both classes")
+        raise ValueError('positive classifier requires both classes')
     if np.unique(training.break_even_labels).size != 2:
-        raise ValueError("break-even classifier requires both classes")
+        raise ValueError('break-even classifier requires both classes')
 
     positive_mask = training.positive_labels == 1
     if int(np.sum(positive_mask)) < spec.min_samples_leaf * 2:
-        raise ValueError("too few positive observations for severity model")
+        raise ValueError('too few positive observations for severity model')
 
     notional_scale = float(np.median(training.notional_usdt))
     if not np.isfinite(notional_scale) or notional_scale <= 0.0:
-        raise ValueError("invalid notional scale")
+        raise ValueError('invalid notional scale')
 
     weights = notional_sample_weights(
         training.notional_usdt,
@@ -835,7 +835,7 @@ def fit_hurdle_state(
 def predict_hurdle(
     state: HurdleState,
     dataset: HurdleDayDataset,
-) -> PredictionBundle:
+):
     probability_positive = state.positive_classifier.predict_proba(
         dataset.features
     )[:, 1]
@@ -897,17 +897,17 @@ def fractional_notional_allocation(
     *,
     budget_fraction: float,
     eligible: np.ndarray | None = None,
-) -> np.ndarray:
+):
     if priority_score.shape != notional_usdt.shape:
-        raise ValueError("score and notional shapes differ")
+        raise ValueError('score and notional shapes differ')
     if priority_score.ndim != 1 or priority_score.size == 0:
-        raise ValueError("allocation arrays must be non-empty")
+        raise ValueError('allocation arrays must be non-empty')
     if np.any(~np.isfinite(priority_score)):
-        raise ValueError("priority contains non-finite values")
+        raise ValueError('priority contains non-finite values')
     if np.any(~np.isfinite(notional_usdt)) or np.any(notional_usdt <= 0.0):
-        raise ValueError("notional must be finite and positive")
+        raise ValueError('notional must be finite and positive')
     if not 0.0 <= budget_fraction <= 1.0:
-        raise ValueError("budget_fraction must be in [0, 1]")
+        raise ValueError('budget_fraction must be in [0, 1]')
 
     action = np.zeros(priority_score.size, dtype=np.float64)
     if budget_fraction == 0.0:
@@ -916,7 +916,7 @@ def fractional_notional_allocation(
     if eligible is None:
         eligible = np.ones(priority_score.size, dtype=bool)
     if eligible.shape != priority_score.shape:
-        raise ValueError("eligible mask shape differs")
+        raise ValueError('eligible mask shape differs')
 
     candidates = np.flatnonzero(eligible)
     if candidates.size == 0:
@@ -925,7 +925,7 @@ def fractional_notional_allocation(
     order = candidates[
         np.argsort(
             priority_score[candidates],
-            kind="stable",
+            kind='stable',
         )[::-1]
     ]
     remaining = (
@@ -949,9 +949,9 @@ def predicted_net_bps(
     *,
     scenario: EconomicScenario,
     multiplier: float,
-) -> np.ndarray:
+):
     if multiplier <= 0.0:
-        raise ValueError("multiplier must be positive")
+        raise ValueError('multiplier must be positive')
     return (
         scenario.protection_fraction
         * multiplier
@@ -966,7 +966,7 @@ def hurdle_action_fraction(
     *,
     scenario: EconomicScenario,
     policy: PolicySpec,
-) -> tuple[np.ndarray, np.ndarray]:
+):
     net_bps = predicted_net_bps(
         predictions.expected_positive_markout_bps,
         scenario=scenario,
@@ -996,7 +996,7 @@ def direct_action_fraction(
     *,
     scenario: EconomicScenario,
     policy: PolicySpec,
-) -> tuple[np.ndarray, np.ndarray]:
+):
     net_bps = predicted_net_bps(
         predictions.direct_expected_positive_markout_bps,
         scenario=scenario,
@@ -1025,7 +1025,7 @@ def probability_action_fraction(
     notional_usdt: np.ndarray,
     *,
     policy: PolicySpec,
-) -> np.ndarray:
+):
     eligible = (
         predictions.probability_break_even
         >= policy.min_break_even_probability
@@ -1043,7 +1043,7 @@ def oracle_action_fraction(
     *,
     scenario: EconomicScenario,
     policy: PolicySpec,
-) -> np.ndarray:
+):
     realized_net = (
         scenario.protection_fraction
         * np.maximum(dataset.markout_bps, 0.0)
@@ -1062,15 +1062,15 @@ def calculate_policy_metrics(
     action_fraction: np.ndarray,
     dataset: HurdleDayDataset,
     scenario: EconomicScenario,
-) -> PolicyMetrics:
+):
     if not (
         action_fraction.shape
         == dataset.notional_usdt.shape
         == dataset.adverse_loss_usdt.shape
     ):
-        raise ValueError("policy metric array shapes differ")
+        raise ValueError('policy metric array shapes differ')
     if np.any((action_fraction < 0.0) | (action_fraction > 1.0)):
-        raise ValueError("action_fraction must be in [0, 1]")
+        raise ValueError('action_fraction must be in [0, 1]')
 
     acted = action_fraction > 0.0
     observations = int(action_fraction.size)
@@ -1173,9 +1173,9 @@ def aggregate_policy_metrics(
     daily: list[PolicyMetrics],
     *,
     scenario: EconomicScenario,
-) -> PolicyMetrics:
+):
     if not daily:
-        raise ValueError("daily metrics cannot be empty")
+        raise ValueError('daily metrics cannot be empty')
 
     observations = sum(item.observations for item in daily)
     acted_observations = sum(
@@ -1280,7 +1280,7 @@ def summarize_candidate(
     daily_metrics: list[PolicyMetrics],
     risk_penalty: float,
     minimum_positive_day_fraction: float,
-) -> CandidateSummary:
+):
     values = np.asarray(
         [
             item.net_value_per_million_usdt
@@ -1316,7 +1316,7 @@ def summarize_candidate(
 
 def select_best_candidate(
     candidates: list[CandidateSummary],
-) -> CandidateSummary | None:
+):
     accepted = [item for item in candidates if item.accepted]
     if not accepted:
         return None
@@ -1337,10 +1337,10 @@ def bootstrap_daily_difference(
     *,
     samples: int,
     seed: int,
-) -> dict[str, float | int]:
+):
     values = np.asarray(differences, dtype=np.float64)
     if values.size == 0 or np.any(~np.isfinite(values)):
-        raise ValueError("bootstrap input must be finite and non-empty")
+        raise ValueError('bootstrap input must be finite and non-empty')
     rng = np.random.default_rng(seed)
     indices = rng.integers(
         0,
@@ -1349,11 +1349,11 @@ def bootstrap_daily_difference(
     )
     means = np.mean(values[indices], axis=1)
     return {
-        "days": int(values.size),
-        "mean": float(np.mean(values)),
-        "ci_025": float(np.quantile(means, 0.025)),
-        "ci_975": float(np.quantile(means, 0.975)),
-        "positive_day_fraction": float(np.mean(values > 0.0)),
+        'days': int(values.size),
+        'mean': float(np.mean(values)),
+        'ci_025': float(np.quantile(means, 0.025)),
+        'ci_975': float(np.quantile(means, 0.975)),
+        'positive_day_fraction': float(np.mean(values > 0.0)),
     }
 
 
@@ -1365,7 +1365,7 @@ def evaluate_predictions(
     scenario: EconomicScenario,
     bootstrap_samples: int,
     seed_offset: int,
-) -> dict[str, Any]:
+):
     daily_output: list[dict[str, Any]] = []
     collected: dict[str, list[PolicyMetrics]] = {
         name: [] for name in POLICY_NAMES
@@ -1401,11 +1401,11 @@ def evaluate_predictions(
         )
 
         actions = {
-            "no_action": zero_action,
-            "probability_budget": probability_action,
-            "direct_economic": direct_action,
-            "hurdle_economic": hurdle_action,
-            "oracle_upper_bound": oracle_action,
+            'no_action': zero_action,
+            'probability_budget': probability_action,
+            'direct_economic': direct_action,
+            'hurdle_economic': hurdle_action,
+            'oracle_upper_bound': oracle_action,
         }
         metrics = {
             name: calculate_policy_metrics(
@@ -1420,62 +1420,62 @@ def evaluate_predictions(
 
         daily_output.append(
             {
-                "date": trade_date.isoformat(),
-                "policies": {
+                'date': trade_date.isoformat(),
+                'policies': {
                     name: asdict(value)
                     for name, value in metrics.items()
                 },
-                "prediction_diagnostics": {
-                    "probability_positive_mean": float(
+                'prediction_diagnostics': {
+                    'probability_positive_mean': float(
                         np.mean(prediction.probability_positive)
                     ),
-                    "probability_break_even_mean": float(
+                    'probability_break_even_mean': float(
                         np.mean(prediction.probability_break_even)
                     ),
-                    "expected_positive_markout_p95_bps": float(
+                    'expected_positive_markout_p95_bps': float(
                         np.quantile(
                             prediction.expected_positive_markout_bps,
                             0.95,
                         )
                     ),
-                    "expected_positive_markout_max_bps": float(
+                    'expected_positive_markout_max_bps': float(
                         np.max(
                             prediction.expected_positive_markout_bps
                         )
                     ),
-                    "direct_expected_markout_p95_bps": float(
+                    'direct_expected_markout_p95_bps': float(
                         np.quantile(
                             prediction.direct_expected_positive_markout_bps,
                             0.95,
                         )
                     ),
-                    "hurdle_predicted_net_positive_fraction": float(
+                    'hurdle_predicted_net_positive_fraction': float(
                         np.mean(hurdle_net > 0.0)
                     ),
-                    "direct_predicted_net_positive_fraction": float(
+                    'direct_predicted_net_positive_fraction': float(
                         np.mean(direct_net > 0.0)
                     ),
                 },
-                "comparisons": {
-                    "hurdle_minus_no_action": (
+                'comparisons': {
+                    'hurdle_minus_no_action': (
                         metrics[
-                            "hurdle_economic"
+                            'hurdle_economic'
                         ].net_value_per_million_usdt
                     ),
-                    "hurdle_minus_probability": (
+                    'hurdle_minus_probability': (
                         metrics[
-                            "hurdle_economic"
+                            'hurdle_economic'
                         ].net_value_per_million_usdt
                         - metrics[
-                            "probability_budget"
+                            'probability_budget'
                         ].net_value_per_million_usdt
                     ),
-                    "hurdle_minus_direct": (
+                    'hurdle_minus_direct': (
                         metrics[
-                            "hurdle_economic"
+                            'hurdle_economic'
                         ].net_value_per_million_usdt
                         - metrics[
-                            "direct_economic"
+                            'direct_economic'
                         ].net_value_per_million_usdt
                     ),
                 },
@@ -1489,11 +1489,11 @@ def evaluate_predictions(
         for name, values in collected.items()
     }
 
-    oracle_value = aggregate["oracle_upper_bound"][
-        "net_value_per_million_usdt"
+    oracle_value = aggregate['oracle_upper_bound'][
+        'net_value_per_million_usdt'
     ]
-    hurdle_value = aggregate["hurdle_economic"][
-        "net_value_per_million_usdt"
+    hurdle_value = aggregate['hurdle_economic'][
+        'net_value_per_million_usdt'
     ]
     oracle_capture_fraction = (
         hurdle_value / oracle_value
@@ -1503,13 +1503,13 @@ def evaluate_predictions(
 
     bootstrap: dict[str, Any] = {}
     for comparison in (
-        "hurdle_minus_no_action",
-        "hurdle_minus_probability",
-        "hurdle_minus_direct",
+        'hurdle_minus_no_action',
+        'hurdle_minus_probability',
+        'hurdle_minus_direct',
     ):
         bootstrap[comparison] = bootstrap_daily_difference(
             [
-                day["comparisons"][comparison]
+                day['comparisons'][comparison]
                 for day in daily_output
             ],
             samples=bootstrap_samples,
@@ -1521,10 +1521,10 @@ def evaluate_predictions(
         )
 
     return {
-        "daily": daily_output,
-        "aggregate": aggregate,
-        "oracle_capture_fraction": float(oracle_capture_fraction),
-        "bootstrap": bootstrap,
+        'daily': daily_output,
+        'aggregate': aggregate,
+        'oracle_capture_fraction': float(oracle_capture_fraction),
+        'bootstrap': bootstrap,
     }
 
 
@@ -1534,7 +1534,7 @@ def evaluate_candidate_on_days(
     datasets: dict[date, HurdleDayDataset],
     policy: PolicySpec,
     scenario: EconomicScenario,
-) -> list[PolicyMetrics]:
+):
     output: list[PolicyMetrics] = []
     for trade_date, dataset in datasets.items():
         action, _ = hurdle_action_fraction(
@@ -1556,7 +1556,7 @@ def evaluate_candidate_on_days(
 def predictions_for_days(
     state: HurdleState,
     datasets: dict[date, HurdleDayDataset],
-) -> dict[date, PredictionBundle]:
+):
     return {
         trade_date: predict_hurdle(state, dataset)
         for trade_date, dataset in datasets.items()
@@ -1566,10 +1566,10 @@ def predictions_for_days(
 def load_market_cache(
     clickhouse: Any,
     dates: list[date],
-) -> dict[date, coupled.MarketDay]:
+):
     cache: dict[date, coupled.MarketDay] = {}
     for trade_date in dates:
-        print(f"Loading synchronized day {trade_date}", flush=True)
+        print(f'''Loading synchronized day {trade_date}''', flush=True)
         cache[trade_date] = coupled.load_market_day(
             clickhouse,
             trade_date,
@@ -1577,13 +1577,13 @@ def load_market_cache(
     return cache
 
 
-def write_json(path: str | Path, payload: dict[str, Any]) -> None:
+def write_json(path: str | Path, payload: dict[str, Any]):
     output = Path(path)
     output.parent.mkdir(parents=True, exist_ok=True)
-    temporary = output.with_suffix(output.suffix + ".part")
-    with temporary.open("w", encoding="utf-8") as stream:
+    temporary = output.with_suffix(output.suffix + '.part')
+    with temporary.open('w', encoding='utf-8') as stream:
         json.dump(payload, stream, ensure_ascii=False, indent=2)
-        stream.write("\n")
+        stream.write('\n')
     os.replace(temporary, output)
 
 
@@ -1592,7 +1592,7 @@ def validate_splits(
     development_dates: list[date],
     validation_dates: list[date],
     final_dates: list[date],
-) -> None:
+):
     combined = (
         train_dates
         + development_dates
@@ -1600,125 +1600,125 @@ def validate_splits(
         + final_dates
     )
     if len(set(combined)) != len(combined):
-        raise ValueError("temporal splits overlap")
+        raise ValueError('temporal splits overlap')
     if not all(
         (train_dates, development_dates, validation_dates, final_dates)
     ):
-        raise ValueError("all temporal splits must be non-empty")
+        raise ValueError('all temporal splits must be non-empty')
     if max(train_dates) >= min(development_dates):
-        raise ValueError("development must follow training")
+        raise ValueError('development must follow training')
     if max(development_dates) >= min(validation_dates):
-        raise ValueError("validation must follow development")
+        raise ValueError('validation must follow development')
     if max(validation_dates) >= min(final_dates):
-        raise ValueError("final must follow validation")
+        raise ValueError('final must follow validation')
 
 
-def main() -> None:
+def main():
     parser = argparse.ArgumentParser(
         description=(
-            "Train and validate a notional-constrained hurdle economic "
-            "policy on RG-noJ and extended market-state features."
+            'Train and validate a notional-constrained hurdle economic '
+            'policy on RG-noJ and extended market-state features.'
         )
     )
     parser.add_argument(
-        "--target-symbols",
-        nargs="+",
+        '--target-symbols',
+        nargs='+',
         default=list(coupled.TARGET_SYMBOLS),
     )
     parser.add_argument(
-        "--horizons-seconds",
-        nargs="+",
+        '--horizons-seconds',
+        nargs='+',
         type=parse_positive_int,
         default=list(DEFAULT_HORIZONS_SECONDS),
     )
     parser.add_argument(
-        "--decision-stride-seconds",
+        '--decision-stride-seconds',
         type=parse_positive_int,
         default=10,
     )
-    parser.add_argument("--train-start", type=date.fromisoformat, required=True)
-    parser.add_argument("--train-end", type=date.fromisoformat, required=True)
+    parser.add_argument('--train-start', type=date.fromisoformat, required=True)
+    parser.add_argument('--train-end', type=date.fromisoformat, required=True)
     parser.add_argument(
-        "--development-start",
+        '--development-start',
         type=date.fromisoformat,
         required=True,
     )
     parser.add_argument(
-        "--development-end",
+        '--development-end',
         type=date.fromisoformat,
         required=True,
     )
     parser.add_argument(
-        "--validation-start",
+        '--validation-start',
         type=date.fromisoformat,
         required=True,
     )
     parser.add_argument(
-        "--validation-end",
+        '--validation-end',
         type=date.fromisoformat,
         required=True,
     )
     parser.add_argument(
-        "--final-test-start",
+        '--final-test-start',
         type=date.fromisoformat,
         required=True,
     )
     parser.add_argument(
-        "--final-test-end",
+        '--final-test-end',
         type=date.fromisoformat,
         required=True,
     )
     parser.add_argument(
-        "--scenario",
+        '--scenario',
         type=parse_scenario,
-        default=parse_scenario("base:0.50:0.25:0.50"),
+        default=parse_scenario('base:0.50:0.25:0.50'),
     )
     parser.add_argument(
-        "--model-presets",
-        nargs="+",
+        '--model-presets',
+        nargs='+',
         choices=DEFAULT_MODEL_PRESETS,
         default=list(DEFAULT_MODEL_PRESETS),
     )
     parser.add_argument(
-        "--notional-budget-fractions",
-        nargs="+",
+        '--notional-budget-fractions',
+        nargs='+',
         type=parse_fraction,
         default=list(DEFAULT_NOTIONAL_BUDGETS),
     )
     parser.add_argument(
-        "--minimum-net-margins-bps",
-        nargs="+",
+        '--minimum-net-margins-bps',
+        nargs='+',
         type=parse_non_negative_float,
         default=list(DEFAULT_MIN_NET_MARGINS_BPS),
     )
     parser.add_argument(
-        "--minimum-break-even-probabilities",
-        nargs="+",
+        '--minimum-break-even-probabilities',
+        nargs='+',
         type=parse_probability,
         default=list(DEFAULT_MIN_BREAK_EVEN_PROBABILITIES),
     )
     parser.add_argument(
-        "--prediction-multipliers",
-        nargs="+",
+        '--prediction-multipliers',
+        nargs='+',
         type=parse_positive_float,
         default=list(DEFAULT_PREDICTION_MULTIPLIERS),
     )
     parser.add_argument(
-        "--risk-penalty",
+        '--risk-penalty',
         type=parse_non_negative_float,
         default=0.50,
     )
     parser.add_argument(
-        "--minimum-positive-day-fraction",
+        '--minimum-positive-day-fraction',
         type=parse_fraction,
         default=5.0 / 7.0,
     )
     parser.add_argument(
-        "--bootstrap-samples",
+        '--bootstrap-samples',
         type=parse_positive_int,
         default=5000,
     )
-    parser.add_argument("--output", required=True)
+    parser.add_argument('--output', required=True)
     arguments = parser.parse_args()
 
     train_dates = coupled.date_range(
@@ -1751,7 +1751,7 @@ def main() -> None:
     ]
     if invalid_targets:
         raise ValueError(
-            f"unsupported target symbols: {invalid_targets}"
+            f'''unsupported target symbols: {invalid_targets}'''
         )
 
     horizons = tuple(sorted(set(arguments.horizons_seconds)))
@@ -1774,55 +1774,55 @@ def main() -> None:
     market_cache = load_market_cache(clickhouse, all_dates)
 
     output: dict[str, Any] = {
-        "configuration": {
-            "target_symbols": list(targets),
-            "horizons_seconds": list(horizons),
-            "decision_stride_seconds": (
+        'configuration': {
+            'target_symbols': list(targets),
+            'horizons_seconds': list(horizons),
+            'decision_stride_seconds': (
                 arguments.decision_stride_seconds
             ),
-            "scenario": asdict(scenario),
-            "break_even_markout_bps": (
+            'scenario': asdict(scenario),
+            'break_even_markout_bps': (
                 scenario.break_even_markout_bps
             ),
-            "train_dates": [item.isoformat() for item in train_dates],
-            "development_dates": [
+            'train_dates': [item.isoformat() for item in train_dates],
+            'development_dates': [
                 item.isoformat() for item in development_dates
             ],
-            "validation_dates": [
+            'validation_dates': [
                 item.isoformat() for item in validation_dates
             ],
-            "final_test_dates": [
+            'final_test_dates': [
                 item.isoformat() for item in final_dates
             ],
-            "model_specs": [asdict(item) for item in model_specs],
-            "policy_grid_size": len(policy_specs),
-            "risk_penalty": arguments.risk_penalty,
-            "minimum_positive_day_fraction": (
+            'model_specs': [asdict(item) for item in model_specs],
+            'policy_grid_size': len(policy_specs),
+            'risk_penalty': arguments.risk_penalty,
+            'minimum_positive_day_fraction': (
                 arguments.minimum_positive_day_fraction
             ),
-            "selection_protocol": (
-                "train models on train; select one policy per horizon "
-                "on development; select one horizon on validation; "
-                "refit on train+development+validation; evaluate final once"
+            'selection_protocol': (
+                'train models on train; select one policy per horizon '
+                'on development; select one horizon on validation; '
+                'refit on train+development+validation; evaluate final once'
             ),
-            "main_target": (
-                "expected positive aggressor-aligned markout in bps"
+            'main_target': (
+                'expected positive aggressor-aligned markout in bps'
             ),
-            "hurdle_definition": (
-                "P(markout>0) * E[markout | markout>0], with an "
-                "additional P(markout>break-even) gate"
+            'hurdle_definition': (
+                'P(markout>0) * E[markout | markout>0], with an '
+                'additional P(markout>break-even) gate'
             ),
-            "interpretation": (
-                "scenario-adjusted potential protected value; "
-                "not realized bank PnL"
+            'interpretation': (
+                'scenario-adjusted potential protected value; '
+                'not realized bank PnL'
             ),
         },
-        "targets": {},
+        'targets': {},
     }
 
     for target_index, target_symbol in enumerate(targets):
-        print("=" * 100, flush=True)
-        print(f"TARGET {target_symbol}", flush=True)
+        print('=' * 100, flush=True)
+        print(f'''TARGET {target_symbol}''', flush=True)
 
         development_winners: list[CandidateSummary] = []
         development_payload: dict[str, Any] = {}
@@ -1855,8 +1855,8 @@ def main() -> None:
             horizon_candidates: list[CandidateSummary] = []
             for model_spec in model_specs:
                 print(
-                    f"{target_symbol} H={horizon}s: "
-                    f"fitting {model_spec.preset}",
+                    f'''{target_symbol} H={horizon}s: '''
+                    f'''fitting {model_spec.preset}''',
                     flush=True,
                 )
                 state = fit_hurdle_state(training, model_spec)
@@ -1901,24 +1901,24 @@ def main() -> None:
             if winner is not None:
                 development_winners.append(winner)
                 print(
-                    f"{target_symbol} H={horizon}s DEV winner: "
-                    f"{winner.model_spec.preset}, "
-                    f"{winner.policy_spec.policy_id}, "
-                    f"mean={winner.mean_daily_net_value_per_million_usdt:+.4f}, "
-                    f"robust={winner.robust_score:+.4f}, "
-                    f"positive_days={winner.positive_day_fraction:.2%}",
+                    f'''{target_symbol} H={horizon}s DEV winner: '''
+                    f'''{winner.model_spec.preset}, '''
+                    f'''{winner.policy_spec.policy_id}, '''
+                    f'''mean={winner.mean_daily_net_value_per_million_usdt:+.4f}, '''
+                    f'''robust={winner.robust_score:+.4f}, '''
+                    f'''positive_days={winner.positive_day_fraction:.2%}''',
                     flush=True,
                 )
             else:
                 print(
-                    f"{target_symbol} H={horizon}s: "
-                    "no accepted development candidate",
+                    f'''{target_symbol} H={horizon}s: '''
+                    'no accepted development candidate',
                     flush=True,
                 )
 
             development_payload[str(horizon)] = {
-                "winner": asdict(winner) if winner else None,
-                "leaderboard_top20": [
+                'winner': asdict(winner) if winner else None,
+                'leaderboard_top20': [
                     asdict(item) for item in ranking[:20]
                 ],
             }
@@ -1990,15 +1990,15 @@ def main() -> None:
                 seed_offset=target_index * 100_000 + horizon,
             )
             validation_payload[str(horizon)] = {
-                "candidate": asdict(validation_summary),
-                "evaluation": evaluation,
+                'candidate': asdict(validation_summary),
+                'evaluation': evaluation,
             }
             print(
-                f"{target_symbol} H={horizon}s VALIDATION: "
-                f"mean={validation_summary.mean_daily_net_value_per_million_usdt:+.4f}, "
-                f"robust={validation_summary.robust_score:+.4f}, "
-                f"positive_days={validation_summary.positive_day_fraction:.2%}, "
-                f"accepted={validation_summary.accepted}",
+                f'''{target_symbol} H={horizon}s VALIDATION: '''
+                f'''mean={validation_summary.mean_daily_net_value_per_million_usdt:+.4f}, '''
+                f'''robust={validation_summary.robust_score:+.4f}, '''
+                f'''positive_days={validation_summary.positive_day_fraction:.2%}, '''
+                f'''accepted={validation_summary.accepted}''',
                 flush=True,
             )
 
@@ -2018,18 +2018,18 @@ def main() -> None:
 
         if final_candidate is None:
             print(
-                f"{target_symbol}: no accepted validation candidate; "
-                "final policy is no_action",
+                f'''{target_symbol}: no accepted validation candidate; '''
+                'final policy is no_action',
                 flush=True,
             )
             target_output = {
-                "development": development_payload,
-                "validation": validation_payload,
-                "selected_final_candidate": None,
-                "status": "no_action_fallback_after_validation",
-                "final_test": None,
+                'development': development_payload,
+                'validation': validation_payload,
+                'selected_final_candidate': None,
+                'status': 'no_action_fallback_after_validation',
+                'final_test': None,
             }
-            output["targets"][target_symbol] = target_output
+            output['targets'][target_symbol] = target_output
             write_json(arguments.output, output)
             continue
 
@@ -2083,33 +2083,33 @@ def main() -> None:
             ),
         )
 
-        hurdle_aggregate = final_evaluation["aggregate"][
-            "hurdle_economic"
+        hurdle_aggregate = final_evaluation['aggregate'][
+            'hurdle_economic'
         ]
-        hurdle_bootstrap = final_evaluation["bootstrap"][
-            "hurdle_minus_no_action"
+        hurdle_bootstrap = final_evaluation['bootstrap'][
+            'hurdle_minus_no_action'
         ]
         print(
-            f"{target_symbol}: FINAL H={selected_horizon}s "
-            f"net={hurdle_aggregate['net_value_per_million_usdt']:+.4f} "
-            f"USDT/$1M, "
-            f"CI=[{hurdle_bootstrap['ci_025']:+.4f}, "
-            f"{hurdle_bootstrap['ci_975']:+.4f}], "
-            f"positive_days="
-            f"{hurdle_bootstrap['positive_day_fraction']:.2%}, "
-            f"oracle_capture="
-            f"{final_evaluation['oracle_capture_fraction']:.2%}",
+            f'''{target_symbol}: FINAL H={selected_horizon}s '''
+            f'''net={hurdle_aggregate['net_value_per_million_usdt']:+.4f} '''
+            f'''USDT/$1M, '''
+            f'''CI=[{hurdle_bootstrap['ci_025']:+.4f}, '''
+            f'''{hurdle_bootstrap['ci_975']:+.4f}], '''
+            f'''positive_days='''
+            f'''{hurdle_bootstrap['positive_day_fraction']:.2%}, '''
+            f'''oracle_capture='''
+            f'''{final_evaluation['oracle_capture_fraction']:.2%}''',
             flush=True,
         )
 
         target_output = {
-            "development": development_payload,
-            "validation": validation_payload,
-            "selected_final_candidate": asdict(final_candidate),
-            "status": "final_candidate_evaluated",
-            "final_test": final_evaluation,
+            'development': development_payload,
+            'validation': validation_payload,
+            'selected_final_candidate': asdict(final_candidate),
+            'status': 'final_candidate_evaluated',
+            'final_test': final_evaluation,
         }
-        output["targets"][target_symbol] = target_output
+        output['targets'][target_symbol] = target_output
         write_json(arguments.output, output)
 
         del (
@@ -2124,5 +2124,5 @@ def main() -> None:
     write_json(arguments.output, output)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

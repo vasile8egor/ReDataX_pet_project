@@ -38,7 +38,7 @@ class HawkesLikeFXEventGenerator:
         start_at: datetime | None = None,
         event_dataset_id: UUID | None = None,
         seed: int | None = None,
-    ) -> FXEventDataset:
+    ):
         dataset_id = event_dataset_id or uuid4()
         started_at = start_at or datetime.now(timezone.utc)
         current_time = started_at
@@ -128,7 +128,7 @@ class HawkesLikeFXEventGenerator:
         alpha: float = DEFAULT_HAWKES_ALPHA,
         beta: float = DEFAULT_HAWKES_BETA,
         start_at: datetime | None = None,
-    ) -> list[QuoteRequest]:
+    ):
         dataset = self.simulate_event_dataset(
             steps=steps,
             dt_seconds=dt_seconds,
@@ -144,7 +144,7 @@ class HawkesLikeFXEventGenerator:
         ]
 
     @staticmethod
-    def _sample_segment(rng: np.random.Generator) -> CustomerSegment:
+    def _sample_segment(rng: np.random.Generator):
         value = rng.random()
 
         premium_threshold = PREMIUM_SEGMENT_PROBABILITY

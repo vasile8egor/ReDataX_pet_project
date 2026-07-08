@@ -1,70 +1,51 @@
-from clickhouse_driver import Client
 from datetime import datetime
+
+from clickhouse_driver import Client
+
+from revolut_app.loaders.queries import (
+    CREATE_GOLD_DATABASE_Q,
+    CREATE_GOLD_FACT_TRANSACTIONS_Q,
+    DELETE_GOLD_FACT_TRANSACTIONS_FOR_DATE_Q,
+    INSERT_GOLD_FACT_TRANSACTIONS_Q,
+    TRUNCATE_GOLD_FACT_TRANSACTIONS_Q,
+)
+
+CLICKHOUSE_DEFAULT_PORT = 9000
 
 
 class GoldLayerLoader:
     def __init__(self, ch_host='clickhouse'):
         self.ch_client = Client(
             host=ch_host,
-            port=9000,
+            port=CLICKHOUSE_DEFAULT_PORT,
             user='default',
             password='default'
         )
 
-    def ensure_schema(self) -> None:
-        self.ch_client.execute('CREATE DATABASE IF NOT EXISTS gold')
-        self.ch_client.execute(
-            '''
-            CREATE TABLE IF NOT EXISTS gold.fact_transactions (
-                transaction_id String,
-                account_id String,
-                tx_timestamp DateTime64(3, 'UTC'),
-                amount Decimal(18, 4),
-                currency String,
-                merchant_name Nullable(String),
-                bronze_loaded_at DateTime64(3, 'UTC'),
-                gold_loaded_at DateTime DEFAULT now()
-            )
-            ENGINE = ReplacingMergeTree(gold_loaded_at)
-            ORDER BY (tx_timestamp, transaction_id)
-            '''
-        )
+    def ensure_schema(self):
+        self.ch_client.execute(CREATE_GOLD_DATABASE_Q)
+        self.ch_client.execute(CREATE_GOLD_FACT_TRANSACTIONS_Q)
 
-    def truncate_transactions(self) -> None:
+    def truncate_transactions(self):
         self.ensure_schema()
-        self.ch_client.execute('TRUNCATE TABLE gold.fact_transactions')
+        self.ch_client.execute(TRUNCATE_GOLD_FACT_TRANSACTIONS_Q)
 
-    def delete_transactions_for_date(self, target_date_str: str) -> None:
+    def delete_transactions_for_date(self, target_date_str: str):
         datetime.strptime(target_date_str, '%Y-%m-%d')
 
         self.ensure_schema()
         self.ch_client.execute(
-            '''
-            ALTER TABLE gold.fact_transactions
-            DELETE WHERE toDate(tx_timestamp) = toDate(%(target_date)s)
-            SETTINGS mutations_sync = 1
-            ''',
+            DELETE_GOLD_FACT_TRANSACTIONS_FOR_DATE_Q,
             {'target_date': target_date_str}
         )
 
-    def load_transactions(self, rows: list[tuple]) -> int:
+    def load_transactions(self, rows: list[tuple]):
         if not rows:
             return 0
 
         self.ensure_schema()
         self.ch_client.execute(
-            '''
-            INSERT INTO gold.fact_transactions (
-                transaction_id,
-                account_id,
-                tx_timestamp,
-                amount,
-                currency,
-                merchant_name,
-                bronze_loaded_at
-            )
-            VALUES
-            ''',
+            INSERT_GOLD_FACT_TRANSACTIONS_Q,
             rows
         )
         return len(rows)

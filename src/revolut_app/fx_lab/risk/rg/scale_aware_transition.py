@@ -14,22 +14,22 @@ class RollingPressureWindow:
         *,
         currencies: tuple[str, ...],
         block_size: int,
-    ) -> None:
+    ):
         if not currencies:
             raise ValueError(
-                "currencies cannot be empty"
+                'currencies cannot be empty'
             )
 
         if len(set(currencies)) != len(
             currencies
         ):
             raise ValueError(
-                "currencies must be unique"
+                'currencies must be unique'
             )
 
         if block_size <= 0:
             raise ValueError(
-                "block_size must be positive"
+                'block_size must be positive'
             )
 
         self.currencies = currencies
@@ -45,20 +45,20 @@ class RollingPressureWindow:
         }
 
     @property
-    def is_ready(self) -> bool:
+    def is_ready(self):
         return (
             len(self._frames)
             == self.block_size
         )
 
     @property
-    def frame_count(self) -> int:
+    def frame_count(self):
         return len(self._frames)
 
     def append(
         self,
         pressures: Mapping[str, float],
-    ) -> None:
+    ):
         resolved = self._validate_pressures(
             pressures
         )
@@ -80,11 +80,11 @@ class RollingPressureWindow:
 
     def mean_pressures(
         self,
-    ) -> dict[str, float]:
+    ):
         if not self.is_ready:
             raise ValueError(
-                "Rolling pressure window "
-                "is not ready"
+                'Rolling pressure window '
+                'is not ready'
             )
 
         return {
@@ -102,11 +102,11 @@ class RollingPressureWindow:
             str,
             float,
         ],
-    ) -> dict[str, float]:
+    ):
         if not self.is_ready:
             raise ValueError(
-                "Rolling pressure window "
-                "is not ready"
+                'Rolling pressure window '
+                'is not ready'
             )
 
         projected = self._validate_pressures(
@@ -128,14 +128,14 @@ class RollingPressureWindow:
     def _validate_pressures(
         self,
         pressures: Mapping[str, float],
-    ) -> dict[str, float]:
+    ):
         if set(pressures) != set(
             self.currencies
         ):
             raise ValueError(
-                "Pressure dimensions do not match: "
-                f"expected={sorted(self.currencies)}, "
-                f"actual={sorted(pressures)}"
+                'Pressure dimensions do not match: '
+                f'''expected={sorted(self.currencies)}, '''
+                f'''actual={sorted(pressures)}'''
             )
 
         resolved = {
@@ -150,9 +150,9 @@ class RollingPressureWindow:
         ):
             if not isfinite(value):
                 raise ValueError(
-                    "Pressure must be finite: "
-                    f"currency={currency}, "
-                    f"value={value}"
+                    'Pressure must be finite: '
+                    f'''currency={currency}, '''
+                    f'''value={value}'''
                 )
 
         return resolved
@@ -164,13 +164,13 @@ class EffectiveHamiltonianEvaluator:
         *,
         coefficients:
             EffectiveHamiltonianCoefficients,
-    ) -> None:
+    ):
         self.coefficients = coefficients
 
     def evaluate(
         self,
         pressures: Mapping[str, float],
-    ) -> float:
+    ):
         quadratic_invariant = sum(
             value**2
             for value in pressures.values()
@@ -195,16 +195,16 @@ class ScaleAwareTransitionEvaluator:
         self, *,
         pressure_window: RollingPressureWindow,
         hamiltonian: EffectiveHamiltonianEvaluator,
-    ) -> None:
+    ):
         if (
             pressure_window.block_size
             != hamiltonian
             .coefficients.block_size
         ):
             raise ValueError(
-                "Pressure window and effective "
-                "Hamiltonian must have the same "
-                "block size"
+                'Pressure window and effective '
+                'Hamiltonian must have the same '
+                'block size'
             )
 
         self.pressure_window = (
@@ -216,7 +216,7 @@ class ScaleAwareTransitionEvaluator:
         self, *,
         current_pressures: Mapping[str, float],
         projected_pressures: Mapping[str, float],
-    ) -> ScaleAwareTransition:
+    ):
         block_size = self.pressure_window.block_size
 
         if not self.pressure_window.is_ready:
@@ -313,5 +313,5 @@ class ScaleAwareTransitionEvaluator:
     def commit(
         self, *,
         actual_pressures: Mapping[str, float],
-    ) -> None:
+    ):
         self.pressure_window.append(actual_pressures)

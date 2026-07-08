@@ -22,47 +22,17 @@ try:
 except ImportError:  # Allows pure unit tests outside the project container.
     Client = Any  # type: ignore[misc,assignment]
 
+from revolut_app.real_market.experiments.queries import SECONDLY_FLOW_SQL
 
-SYMBOLS = ("BTCUSDT", "ETHUSDT", "ETHBTC")
-TARGET_SYMBOLS = ("BTCUSDT", "ETHUSDT")
+
+SYMBOLS = ('BTCUSDT', 'ETHUSDT', 'ETHBTC')
+TARGET_SYMBOLS = ('BTCUSDT', 'ETHUSDT')
 SCALES_SECONDS = (1, 2, 4, 8, 16, 32, 64)
-MODEL_NAMES = ("m1_local", "rg_no_j", "rg_with_j")
+MODEL_NAMES = ('m1_local', 'rg_no_j', 'rg_with_j')
 DEFAULT_ALPHAS = (1e-5, 1e-4, 1e-3)
 
 SECONDS_PER_DAY = 86_400
 SEED = 20260628
-
-
-SECONDLY_FLOW_SQL = """
-SELECT
-    toUInt32(
-        intDiv(
-            timestamp_us - %(day_start_us)s,
-            1000000
-        )
-    ) AS second_index,
-    symbol,
-    sumIf(
-        toFloat64(quote_quantity),
-        aggressor_side = 'buy_base'
-    ) AS buy_quote_quantity,
-    sumIf(
-        toFloat64(quote_quantity),
-        aggressor_side = 'sell_base'
-    ) AS sell_quote_quantity,
-    sum(toFloat64(quote_quantity))
-        / sum(toFloat64(base_quantity))
-        AS vwap
-FROM raw.fact_real_market_agg_trades FINAL
-WHERE trade_date = %(trade_date)s
-  AND symbol IN %(symbols)s
-GROUP BY
-    second_index,
-    symbol
-ORDER BY
-    second_index,
-    symbol
-"""
 
 
 @dataclass(frozen=True)
@@ -100,46 +70,46 @@ class Metrics:
     top_decile_lift: float
 
 
-def date_range(start: date, end: date) -> list[date]:
+def date_range(start: date, end: date):
     if end < start:
-        raise ValueError("end date is before start date")
+        raise ValueError('end date is before start date')
     return [
         start + timedelta(days=offset)
         for offset in range((end - start).days + 1)
     ]
 
 
-def utc_midnight_us(value: date) -> int:
+def utc_midnight_us(value: date):
     return calendar.timegm(value.timetuple()) * 1_000_000
 
 
-def create_client() -> Client:
+def create_client():
     if Client is Any:
         raise RuntimeError(
-            "clickhouse-driver is required inside the project container"
+            'clickhouse-driver is required inside the project container'
         )
     return Client(
-        host=os.getenv("CLICKHOUSE_HOST", "clickhouse"),
-        port=int(os.getenv("CLICKHOUSE_PORT", "9000")),
-        user=os.getenv("CLICKHOUSE_USER", "default"),
-        password=os.getenv("CLICKHOUSE_PASSWORD", "default"),
+        host=os.getenv('CLICKHOUSE_HOST', 'clickhouse'),
+        port=int(os.getenv('CLICKHOUSE_PORT', '9000')),
+        user=os.getenv('CLICKHOUSE_USER', 'default'),
+        password=os.getenv('CLICKHOUSE_PASSWORD', 'default'),
     )
 
 
 def trailing_means(
     values: np.ndarray,
     scales: tuple[int, ...] = SCALES_SECONDS,
-) -> np.ndarray:
-    """
+):
+    '''
     Clock-time trailing means including the current completed second.
 
     Result[t, j] uses values[t-scale+1 : t+1].
     Seconds without trades must already be represented by zero.
-    """
+    '''
     if values.ndim != 2:
-        raise ValueError("values must have shape (time, components)")
+        raise ValueError('values must have shape (time, components)')
     if not scales or any(scale <= 0 for scale in scales):
-        raise ValueError("scales must contain positive integers")
+        raise ValueError('scales must contain positive integers')
 
     count, components = values.shape
     cumulative = np.vstack(
@@ -168,13 +138,13 @@ def trailing_means(
 def load_market_day(
     clickhouse: Client,
     trade_date: date,
-) -> MarketDay:
+):
     rows = clickhouse.execute(
         SECONDLY_FLOW_SQL,
         {
-            "trade_date": trade_date,
-            "day_start_us": utc_midnight_us(trade_date),
-            "symbols": SYMBOLS,
+            'trade_date': trade_date,
+            'day_start_us': utc_midnight_us(trade_date),
+            'symbols': SYMBOLS,
         },
     )
 
@@ -201,11 +171,11 @@ def load_market_day(
         second = int(second_index)
         if not 0 <= second < SECONDS_PER_DAY:
             raise ValueError(
-                f"second_index outside UTC day: {second}"
+                f'''second_index outside UTC day: {second}'''
             )
         symbol_text = str(symbol)
         if symbol_text not in symbol_index:
-            raise ValueError(f"unexpected symbol: {symbol_text}")
+            raise ValueError(f'''unexpected symbol: {symbol_text}''')
 
         component = symbol_index[symbol_text]
         buy_value = float(buy_quote)
@@ -213,9 +183,9 @@ def load_market_day(
         price_value = float(second_vwap)
 
         if buy_value < 0 or sell_value < 0:
-            raise ValueError("negative aggregated quote volume")
+            raise ValueError('negative aggregated quote volume')
         if price_value <= 0:
-            raise ValueError("non-positive second VWAP")
+            raise ValueError('non-positive second VWAP')
 
         buy[second, component] = buy_value
         sell[second, component] = sell_value
@@ -229,7 +199,7 @@ def load_market_day(
     ]
     if missing:
         raise ValueError(
-            f"missing symbols on {trade_date}: {missing}"
+            f'''missing symbols on {trade_date}: {missing}'''
         )
 
     total = buy + sell
@@ -256,11 +226,11 @@ def load_market_day(
 
 def _flatten_scale_component(
     values: np.ndarray,
-) -> np.ndarray:
+):
     if values.ndim != 3:
         raise ValueError(
-            "values must have shape "
-            "(observations, scales, components)"
+            'values must have shape '
+            '(observations, scales, components)'
         )
     return values.reshape(values.shape[0], -1)
 
@@ -270,14 +240,14 @@ def build_feature_matrices(
     *,
     target_symbol: str,
     horizon_seconds: int,
-) -> DayDataset:
+):
     if target_symbol not in TARGET_SYMBOLS:
         raise ValueError(
-            f"unsupported target symbol: {target_symbol}"
+            f'''unsupported target symbol: {target_symbol}'''
         )
     if horizon_seconds <= 0:
         raise ValueError(
-            "horizon_seconds must be positive"
+            'horizon_seconds must be positive'
         )
 
     target_index = SYMBOLS.index(target_symbol)
@@ -311,8 +281,8 @@ def build_feature_matrices(
     indices = np.flatnonzero(valid)
     if indices.size == 0:
         raise ValueError(
-            f"no valid observations for "
-            f"{target_symbol} on {day.trade_date}"
+            f'''no valid observations for '''
+            f'''{target_symbol} on {day.trade_date}'''
         )
 
     side_valid = side[indices].astype(
@@ -332,7 +302,7 @@ def build_feature_matrices(
     local_columns: list[np.ndarray] = [
         current_log_volume[:, target_index]
     ]
-    local_names = [f"log_volume[{target_symbol}]"]
+    local_names = [f'''log_volume[{target_symbol}]''']
 
     for scale_index, scale in enumerate(SCALES_SECONDS):
         local_columns.extend(
@@ -345,10 +315,10 @@ def build_feature_matrices(
         )
         local_names.extend(
             (
-                f"h[{target_symbol},B={scale}]",
-                f"abs[{target_symbol},B={scale}]",
-                f"a[{target_symbol},B={scale}]",
-                f"b[{target_symbol},B={scale}]",
+                f'''h[{target_symbol},B={scale}]''',
+                f'''abs[{target_symbol},B={scale}]''',
+                f'''a[{target_symbol},B={scale}]''',
+                f'''b[{target_symbol},B={scale}]''',
             )
         )
 
@@ -362,7 +332,7 @@ def build_feature_matrices(
 
     for component, symbol in enumerate(SYMBOLS):
         no_j_columns.append(current_log_volume[:, component])
-        no_j_names.append(f"log_volume[{symbol}]")
+        no_j_names.append(f'''log_volume[{symbol}]''')
 
     for scale_index, scale in enumerate(SCALES_SECONDS):
         for component, symbol in enumerate(SYMBOLS):
@@ -376,10 +346,10 @@ def build_feature_matrices(
             )
             no_j_names.extend(
                 (
-                    f"h[{symbol},B={scale}]",
-                    f"abs[{symbol},B={scale}]",
-                    f"a[{symbol},B={scale}]",
-                    f"b[{symbol},B={scale}]",
+                    f'''h[{symbol},B={scale}]''',
+                    f'''abs[{symbol},B={scale}]''',
+                    f'''a[{symbol},B={scale}]''',
+                    f'''b[{symbol},B={scale}]''',
                 )
             )
 
@@ -391,9 +361,9 @@ def build_feature_matrices(
     j_columns: list[np.ndarray] = [rg_no_j]
     j_names = list(no_j_names)
     pairs = (
-        ("BTCUSDT", "ETHUSDT"),
-        ("BTCUSDT", "ETHBTC"),
-        ("ETHUSDT", "ETHBTC"),
+        ('BTCUSDT', 'ETHUSDT'),
+        ('BTCUSDT', 'ETHBTC'),
+        ('ETHUSDT', 'ETHBTC'),
     )
 
     for scale_index, scale in enumerate(SCALES_SECONDS):
@@ -408,7 +378,7 @@ def build_feature_matrices(
             )
             j_columns.append(interaction)
             j_names.append(
-                f"J[{first},{second},B={scale}]"
+                f'''J[{first},{second},B={scale}]'''
             )
 
     rg_with_j = np.column_stack(j_columns).astype(
@@ -429,28 +399,28 @@ def build_feature_matrices(
 
     return DayDataset(
         features={
-            "m1_local": m1_local,
-            "rg_no_j": rg_no_j,
-            "rg_with_j": rg_with_j,
+            'm1_local': m1_local,
+            'rg_no_j': rg_no_j,
+            'rg_with_j': rg_with_j,
         },
         feature_names={
-            "m1_local": tuple(local_names),
-            "rg_no_j": tuple(no_j_names),
-            "rg_with_j": tuple(j_names),
+            'm1_local': tuple(local_names),
+            'rg_no_j': tuple(no_j_names),
+            'rg_with_j': tuple(j_names),
         },
         labels=labels,
         markout_bps=markout,
     )
 
 
-def new_classifier(alpha: float) -> SGDClassifier:
+def new_classifier(alpha: float):
     if alpha <= 0:
-        raise ValueError("alpha must be positive")
+        raise ValueError('alpha must be positive')
     return SGDClassifier(
-        loss="log_loss",
-        penalty="l2",
+        loss='log_loss',
+        penalty='l2',
         alpha=alpha,
-        learning_rate="optimal",
+        learning_rate='optimal',
         average=True,
         random_state=SEED,
         shuffle=True,
@@ -463,7 +433,7 @@ def fit_scalers(
     *,
     target_symbol: str,
     horizon_seconds: int,
-) -> dict[str, StandardScaler]:
+):
     scalers = {
         model_name: StandardScaler()
         for model_name in MODEL_NAMES
@@ -491,7 +461,7 @@ def fit_alpha_candidates(
     horizon_seconds: int,
     scalers: dict[str, StandardScaler],
     alphas: tuple[float, ...],
-) -> dict[str, dict[float, ModelState]]:
+):
     states: dict[str, dict[float, ModelState]] = {
         model_name: {
             alpha: ModelState(
@@ -528,14 +498,14 @@ def fit_alpha_candidates(
 def exact_top_fraction_mask(
     scores: np.ndarray,
     fraction: float = 0.10,
-) -> np.ndarray:
+):
     if scores.ndim != 1 or scores.size == 0:
         raise ValueError(
-            "scores must be a non-empty vector"
+            'scores must be a non-empty vector'
         )
     if not 0 < fraction <= 1:
         raise ValueError(
-            "fraction must be in (0, 1]"
+            'fraction must be in (0, 1]'
         )
     selected_count = max(
         1,
@@ -553,14 +523,14 @@ def exact_top_fraction_mask(
 def calculate_metrics(
     labels: np.ndarray,
     scores: np.ndarray,
-) -> Metrics:
+):
     if labels.shape != scores.shape:
         raise ValueError(
-            "labels and scores have different shapes"
+            'labels and scores have different shapes'
         )
     if np.unique(labels).size != 2:
         raise ValueError(
-            "both target classes are required"
+            'both target classes are required'
         )
 
     toxic_rate = float(np.mean(labels))
@@ -600,7 +570,7 @@ def evaluate_states(
     target_symbol: str,
     horizon_seconds: int,
     states: dict[str, ModelState],
-) -> dict[str, Any]:
+):
     daily: list[dict[str, Any]] = []
     pooled_labels: list[np.ndarray] = []
     pooled_scores = {
@@ -635,47 +605,47 @@ def evaluate_states(
             )
 
         pooled_labels.append(dataset.labels)
-        m1 = model_metrics["m1_local"]
-        no_j = model_metrics["rg_no_j"]
-        with_j = model_metrics["rg_with_j"]
+        m1 = model_metrics['m1_local']
+        no_j = model_metrics['rg_no_j']
+        with_j = model_metrics['rg_with_j']
 
         daily.append(
             {
-                "date": trade_date.isoformat(),
-                "models": model_metrics,
-                "rg_no_j_minus_m1": {
-                    "roc_auc": (
-                        no_j["roc_auc"] - m1["roc_auc"]
+                'date': trade_date.isoformat(),
+                'models': model_metrics,
+                'rg_no_j_minus_m1': {
+                    'roc_auc': (
+                        no_j['roc_auc'] - m1['roc_auc']
                     ),
-                    "average_precision": (
-                        no_j["average_precision"]
-                        - m1["average_precision"]
+                    'average_precision': (
+                        no_j['average_precision']
+                        - m1['average_precision']
                     ),
-                    "brier_improvement": (
-                        m1["brier_score"]
-                        - no_j["brier_score"]
+                    'brier_improvement': (
+                        m1['brier_score']
+                        - no_j['brier_score']
                     ),
-                    "top_decile_lift": (
-                        no_j["top_decile_lift"]
-                        - m1["top_decile_lift"]
+                    'top_decile_lift': (
+                        no_j['top_decile_lift']
+                        - m1['top_decile_lift']
                     ),
                 },
-                "rg_with_j_minus_no_j": {
-                    "roc_auc": (
-                        with_j["roc_auc"]
-                        - no_j["roc_auc"]
+                'rg_with_j_minus_no_j': {
+                    'roc_auc': (
+                        with_j['roc_auc']
+                        - no_j['roc_auc']
                     ),
-                    "average_precision": (
-                        with_j["average_precision"]
-                        - no_j["average_precision"]
+                    'average_precision': (
+                        with_j['average_precision']
+                        - no_j['average_precision']
                     ),
-                    "brier_improvement": (
-                        no_j["brier_score"]
-                        - with_j["brier_score"]
+                    'brier_improvement': (
+                        no_j['brier_score']
+                        - with_j['brier_score']
                     ),
-                    "top_decile_lift": (
-                        with_j["top_decile_lift"]
-                        - no_j["top_decile_lift"]
+                    'top_decile_lift': (
+                        with_j['top_decile_lift']
+                        - no_j['top_decile_lift']
                     ),
                 },
             }
@@ -695,22 +665,22 @@ def evaluate_states(
     }
 
     return {
-        "daily": daily,
-        "pooled": pooled,
+        'daily': daily,
+        'pooled': pooled,
     }
 
 
 def mean_daily_ap(
     evaluation: dict[str, Any],
     model_name: str,
-) -> float:
+):
     return float(
         np.mean(
             [
-                day["models"][model_name][
-                    "average_precision"
+                day['models'][model_name][
+                    'average_precision'
                 ]
-                for day in evaluation["daily"]
+                for day in evaluation['daily']
             ]
         )
     )
@@ -726,10 +696,7 @@ def select_alphas(
         str,
         dict[float, ModelState],
     ],
-) -> tuple[
-    dict[str, float],
-    dict[str, dict[str, float]],
-]:
+):
     selected: dict[str, float] = {}
     scores: dict[str, dict[str, float]] = {}
 
@@ -795,7 +762,7 @@ def fit_final_states(
     target_symbol: str,
     horizon_seconds: int,
     selected_alphas: dict[str, float],
-) -> dict[str, ModelState]:
+):
     scalers = fit_scalers(
         cache,
         fit_dates,
@@ -841,7 +808,7 @@ def bootstrap_daily_difference(
     metric_name: str,
     samples: int,
     seed: int,
-) -> dict[str, float | int]:
+):
     values = np.asarray(
         [
             day[comparison][metric_name]
@@ -858,15 +825,15 @@ def bootstrap_daily_difference(
     means = np.mean(values[indices], axis=1)
 
     return {
-        "days": int(values.size),
-        "mean": float(np.mean(values)),
-        "ci_025": float(
+        'days': int(values.size),
+        'mean': float(np.mean(values)),
+        'ci_025': float(
             np.quantile(means, 0.025)
         ),
-        "ci_975": float(
+        'ci_975': float(
             np.quantile(means, 0.975)
         ),
-        "positive_day_fraction": float(
+        'positive_day_fraction': float(
             np.mean(values > 0)
         ),
     }
@@ -877,17 +844,17 @@ def add_bootstrap(
     *,
     bootstrap_samples: int,
     seed_offset: int,
-) -> None:
+):
     bootstrap: dict[str, Any] = {}
     comparisons = (
-        "rg_no_j_minus_m1",
-        "rg_with_j_minus_no_j",
+        'rg_no_j_minus_m1',
+        'rg_with_j_minus_no_j',
     )
     metric_names = (
-        "roc_auc",
-        "average_precision",
-        "brier_improvement",
-        "top_decile_lift",
+        'roc_auc',
+        'average_precision',
+        'brier_improvement',
+        'top_decile_lift',
     )
 
     for comparison in comparisons:
@@ -895,7 +862,7 @@ def add_bootstrap(
         for metric_name in metric_names:
             bootstrap[comparison][metric_name] = (
                 bootstrap_daily_difference(
-                    evaluation["daily"],
+                    evaluation['daily'],
                     comparison=comparison,
                     metric_name=metric_name,
                     samples=bootstrap_samples,
@@ -908,20 +875,20 @@ def add_bootstrap(
                 )
             )
 
-    evaluation["bootstrap"] = bootstrap
+    evaluation['bootstrap'] = bootstrap
 
 
 def extract_raw_coefficients(
     state: ModelState,
     feature_names: tuple[str, ...],
-) -> dict[str, float]:
+):
     coefficients = (
         state.classifier.coef_[0]
         / state.scaler.scale_
     )
     if coefficients.size != len(feature_names):
         raise ValueError(
-            "coefficient and feature counts differ"
+            'coefficient and feature counts differ'
         )
     return {
         name: float(value)
@@ -933,15 +900,15 @@ def extract_raw_coefficients(
     }
 
 
-def parse_date(value: str) -> date:
+def parse_date(value: str):
     return date.fromisoformat(value)
 
 
-def parse_alpha(value: str) -> float:
+def parse_alpha(value: str):
     alpha = float(value)
     if alpha <= 0:
         raise argparse.ArgumentTypeError(
-            "alpha must be positive"
+            'alpha must be positive'
         )
     return alpha
 
@@ -949,16 +916,16 @@ def parse_alpha(value: str) -> float:
 def write_json(
     output_path: str,
     payload: dict[str, Any],
-) -> None:
+):
     os.makedirs(
-        os.path.dirname(output_path) or ".",
+        os.path.dirname(output_path) or '.',
         exist_ok=True,
     )
-    temporary = f"{output_path}.part"
+    temporary = f'''{output_path}.part'''
     with open(
         temporary,
-        "w",
-        encoding="utf-8",
+        'w',
+        encoding='utf-8',
     ) as stream:
         json.dump(
             payload,
@@ -966,65 +933,65 @@ def write_json(
             ensure_ascii=False,
             indent=2,
         )
-        stream.write("\n")
+        stream.write('\n')
     os.replace(temporary, output_path)
 
 
-def main() -> None:
+def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--target-symbols",
-        nargs="+",
+        '--target-symbols',
+        nargs='+',
         default=list(TARGET_SYMBOLS),
     )
     parser.add_argument(
-        "--horizon-seconds",
+        '--horizon-seconds',
         type=int,
         default=5,
     )
     parser.add_argument(
-        "--alphas",
-        nargs="+",
+        '--alphas',
+        nargs='+',
         type=parse_alpha,
         default=list(DEFAULT_ALPHAS),
     )
     parser.add_argument(
-        "--train-start",
+        '--train-start',
         type=parse_date,
         required=True,
     )
     parser.add_argument(
-        "--train-end",
+        '--train-end',
         type=parse_date,
         required=True,
     )
     parser.add_argument(
-        "--development-start",
+        '--development-start',
         type=parse_date,
         required=True,
     )
     parser.add_argument(
-        "--development-end",
+        '--development-end',
         type=parse_date,
         required=True,
     )
     parser.add_argument(
-        "--final-test-start",
+        '--final-test-start',
         type=parse_date,
         required=True,
     )
     parser.add_argument(
-        "--final-test-end",
+        '--final-test-end',
         type=parse_date,
         required=True,
     )
     parser.add_argument(
-        "--bootstrap-samples",
+        '--bootstrap-samples',
         type=int,
         default=5000,
     )
     parser.add_argument(
-        "--output",
+        '--output',
         required=True,
     )
     arguments = parser.parse_args()
@@ -1049,7 +1016,7 @@ def main() -> None:
     )
     if len(set(all_dates)) != len(all_dates):
         raise ValueError(
-            "train, development and final-test dates overlap"
+            'train, development and final-test dates overlap'
         )
 
     target_symbols = tuple(
@@ -1062,7 +1029,7 @@ def main() -> None:
     ]
     if invalid_targets:
         raise ValueError(
-            f"unsupported target symbols: {invalid_targets}"
+            f'''unsupported target symbols: {invalid_targets}'''
         )
 
     alphas = tuple(
@@ -1073,7 +1040,7 @@ def main() -> None:
     cache: dict[date, MarketDay] = {}
     for trade_date in all_dates:
         print(
-            f"Loading synchronized day {trade_date}",
+            f'''Loading synchronized day {trade_date}''',
             flush=True,
         )
         cache[trade_date] = load_market_day(
@@ -1082,52 +1049,52 @@ def main() -> None:
         )
 
     output: dict[str, Any] = {
-        "configuration": {
-            "symbols": list(SYMBOLS),
-            "target_symbols": list(target_symbols),
-            "scales_seconds": list(
+        'configuration': {
+            'symbols': list(SYMBOLS),
+            'target_symbols': list(target_symbols),
+            'scales_seconds': list(
                 SCALES_SECONDS
             ),
-            "horizon_seconds": (
+            'horizon_seconds': (
                 arguments.horizon_seconds
             ),
-            "candidate_alphas": list(alphas),
-            "train_dates": [
+            'candidate_alphas': list(alphas),
+            'train_dates': [
                 value.isoformat()
                 for value in train_dates
             ],
-            "development_dates": [
+            'development_dates': [
                 value.isoformat()
                 for value in development_dates
             ],
-            "final_test_dates": [
+            'final_test_dates': [
                 value.isoformat()
                 for value in final_test_dates
             ],
-            "field_definition": (
-                "(buy_quote - sell_quote) / "
-                "(buy_quote + sell_quote), "
-                "zero for inactive seconds"
+            'field_definition': (
+                '(buy_quote - sell_quote) / '
+                '(buy_quote + sell_quote), '
+                'zero for inactive seconds'
             ),
-            "target_definition": (
-                "sign(current second net flow) * "
-                "(future second VWAP - current second VWAP) "
-                "/ current second VWAP"
+            'target_definition': (
+                'sign(current second net flow) * '
+                '(future second VWAP - current second VWAP) '
+                '/ current second VWAP'
             ),
-            "model_interpretation": (
-                "regularized predictive effective action; "
-                "coefficients are not equilibrium free-energy "
-                "parameters"
+            'model_interpretation': (
+                'regularized predictive effective action; '
+                'coefficients are not equilibrium free-energy '
+                'parameters'
             ),
         },
-        "targets": {},
+        'targets': {},
     }
 
     fit_dates = train_dates + development_dates
 
     for target_symbol in target_symbols:
         print(
-            f"{target_symbol}: fitting development candidates",
+            f'''{target_symbol}: fitting development candidates''',
             flush=True,
         )
         scalers = fit_scalers(
@@ -1161,8 +1128,8 @@ def main() -> None:
         )
 
         print(
-            f"{target_symbol}: selected alphas "
-            f"{selected_alphas}",
+            f'''{target_symbol}: selected alphas '''
+            f'''{selected_alphas}''',
             flush=True,
         )
 
@@ -1213,33 +1180,33 @@ def main() -> None:
             for model_name in MODEL_NAMES
         }
 
-        output["targets"][target_symbol] = {
-            "selected_alphas": selected_alphas,
-            "development_mean_daily_ap": (
+        output['targets'][target_symbol] = {
+            'selected_alphas': selected_alphas,
+            'development_mean_daily_ap': (
                 development_scores
             ),
-            "final_test": final_evaluation,
-            "raw_scale_coefficients": coefficients,
+            'final_test': final_evaluation,
+            'raw_scale_coefficients': coefficients,
         }
 
-        no_j_ap = final_evaluation["bootstrap"][
-            "rg_no_j_minus_m1"
-        ]["average_precision"]
-        j_ap = final_evaluation["bootstrap"][
-            "rg_with_j_minus_no_j"
-        ]["average_precision"]
+        no_j_ap = final_evaluation['bootstrap'][
+            'rg_no_j_minus_m1'
+        ]['average_precision']
+        j_ap = final_evaluation['bootstrap'][
+            'rg_with_j_minus_no_j'
+        ]['average_precision']
 
         print(
-            f"{target_symbol} H="
-            f"{arguments.horizon_seconds}s "
-            f"RG-noJ minus M1 AP="
-            f"{no_j_ap['mean']:+.6f} "
-            f"CI=[{no_j_ap['ci_025']:+.6f},"
-            f"{no_j_ap['ci_975']:+.6f}] "
-            f"RG-J minus RG-noJ AP="
-            f"{j_ap['mean']:+.6f} "
-            f"CI=[{j_ap['ci_025']:+.6f},"
-            f"{j_ap['ci_975']:+.6f}]",
+            f'''{target_symbol} H='''
+            f'''{arguments.horizon_seconds}s '''
+            f'''RG-noJ minus M1 AP='''
+            f'''{no_j_ap['mean']:+.6f} '''
+            f'''CI=[{no_j_ap['ci_025']:+.6f},'''
+            f'''{no_j_ap['ci_975']:+.6f}] '''
+            f'''RG-J minus RG-noJ AP='''
+            f'''{j_ap['mean']:+.6f} '''
+            f'''CI=[{j_ap['ci_025']:+.6f},'''
+            f'''{j_ap['ci_975']:+.6f}]''',
             flush=True,
         )
 
@@ -1248,5 +1215,5 @@ def main() -> None:
     write_json(arguments.output, output)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

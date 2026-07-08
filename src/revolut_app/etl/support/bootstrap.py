@@ -15,7 +15,7 @@ SQL_BOOTSTRAP_ORDER = (
 )
 
 
-def _sql_root() -> Path:
+def _sql_root():
     mounted_sql_root = Path(os.getenv('REVOLUT_SQL_ROOT', '/opt/airflow/sql'))
     if mounted_sql_root.exists():
         return mounted_sql_root
@@ -30,7 +30,7 @@ def _sql_root() -> Path:
     )
 
 
-def read_sql_file(relative_path: str) -> str:
+def read_sql_file(relative_path: str):
     root = _sql_root()
     sql_path = root / relative_path
     if not sql_path.exists():
@@ -39,7 +39,7 @@ def read_sql_file(relative_path: str) -> str:
     return sql_path.read_text(encoding='utf-8')
 
 
-def _read_sql_files(relative_paths: Iterable[str]) -> list[str]:
+def _read_sql_files(relative_paths: Iterable[str]):
     statements = []
 
     for relative_path in relative_paths:
@@ -48,7 +48,7 @@ def _read_sql_files(relative_paths: Iterable[str]) -> list[str]:
     return statements
 
 
-def run_db_bootstrap_pipeline() -> None:
+def run_db_bootstrap_pipeline():
     hook = PostgresHook(postgres_conn_id='postgres_main')
     for statement in _read_sql_files(SQL_BOOTSTRAP_ORDER):
         hook.run(statement)

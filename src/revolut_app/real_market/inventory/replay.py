@@ -19,7 +19,7 @@ SUPPORTED_SYMBOLS = {
 
 def calculate_passive_maker_delta(
     event: UnifiedMarketEvent,
-) -> InventoryDelta:
+):
     if event.symbol not in SUPPORTED_SYMBOLS:
         raise ValueError(
             f'Unsupported symbol: {event.symbol}'
@@ -78,7 +78,7 @@ def calculate_passive_maker_delta(
 def replay_passive_market_maker_inventory(
     events: Iterable[UnifiedMarketEvent],
     initial_state: InventoryState | None = None,
-) -> Iterator[InventoryReplayRecord]:
+):
     state = initial_state or InventoryState()
 
     previous_event_index: int | None = None

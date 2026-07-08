@@ -11,7 +11,7 @@ from revolut_app.fx_lab.risk.rg.models import (
 def coarse_grain_pressure_trajectory(
     frames: Iterable[PressureFrame],
     parameters: TemporalCoarseGrainingParameters,
-) -> list[CoarsePressureBlock]:
+):
     resolved_frames = list(frames)
 
     if not resolved_frames:
@@ -42,7 +42,7 @@ def _build_coarse_block(
     *,
     block_index: int,
     frames: list[PressureFrame],
-) -> CoarsePressureBlock:
+):
     event_count = len(frames)
 
     pressure_keys = tuple(
@@ -109,13 +109,13 @@ def _build_coarse_block(
     )
 
 
-def _validate_frames(frames: list[PressureFrame]) -> None:
+def _validate_frames(frames: list[PressureFrame]):
     expected_keys = set(frames[0].pressures)
 
     if not expected_keys:
         raise ValueError(
-            "Pressure frames must contain "
-            "at least one pressure dimension"
+            'Pressure frames must contain '
+            'at least one pressure dimension'
         )
 
     previous_event_index: int | None = None
@@ -127,8 +127,8 @@ def _validate_frames(frames: list[PressureFrame]) -> None:
 
     if len(h_presence) > 1:
         raise ValueError(
-            "h_total must be present for all frames "
-            "or absent for all frames"
+            'h_total must be present for all frames '
+            'or absent for all frames'
         )
 
     for frame in frames:
@@ -136,8 +136,8 @@ def _validate_frames(frames: list[PressureFrame]) -> None:
 
         if actual_keys != expected_keys:
             raise ValueError(
-                "All pressure frames must contain "
-                "the same pressure dimensions"
+                'All pressure frames must contain '
+                'the same pressure dimensions'
             )
 
         if (
@@ -146,8 +146,8 @@ def _validate_frames(frames: list[PressureFrame]) -> None:
             <= previous_event_index
         ):
             raise ValueError(
-                "Pressure frames must be ordered "
-                "by strictly increasing event_index"
+                'Pressure frames must be ordered '
+                'by strictly increasing event_index'
             )
 
         previous_event_index = frame.event_index
@@ -155,8 +155,8 @@ def _validate_frames(frames: list[PressureFrame]) -> None:
         for currency, value in frame.pressures.items():
             if not isfinite(value):
                 raise ValueError(
-                    "Pressure must be finite: "
-                    f"currency={currency}, value={value}"
+                    'Pressure must be finite: '
+                    f'''currency={currency}, value={value}'''
                 )
 
         if (
@@ -164,5 +164,5 @@ def _validate_frames(frames: list[PressureFrame]) -> None:
             and not isfinite(frame.h_total)
         ):
             raise ValueError(
-                "h_total must be finite"
+                'h_total must be finite'
             )

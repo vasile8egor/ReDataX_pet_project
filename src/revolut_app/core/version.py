@@ -8,7 +8,7 @@ from pathlib import Path
 UNKNOWN_GIT_SHA = 'unknown'
 
 
-def _read_ref(git_dir: Path, ref_name: str) -> str | None:
+def _read_ref(git_dir: Path, ref_name: str):
     loose_ref = git_dir / ref_name
     if loose_ref.is_file():
         return loose_ref.read_text(encoding='ascii').strip()
@@ -26,7 +26,7 @@ def _read_ref(git_dir: Path, ref_name: str) -> str | None:
     return None
 
 
-def _find_git_dir() -> Path | None:
+def _find_git_dir():
     candidates = (Path.cwd(), *Path(__file__).resolve().parents)
     for directory in candidates:
         git_dir = directory / '.git'
@@ -36,7 +36,7 @@ def _find_git_dir() -> Path | None:
 
 
 @lru_cache(maxsize=1)
-def resolve_git_sha() -> str:
+def resolve_git_sha():
     configured_sha = os.getenv('GIT_SHA', '').strip()
     if configured_sha:
         return configured_sha

@@ -7,15 +7,15 @@ from clickhouse_driver import Client
 
 
 MODEL_VERSION = (
-    "hamiltonian-observer-v1-"
-    "rg-diagnostic-b16-v3"
+    'hamiltonian-observer-v1-'
+    'rg-diagnostic-b16-v3'
 )
 
 BOOTSTRAP_ITERATIONS = 20_000
 RANDOM_SEED = 20260626
 
 
-QUERY = """
+QUERY = '''
 WITH
     0.9 AS stress_threshold,
 
@@ -120,7 +120,7 @@ ORDER BY
     horizon,
     event_dataset_id,
     signal_group
-"""
+'''
 
 
 @dataclass(frozen=True)
@@ -139,9 +139,9 @@ class LiftResult:
     leave_one_out_max: float
 
 
-def rate(counts: GroupCounts) -> float:
+def rate(counts: GroupCounts):
     if counts.observations == 0:
-        return float("nan")
+        return float('nan')
 
     return (
         counts.stress_events
@@ -154,7 +154,7 @@ def calculate_lift(
     counts: dict[str, GroupCounts],
     left_group: str,
     right_group: str,
-) -> float:
+):
     return (
         rate(counts[left_group])
         - rate(counts[right_group])
@@ -168,7 +168,7 @@ def combine_datasets(
         str,
         dict[str, GroupCounts],
     ],
-) -> dict[str, GroupCounts]:
+):
     observations = defaultdict(int)
     stress_events = defaultdict(int)
 
@@ -202,7 +202,7 @@ def bootstrap_lift(
     right_group: str,
     iterations: int,
     seed: int,
-) -> LiftResult:
+):
     dataset_ids = sorted(dataset_counts)
 
     full_counts = combine_datasets(
@@ -299,32 +299,32 @@ def bootstrap_lift(
     )
 
 
-def main() -> None:
+def main():
     client = Client(
         host=os.getenv(
-            "CLICKHOUSE_HOST",
-            "clickhouse",
+            'CLICKHOUSE_HOST',
+            'clickhouse',
         ),
         port=int(
             os.getenv(
-                "CLICKHOUSE_PORT",
-                "9000",
+                'CLICKHOUSE_PORT',
+                '9000',
             )
         ),
         user=os.getenv(
-            "CLICKHOUSE_USER",
-            "default",
+            'CLICKHOUSE_USER',
+            'default',
         ),
         password=os.getenv(
-            "CLICKHOUSE_PASSWORD",
-            "default",
+            'CLICKHOUSE_PASSWORD',
+            'default',
         ),
     )
 
     rows = client.execute(
         QUERY,
         {
-            "model_version": MODEL_VERSION,
+            'model_version': MODEL_VERSION,
         },
     )
 
@@ -351,14 +351,14 @@ def main() -> None:
 
     comparisons = (
         (
-            "macro_increment",
-            "macro_only",
-            "both_non_increasing",
+            'macro_increment',
+            'macro_only',
+            'both_non_increasing',
         ),
         (
-            "coarse_confirmation",
-            "both_positive",
-            "local_only",
+            'coarse_confirmation',
+            'both_positive',
+            'local_only',
         ),
     )
 
@@ -370,14 +370,14 @@ def main() -> None:
     ):
         print()
         print(
-            f"policy={pricing_policy} "
-            f"horizon={horizon}"
+            f'''policy={pricing_policy} '''
+            f'''horizon={horizon}'''
         )
 
         if len(dataset_counts) != 10:
             raise ValueError(
-                "Expected 10 datasets: "
-                f"actual={len(dataset_counts)}"
+                'Expected 10 datasets: '
+                f'''actual={len(dataset_counts)}'''
             )
 
         for (
@@ -404,19 +404,19 @@ def main() -> None:
             )
 
             print(
-                f"  {comparison_name}: "
-                f"estimate_pp="
-                f"{100 * result.estimate:.5f} "
-                f"ci95_pp=["
-                f"{100 * result.ci_low:.5f}, "
-                f"{100 * result.ci_high:.5f}] "
-                f"p_positive="
-                f"{result.probability_positive:.4f} "
-                f"loo_pp=["
-                f"{100 * result.leave_one_out_min:.5f}, "
-                f"{100 * result.leave_one_out_max:.5f}]"
+                f'''  {comparison_name}: '''
+                f'''estimate_pp='''
+                f'''{100 * result.estimate:.5f} '''
+                f'''ci95_pp=['''
+                f'''{100 * result.ci_low:.5f}, '''
+                f'''{100 * result.ci_high:.5f}] '''
+                f'''p_positive='''
+                f'''{result.probability_positive:.4f} '''
+                f'''loo_pp=['''
+                f'''{100 * result.leave_one_out_min:.5f}, '''
+                f'''{100 * result.leave_one_out_max:.5f}]'''
             )
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

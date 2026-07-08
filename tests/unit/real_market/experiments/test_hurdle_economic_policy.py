@@ -27,12 +27,12 @@ from revolut_app.real_market.experiments.hurdle_economic_policy import (
 def _dataset(
     markout: np.ndarray,
     notional: np.ndarray,
-) -> HurdleDayDataset:
+):
     return HurdleDayDataset(
         trade_date=date(2025, 1, 1),
         seconds=np.arange(markout.size),
         features=np.zeros((markout.size, 2), dtype=np.float32),
-        feature_names=("a", "b"),
+        feature_names=('a', 'b'),
         markout_bps=markout,
         positive_labels=(markout > 0).astype(np.uint8),
         break_even_labels=(markout > 4).astype(np.uint8),
@@ -43,7 +43,7 @@ def _dataset(
     )
 
 
-def test_fractional_allocation_respects_notional_budget() -> None:
+def test_fractional_allocation_respects_notional_budget():
     score = np.array([3.0, 2.0, 1.0])
     notional = np.array([60.0, 60.0, 60.0])
 
@@ -57,8 +57,8 @@ def test_fractional_allocation_respects_notional_budget() -> None:
     assert np.sum(result * notional) == pytest.approx(90.0)
 
 
-def test_expected_net_bps_formula() -> None:
-    scenario = EconomicScenario("base", 0.50, 0.25, 0.50)
+def test_expected_net_bps_formula():
+    scenario = EconomicScenario('base', 0.50, 0.25, 0.50)
     result = predicted_net_bps(
         np.array([2.0, 4.0, 8.0]),
         scenario=scenario,
@@ -67,8 +67,8 @@ def test_expected_net_bps_formula() -> None:
     assert result.tolist() == pytest.approx([-0.25, 0.0, 0.5])
 
 
-def test_hurdle_policy_uses_probability_gate() -> None:
-    scenario = EconomicScenario("base", 0.50, 0.25, 0.50)
+def test_hurdle_policy_uses_probability_gate():
+    scenario = EconomicScenario('base', 0.50, 0.25, 0.50)
     policy = PolicySpec(
         notional_budget_fraction=1.0,
         min_expected_net_margin_bps=0.0,
@@ -93,8 +93,8 @@ def test_hurdle_policy_uses_probability_gate() -> None:
     assert action.tolist() == pytest.approx([1.0, 0.0])
 
 
-def test_policy_metrics_can_be_profitable() -> None:
-    scenario = EconomicScenario("base", 0.50, 0.25, 0.50)
+def test_policy_metrics_can_be_profitable():
+    scenario = EconomicScenario('base', 0.50, 0.25, 0.50)
     dataset = _dataset(
         np.array([10.0, 0.0]),
         np.array([1000.0, 1000.0]),
@@ -111,8 +111,8 @@ def test_policy_metrics_can_be_profitable() -> None:
     assert metrics.profitable
 
 
-def test_candidate_selection_rejects_non_positive_result() -> None:
-    spec = model_spec_from_preset("compact")
+def test_candidate_selection_rejects_non_positive_result():
+    spec = model_spec_from_preset('compact')
     policy = PolicySpec(0.01, 0.0, 0.5, 1.0)
     bad = CandidateSummary(
         horizon_seconds=300,
@@ -129,7 +129,7 @@ def test_candidate_selection_rejects_non_positive_result() -> None:
     assert select_best_candidate([bad]) is None
 
 
-def test_build_dataset_respects_stride_and_markout() -> None:
+def test_build_dataset_respects_stride_and_markout():
     shape = (coupled.SECONDS_PER_DAY, len(coupled.SYMBOLS))
     phi = np.zeros(shape, dtype=np.float32)
     log_volume = np.zeros(shape, dtype=np.float32)
@@ -144,7 +144,7 @@ def test_build_dataset_respects_stride_and_markout() -> None:
 
     current = 1000
     horizon = 120
-    target_index = coupled.SYMBOLS.index("BTCUSDT")
+    target_index = coupled.SYMBOLS.index('BTCUSDT')
     vwap[current + horizon, target_index] = 100.10
 
     coarse_phi = np.repeat(
@@ -160,11 +160,11 @@ def test_build_dataset_respects_stride_and_markout() -> None:
         active=active,
         coarse_phi=coarse_phi,
     )
-    scenario = EconomicScenario("base", 0.50, 0.25, 0.50)
+    scenario = EconomicScenario('base', 0.50, 0.25, 0.50)
 
     dataset = build_hurdle_day_dataset(
         day,
-        target_symbol="BTCUSDT",
+        target_symbol='BTCUSDT',
         horizon_seconds=horizon,
         decision_stride_seconds=10,
         scenario=scenario,
@@ -178,8 +178,8 @@ def test_build_dataset_respects_stride_and_markout() -> None:
     assert np.all(np.isfinite(dataset.features))
 
 
-def test_direct_action_uses_direct_prediction() -> None:
-    scenario = EconomicScenario("base", 0.50, 0.25, 0.50)
+def test_direct_action_uses_direct_prediction():
+    scenario = EconomicScenario('base', 0.50, 0.25, 0.50)
     policy = PolicySpec(1.0, 0.0, 0.0, 1.0)
     predictions = PredictionBundle(
         probability_positive=np.array([0.1, 0.9]),

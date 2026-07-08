@@ -8,32 +8,32 @@ from revolut_app.fx_lab.risk.rg import (
 
 
 EXPECTED_CURRENCIES = (
-    "EUR",
-    "GBP",
-    "USD",
+    'EUR',
+    'GBP',
+    'USD',
 )
 
 
 def test_extracts_one_frame_from_currency_rows():
     observations = [
         PressureObservation(
-            trajectory_id="run-1",
+            trajectory_id='run-1',
             event_index=1,
-            currency="EUR",
+            currency='EUR',
             pressure=0.2,
             h_total=0.5,
         ),
         PressureObservation(
-            trajectory_id="run-1",
+            trajectory_id='run-1',
             event_index=1,
-            currency="GBP",
+            currency='GBP',
             pressure=-0.1,
             h_total=0.5,
         ),
         PressureObservation(
-            trajectory_id="run-1",
+            trajectory_id='run-1',
             event_index=1,
-            currency="USD",
+            currency='USD',
             pressure=0.3,
             h_total=0.5,
         ),
@@ -50,16 +50,16 @@ def test_extracts_one_frame_from_currency_rows():
         ),
     )
 
-    frames = trajectories["run-1"]
+    frames = trajectories['run-1']
 
     assert len(frames) == 1
 
     assert frames[0].event_index == 1
 
     assert frames[0].pressures == {
-        "EUR": 0.2,
-        "GBP": -0.1,
-        "USD": 0.3,
+        'EUR': 0.2,
+        'GBP': -0.1,
+        'USD': 0.3,
     }
 
     assert frames[0].h_total == pytest.approx(
@@ -74,7 +74,7 @@ def test_observations_are_sorted_by_event_index():
         for currency in EXPECTED_CURRENCIES:
             observations.append(
                 PressureObservation(
-                    trajectory_id="run-1",
+                    trajectory_id='run-1',
                     event_index=event_index,
                     currency=currency,
                     pressure=float(event_index),
@@ -95,7 +95,7 @@ def test_observations_are_sorted_by_event_index():
 
     assert [
         frame.event_index
-        for frame in trajectories["run-1"]
+        for frame in trajectories['run-1']
     ] == [1, 2]
 
 
@@ -106,7 +106,7 @@ def test_initial_frame_is_excluded_by_default():
         for currency in EXPECTED_CURRENCIES:
             observations.append(
                 PressureObservation(
-                    trajectory_id="run-1",
+                    trajectory_id='run-1',
                     event_index=event_index,
                     currency=currency,
                     pressure=0.0,
@@ -127,7 +127,7 @@ def test_initial_frame_is_excluded_by_default():
 
     assert [
         frame.event_index
-        for frame in trajectories["run-1"]
+        for frame in trajectories['run-1']
     ] == [1]
 
 
@@ -138,7 +138,7 @@ def test_initial_frame_can_be_included():
         for currency in EXPECTED_CURRENCIES:
             observations.append(
                 PressureObservation(
-                    trajectory_id="run-1",
+                    trajectory_id='run-1',
                     event_index=event_index,
                     currency=currency,
                     pressure=0.0,
@@ -160,7 +160,7 @@ def test_initial_frame_can_be_included():
 
     assert [
         frame.event_index
-        for frame in trajectories["run-1"]
+        for frame in trajectories['run-1']
     ] == [0, 1]
 
 
@@ -171,7 +171,7 @@ def test_missing_event_index_is_rejected():
         for currency in EXPECTED_CURRENCIES:
             observations.append(
                 PressureObservation(
-                    trajectory_id="run-1",
+                    trajectory_id='run-1',
                     event_index=event_index,
                     currency=currency,
                     pressure=0.1,
@@ -181,7 +181,7 @@ def test_missing_event_index_is_rejected():
 
     with pytest.raises(
         ValueError,
-        match="missing event indices",
+        match='missing event indices',
     ):
         extract_pressure_trajectories(
             observations=observations,
@@ -198,16 +198,16 @@ def test_missing_event_index_is_rejected():
 def test_missing_currency_is_rejected():
     observations = [
         PressureObservation(
-            trajectory_id="run-1",
+            trajectory_id='run-1',
             event_index=1,
-            currency="EUR",
+            currency='EUR',
             pressure=0.1,
             h_total=0.2,
         ),
         PressureObservation(
-            trajectory_id="run-1",
+            trajectory_id='run-1',
             event_index=1,
-            currency="USD",
+            currency='USD',
             pressure=-0.1,
             h_total=0.2,
         ),
@@ -215,7 +215,7 @@ def test_missing_currency_is_rejected():
 
     with pytest.raises(
         ValueError,
-        match="Pressure dimensions do not match",
+        match='Pressure dimensions do not match',
     ):
         extract_pressure_trajectories(
             observations=observations,
@@ -232,30 +232,30 @@ def test_missing_currency_is_rejected():
 def test_duplicate_currency_is_rejected():
     observations = [
         PressureObservation(
-            trajectory_id="run-1",
+            trajectory_id='run-1',
             event_index=1,
-            currency="EUR",
+            currency='EUR',
             pressure=0.1,
             h_total=0.2,
         ),
         PressureObservation(
-            trajectory_id="run-1",
+            trajectory_id='run-1',
             event_index=1,
-            currency="EUR",
+            currency='EUR',
             pressure=0.3,
             h_total=0.2,
         ),
         PressureObservation(
-            trajectory_id="run-1",
+            trajectory_id='run-1',
             event_index=1,
-            currency="GBP",
+            currency='GBP',
             pressure=0.0,
             h_total=0.2,
         ),
         PressureObservation(
-            trajectory_id="run-1",
+            trajectory_id='run-1',
             event_index=1,
-            currency="USD",
+            currency='USD',
             pressure=-0.1,
             h_total=0.2,
         ),
@@ -263,7 +263,7 @@ def test_duplicate_currency_is_rejected():
 
     with pytest.raises(
         ValueError,
-        match="Duplicate currency",
+        match='Duplicate currency',
     ):
         extract_pressure_trajectories(
             observations=observations,
@@ -280,23 +280,23 @@ def test_duplicate_currency_is_rejected():
 def test_inconsistent_hamiltonian_is_rejected():
     observations = [
         PressureObservation(
-            trajectory_id="run-1",
+            trajectory_id='run-1',
             event_index=1,
-            currency="EUR",
+            currency='EUR',
             pressure=0.1,
             h_total=0.2,
         ),
         PressureObservation(
-            trajectory_id="run-1",
+            trajectory_id='run-1',
             event_index=1,
-            currency="GBP",
+            currency='GBP',
             pressure=0.0,
             h_total=0.2,
         ),
         PressureObservation(
-            trajectory_id="run-1",
+            trajectory_id='run-1',
             event_index=1,
-            currency="USD",
+            currency='USD',
             pressure=-0.1,
             h_total=0.3,
         ),
@@ -304,7 +304,7 @@ def test_inconsistent_hamiltonian_is_rejected():
 
     with pytest.raises(
         ValueError,
-        match="Inconsistent Hamiltonian",
+        match='Inconsistent Hamiltonian',
     ):
         extract_pressure_trajectories(
             observations=observations,
@@ -322,8 +322,8 @@ def test_multiple_trajectories_are_separated():
     observations = []
 
     for trajectory_id in (
-        "run-1",
-        "run-2",
+        'run-1',
+        'run-2',
     ):
         for currency in EXPECTED_CURRENCIES:
             observations.append(
@@ -348,16 +348,16 @@ def test_multiple_trajectories_are_separated():
     )
 
     assert set(trajectories) == {
-        "run-1",
-        "run-2",
+        'run-1',
+        'run-2',
     }
 
 
 def test_hamiltonian_tolerance_must_be_finite():
     with pytest.raises(
         ValueError,
-        match="hamiltonian_tolerance",
+        match='hamiltonian_tolerance',
     ):
         TrajectoryExtractionParameters(
-            hamiltonian_tolerance=float("nan"),
+            hamiltonian_tolerance=float('nan'),
         )

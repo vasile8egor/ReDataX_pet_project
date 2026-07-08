@@ -67,7 +67,7 @@ class HedgeEngine:
         target_pressure: float = DEFAULT_HEDGE_TARGET_PRESSURE,
         max_hedge_fraction: float = DEFAULT_MAX_HEDGE_FRACTION,
         min_notional: float = DEFAULT_MIN_HEDGE_NOTIONAL,
-    ) -> HedgeRecommendationResult:
+    ):
 
         effective_threshold = self._effective_threshold(
             base_threshold=pressure_threshold,
@@ -141,21 +141,21 @@ class HedgeEngine:
         )
 
     @staticmethod
-    def _reason(phi: float, currency: Currency, regime: StressRegime) -> str:
+    def _reason(phi: float, currency: Currency, regime: StressRegime):
         if phi > 0:
             inventory_side = (
-                f"positive inventory pressure: bank is long {currency.value};"
-                f" recommend: play SELL {currency.value}"
+                f'''positive inventory pressure: bank is long {currency.value};'''
+                f''' recommend: play SELL {currency.value}'''
             )
         elif phi < 0:
             inventory_side = (
-                f"negative inventory pressure: bank is short {currency.value};"
-                f" recommend: play BUY {currency.value}"
+                f'''negative inventory pressure: bank is short {currency.value};'''
+                f''' recommend: play BUY {currency.value}'''
             )
         else:
             inventory_side = (
-                f"neutral inventory pressure for {currency.value}; "
-                "recommend: play HOLD"
+                f'''neutral inventory pressure for {currency.value}; '''
+                'recommend: play HOLD'
             )
         return (
             f'{inventory_side}; regime={regime.value}'
@@ -168,7 +168,7 @@ class HedgeEngine:
         target_pressure: float,
         max_hedge_fraction: float,
         min_notional: float,
-    ) -> HedgeAmountDecision:
+    ):
         current_abs_phi = abs(phi)
 
         if current_abs_phi <= target_pressure:
@@ -211,7 +211,11 @@ class HedgeEngine:
         )
 
     @staticmethod
-    def _effective_threshold(*, base_threshold: float, regime: StressRegime):
+    def _effective_threshold(
+        *,
+        base_threshold: float,
+        regime: StressRegime,
+    ):
         if regime == StressRegime.stress:
             return min(base_threshold, STRESS_HEDGE_PRESSURE_THRESHOLD)
         if regime == StressRegime.elevated:
@@ -219,7 +223,7 @@ class HedgeEngine:
         return base_threshold
 
     @staticmethod
-    def _action_from_pressure(phi: float) -> HedgeAction:
+    def _action_from_pressure(phi: float):
         if phi > 0:
             return HedgeAction.sell
         if phi < 0:

@@ -5,6 +5,8 @@ from uuid import UUID
 from clickhouse_driver import Client
 
 from revolut_app.loaders.queries import (
+    ADD_RG_TRANSITION_DIAGNOSTIC_COLUMN_Q_TEMPLATE,
+    CREATE_GOLD_DATABASE_Q,
     INSERT_RG_TRANSITION_DIAGNOSTICS_Q,
     RG_TRANSITION_DIAGNOSTICS_Q,
 )
@@ -45,31 +47,31 @@ class RgTransitionDiagnosticRecord:
 
 
 class RgTransitionDiagnosticsLoader:
-    def __init__(self) -> None:
+    def __init__(self):
         self.client = Client(
             host=os.getenv(
-                "CLICKHOUSE_HOST",
-                "clickhouse",
+                'CLICKHOUSE_HOST',
+                'clickhouse',
             ),
             port=int(
                 os.getenv(
-                    "CLICKHOUSE_PORT",
-                    "9000",
+                    'CLICKHOUSE_PORT',
+                    '9000',
                 )
             ),
             user=os.getenv(
-                "CLICKHOUSE_USER",
-                "default",
+                'CLICKHOUSE_USER',
+                'default',
             ),
             password=os.getenv(
-                "CLICKHOUSE_PASSWORD",
-                "default",
+                'CLICKHOUSE_PASSWORD',
+                'default',
             ),
         )
 
-    def ensure_schema(self) -> None:
+    def ensure_schema(self):
         self.client.execute(
-            "CREATE DATABASE IF NOT EXISTS gold"
+            CREATE_GOLD_DATABASE_Q
         )
 
         self.client.execute(
@@ -77,16 +79,17 @@ class RgTransitionDiagnosticsLoader:
         )
 
         for column_name in (
-            "coarse_temporal_drift_delta_h",
-            "normalized_coarse_temporal_drift_delta_h",
-            "coarse_request_delta_h",
-            "normalized_coarse_request_delta_h",
-            "coarse_total_accepted_delta_h",
-            "normalized_coarse_total_accepted_delta_h",
+            'coarse_temporal_drift_delta_h',
+            'normalized_coarse_temporal_drift_delta_h',
+            'coarse_request_delta_h',
+            'normalized_coarse_request_delta_h',
+            'coarse_total_accepted_delta_h',
+            'normalized_coarse_total_accepted_delta_h',
         ):
             self.client.execute(
-                "ALTER TABLE gold.fact_rg_transition_diagnostics "
-                f"ADD COLUMN IF NOT EXISTS {column_name} Float64"
+                ADD_RG_TRANSITION_DIAGNOSTIC_COLUMN_Q_TEMPLATE.format(
+                    column_name=column_name
+                )
             )
 
     def persist(
@@ -94,7 +97,7 @@ class RgTransitionDiagnosticsLoader:
         records: list[
             RgTransitionDiagnosticRecord
         ],
-    ) -> None:
+    ):
         if not records:
             return
 

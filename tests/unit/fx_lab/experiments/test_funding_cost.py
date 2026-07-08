@@ -8,7 +8,7 @@ from revolut_app.fx_lab.experiments import (
 from revolut_app.fx_lab.inventory.ledger import InventoryLedger
 
 
-def _zero_inventory(ledger: InventoryLedger) -> None:
+def _zero_inventory(ledger: InventoryLedger):
     for state in ledger.get_all_states().values():
         state.position = 0.0
 

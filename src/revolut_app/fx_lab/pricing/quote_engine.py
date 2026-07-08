@@ -37,7 +37,7 @@ class QuoteEngine:
     def get_mid_rate(
         self,
         request: QuoteRequest,
-    ) -> float:
+    ):
         return self.mid_rate_provider.get_mid_rate(
             base_currency=request.base_currency,
             quote_currency=request.quote_currency,
@@ -48,7 +48,7 @@ class QuoteEngine:
             request: QuoteRequest,
             hamiltonian_penalty_bps: float = 0.0,
             mid_rate: float | None = None,
-    ) -> FXQuote:
+    ):
         resolved_mid_rate = (
             mid_rate
             if mid_rate is not None

@@ -26,7 +26,7 @@ from revolut_app.loaders.rg_analysis_loader import (
 
 
 RG_EFFECTIVE_FIT_NAMESPACE = UUID(
-    "3ca1444d-095a-4873-8cf2-d556125cf021"
+    '3ca1444d-095a-4873-8cf2-d556125cf021'
 )
 
 
@@ -42,15 +42,15 @@ class RgEffectiveHamiltonianParameters:
     block_sizes: tuple[int, ...]
 
     expected_policies: tuple[str, ...] = (
-        "inventory_aware",
-        "naive",
-        "platform",
+        'inventory_aware',
+        'naive',
+        'platform',
     )
 
     expected_trajectories_per_policy: int = 10
 
     operator_basis: str = (
-        "isotropic-local-q2-q4-v1"
+        'isotropic-local-q2-q4-v1'
     )
 
 
@@ -69,26 +69,26 @@ def build_effective_fit_analysis_id(
     *,
     source_analysis_id: UUID,
     parameters: RgEffectiveHamiltonianParameters,
-) -> UUID:
+):
     payload = json.dumps(
         {
-            "source_analysis_id":
+            'source_analysis_id':
                 str(source_analysis_id),
-            "fit_version":
+            'fit_version':
                 parameters.fit_version,
-            "source_model_version":
+            'source_model_version':
                 parameters.source_model_version,
-            "hamiltonian_preset":
+            'hamiltonian_preset':
                 parameters.hamiltonian_preset.value,
-            "block_sizes":
+            'block_sizes':
                 list(parameters.block_sizes),
-            "expected_policies":
+            'expected_policies':
                 list(parameters.expected_policies),
-            "operator_basis":
+            'operator_basis':
                 parameters.operator_basis,
         },
         sort_keys=True,
-        separators=(",", ":"),
+        separators=(',', ':'),
     )
 
     return uuid5(
@@ -102,14 +102,14 @@ class RgEffectiveHamiltonianRunner:
         self,
         *,
         loader: RgAnalysisClickHouseLoader,
-    ) -> None:
+    ):
         self.loader = loader
 
     def run(
         self,
         *,
         parameters: RgEffectiveHamiltonianParameters,
-    ) -> RgEffectiveHamiltonianSummary:
+    ):
         source_analysis = (
             self.loader.load_source_analysis(
                 analysis_version=(
@@ -127,11 +127,11 @@ class RgEffectiveHamiltonianRunner:
             source_analysis.block_sizes
         ):
             raise ValueError(
-                "Fit block sizes do not match "
-                "source RG analysis: "
-                f"fit={parameters.block_sizes}, "
-                f"source="
-                f"{source_analysis.block_sizes}"
+                'Fit block sizes do not match '
+                'source RG analysis: '
+                f'''fit={parameters.block_sizes}, '''
+                f'''source='''
+                f'''{source_analysis.block_sizes}'''
             )
 
         source_runs = (
@@ -151,9 +151,9 @@ class RgEffectiveHamiltonianRunner:
 
         if len(source_runs) != expected_run_count:
             raise ValueError(
-                "Unexpected source run count: "
-                f"expected={expected_run_count}, "
-                f"actual={len(source_runs)}"
+                'Unexpected source run count: '
+                f'''expected={expected_run_count}, '''
+                f'''actual={len(source_runs)}'''
             )
 
         runs_by_policy = defaultdict(list)
@@ -173,11 +173,11 @@ class RgEffectiveHamiltonianRunner:
 
         if actual_policies != expected_policies:
             raise ValueError(
-                "Source policies do not match: "
-                f"expected="
-                f"{sorted(expected_policies)}, "
-                f"actual="
-                f"{sorted(actual_policies)}"
+                'Source policies do not match: '
+                f'''expected='''
+                f'''{sorted(expected_policies)}, '''
+                f'''actual='''
+                f'''{sorted(actual_policies)}'''
             )
 
         for policy_name, policy_runs in (
@@ -188,12 +188,12 @@ class RgEffectiveHamiltonianRunner:
                 .expected_trajectories_per_policy
             ):
                 raise ValueError(
-                    "Unexpected trajectories "
-                    "for policy: "
-                    f"policy={policy_name}, "
-                    f"expected="
-                    f"{parameters.expected_trajectories_per_policy}, "
-                    f"actual={len(policy_runs)}"
+                    'Unexpected trajectories '
+                    'for policy: '
+                    f'''policy={policy_name}, '''
+                    f'''expected='''
+                    f'''{parameters.expected_trajectories_per_policy}, '''
+                    f'''actual={len(policy_runs)}'''
                 )
 
         fit_analysis_id = (
@@ -219,9 +219,9 @@ class RgEffectiveHamiltonianRunner:
         extraction_parameters = (
             TrajectoryExtractionParameters(
                 expected_currencies=(
-                    "EUR",
-                    "GBP",
-                    "USD",
+                    'EUR',
+                    'GBP',
+                    'USD',
                 ),
                 include_initial_frame=False,
                 require_contiguous_event_indices=True,
@@ -255,9 +255,9 @@ class RgEffectiveHamiltonianRunner:
 
             print()
             print(
-                f"[{policy_index}/"
-                f"{len(parameters.expected_policies)}] "
-                f"policy={policy_name}"
+                f'''[{policy_index}/'''
+                f'''{len(parameters.expected_policies)}] '''
+                f'''policy={policy_name}'''
             )
 
             for run_index, source_run in enumerate(
@@ -265,9 +265,9 @@ class RgEffectiveHamiltonianRunner:
                 start=1,
             ):
                 print(
-                    f"  [{run_index}/"
-                    f"{len(policy_runs)}] "
-                    f"run={source_run.run_id}"
+                    f'''  [{run_index}/'''
+                    f'''{len(policy_runs)}] '''
+                    f'''run={source_run.run_id}'''
                 )
 
                 raw_observations = (
@@ -296,10 +296,10 @@ class RgEffectiveHamiltonianRunner:
                     trajectory_id
                 }:
                     raise ValueError(
-                        "Unexpected trajectory IDs: "
-                        f"run_id={source_run.run_id}, "
-                        f"actual="
-                        f"{sorted(trajectories)}"
+                        'Unexpected trajectory IDs: '
+                        f'''run_id={source_run.run_id}, '''
+                        f'''actual='''
+                        f'''{sorted(trajectories)}'''
                     )
 
                 frames = trajectories[
@@ -310,13 +310,13 @@ class RgEffectiveHamiltonianRunner:
                     source_run.generated_requests
                 ):
                     raise ValueError(
-                        "Trajectory frame count "
-                        "does not match requests: "
-                        f"run_id="
-                        f"{source_run.run_id}, "
-                        f"frames={len(frames)}, "
-                        f"requests="
-                        f"{source_run.generated_requests}"
+                        'Trajectory frame count '
+                        'does not match requests: '
+                        f'''run_id='''
+                        f'''{source_run.run_id}, '''
+                        f'''frames={len(frames)}, '''
+                        f'''requests='''
+                        f'''{source_run.generated_requests}'''
                     )
 
                 for block_size in (
@@ -373,20 +373,20 @@ class RgEffectiveHamiltonianRunner:
 
                 parameters_json = json.dumps(
                     {
-                        "fit_version":
+                        'fit_version':
                             parameters.fit_version,
-                        "source_analysis_version":
+                        'source_analysis_version':
                             parameters
                             .source_analysis_version,
-                        "source_model_version":
+                        'source_model_version':
                             parameters
                             .source_model_version,
-                        "hamiltonian_preset":
+                        'hamiltonian_preset':
                             parameters
                             .hamiltonian_preset.value,
-                        "operator_basis":
+                        'operator_basis':
                             parameters.operator_basis,
-                        "block_size":
+                        'block_size':
                             block_size,
                     },
                     sort_keys=True,
@@ -457,12 +457,12 @@ class RgEffectiveHamiltonianRunner:
                 )
 
                 print(
-                    "    "
-                    f"B={block_size:<2} "
-                    f"c={result.intercept:.8f} "
-                    f"a={result.quadratic_coefficient:.8f} "
-                    f"b={result.quartic_coefficient:.8f} "
-                    f"CV_R2={result.cv_r_squared}"
+                    '    '
+                    f'''B={block_size:<2} '''
+                    f'''c={result.intercept:.8f} '''
+                    f'''a={result.quadratic_coefficient:.8f} '''
+                    f'''b={result.quartic_coefficient:.8f} '''
+                    f'''CV_R2={result.cv_r_squared}'''
                 )
 
             del observations_by_scale
@@ -474,9 +474,9 @@ class RgEffectiveHamiltonianRunner:
 
         if len(records) != expected_fit_rows:
             raise ValueError(
-                "Unexpected effective fit row count: "
-                f"expected={expected_fit_rows}, "
-                f"actual={len(records)}"
+                'Unexpected effective fit row count: '
+                f'''expected={expected_fit_rows}, '''
+                f'''actual={len(records)}'''
             )
 
         self.loader.persist_effective_hamiltonian_fits(
@@ -500,21 +500,21 @@ class RgEffectiveHamiltonianRunner:
 
 def _derive_local_hamiltonian_coefficients(
     hamiltonian_preset: HamiltonianPreset,
-) -> tuple[float, float]:
+):
     engine = build_hamiltonian_engine(
         hamiltonian_preset
     )
 
     pressure_1 = {
-        "EUR": 1.0,
-        "GBP": 0.0,
-        "USD": 0.0,
+        'EUR': 1.0,
+        'GBP': 0.0,
+        'USD': 0.0,
     }
 
     pressure_2 = {
-        "EUR": 2.0,
-        "GBP": 0.0,
-        "USD": 0.0,
+        'EUR': 2.0,
+        'GBP': 0.0,
+        'USD': 0.0,
     }
 
     h_1 = engine.evaluate(
@@ -542,14 +542,14 @@ def _validate_fit_result(
     policy_name: str,
     result,
     hamiltonian_preset: HamiltonianPreset,
-) -> None:
+):
     if result.design_rank != 3:
         raise ValueError(
-            "Effective Hamiltonian fit "
-            "must have full rank: "
-            f"policy={policy_name}, "
-            f"block_size={result.block_size}, "
-            f"rank={result.design_rank}"
+            'Effective Hamiltonian fit '
+            'must have full rank: '
+            f'''policy={policy_name}, '''
+            f'''block_size={result.block_size}, '''
+            f'''rank={result.design_rank}'''
         )
 
     if result.block_size != 1:
@@ -567,9 +567,9 @@ def _validate_fit_result(
 
     if abs(result.intercept) > tolerance:
         raise ValueError(
-            "B=1 intercept recovery failed: "
-            f"policy={policy_name}, "
-            f"intercept={result.intercept}"
+            'B=1 intercept recovery failed: '
+            f'''policy={policy_name}, '''
+            f'''intercept={result.intercept}'''
         )
 
     if abs(
@@ -577,12 +577,12 @@ def _validate_fit_result(
         - expected_a
     ) > tolerance:
         raise ValueError(
-            "B=1 quadratic coefficient "
-            "recovery failed: "
-            f"policy={policy_name}, "
-            f"expected={expected_a}, "
-            f"actual="
-            f"{result.quadratic_coefficient}"
+            'B=1 quadratic coefficient '
+            'recovery failed: '
+            f'''policy={policy_name}, '''
+            f'''expected={expected_a}, '''
+            f'''actual='''
+            f'''{result.quadratic_coefficient}'''
         )
 
     if abs(
@@ -590,12 +590,12 @@ def _validate_fit_result(
         - expected_b
     ) > tolerance:
         raise ValueError(
-            "B=1 quartic coefficient "
-            "recovery failed: "
-            f"policy={policy_name}, "
-            f"expected={expected_b}, "
-            f"actual="
-            f"{result.quartic_coefficient}"
+            'B=1 quartic coefficient '
+            'recovery failed: '
+            f'''policy={policy_name}, '''
+            f'''expected={expected_b}, '''
+            f'''actual='''
+            f'''{result.quartic_coefficient}'''
         )
 
     if (
@@ -605,8 +605,8 @@ def _validate_fit_result(
         ) > 1e-10
     ):
         raise ValueError(
-            "B=1 CV R-squared recovery failed: "
-            f"policy={policy_name}, "
-            f"cv_r_squared="
-            f"{result.cv_r_squared}"
+            'B=1 CV R-squared recovery failed: '
+            f'''policy={policy_name}, '''
+            f'''cv_r_squared='''
+            f'''{result.cv_r_squared}'''
         )

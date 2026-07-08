@@ -12,48 +12,27 @@ from typing import Any
 import numpy as np
 
 from revolut_app.real_market.experiments import coupled_rg_final as coupled
+from revolut_app.real_market.experiments.queries import SECONDLY_NOTIONAL_SQL
 
 
 DEFAULT_CAPACITY_FRACTIONS = (0.01, 0.05, 0.10, 0.20)
 DEFAULT_SCENARIOS = (
-    ("conservative", 0.25, 0.10, 1.00),
-    ("base", 0.50, 0.25, 0.50),
-    ("optimistic", 0.75, 0.50, 0.25),
+    ('conservative', 0.25, 0.10, 1.00),
+    ('base', 0.50, 0.25, 0.50),
+    ('optimistic', 0.75, 0.50, 0.25),
 )
 COMPARISONS = (
-    ("rg_no_j_minus_m1", "rg_no_j", "m1_local"),
-    ("rg_with_j_minus_no_j", "rg_with_j", "rg_no_j"),
+    ('rg_no_j_minus_m1', 'rg_no_j', 'm1_local'),
+    ('rg_with_j_minus_no_j', 'rg_with_j', 'rg_no_j'),
 )
 BOOTSTRAP_METRICS = (
-    "net_protected_value_per_million_total_notional",
-    "gross_protected_value_per_million_total_notional",
-    "break_even_action_cost_bps",
-    "capture_rate",
-    "risk_concentration",
-    "selected_notional_fraction",
+    'net_protected_value_per_million_total_notional',
+    'gross_protected_value_per_million_total_notional',
+    'break_even_action_cost_bps',
+    'capture_rate',
+    'risk_concentration',
+    'selected_notional_fraction',
 )
-
-
-SECONDLY_NOTIONAL_SQL = """
-SELECT
-    toUInt32(
-        intDiv(
-            timestamp_us - %(day_start_us)s,
-            1000000
-        )
-    ) AS second_index,
-    symbol,
-    sum(toFloat64(quote_quantity)) AS quote_notional_usdt
-FROM raw.fact_real_market_agg_trades FINAL
-WHERE trade_date = %(trade_date)s
-  AND symbol IN %(symbols)s
-GROUP BY
-    second_index,
-    symbol
-ORDER BY
-    second_index,
-    symbol
-"""
 
 
 @dataclass(frozen=True)
@@ -63,15 +42,15 @@ class BusinessScenario:
     internalization_rate: float
     action_cost_bps: float
 
-    def __post_init__(self) -> None:
+    def __post_init__(self):
         if not self.name.strip():
-            raise ValueError("scenario name cannot be empty")
+            raise ValueError('scenario name cannot be empty')
         if not 0.0 <= self.mitigation_efficiency <= 1.0:
-            raise ValueError("mitigation_efficiency must be in [0, 1]")
+            raise ValueError('mitigation_efficiency must be in [0, 1]')
         if not 0.0 <= self.internalization_rate <= 1.0:
-            raise ValueError("internalization_rate must be in [0, 1]")
+            raise ValueError('internalization_rate must be in [0, 1]')
         if self.action_cost_bps < 0.0:
-            raise ValueError("action_cost_bps cannot be negative")
+            raise ValueError('action_cost_bps cannot be negative')
 
 
 @dataclass(frozen=True)
@@ -107,17 +86,17 @@ class BusinessMetrics:
     benefit_cost_ratio: float
 
 
-def parse_scenario(value: str) -> BusinessScenario:
-    """
+def parse_scenario(value: str):
+    '''
     Parse NAME:MITIGATION:INTERNALIZATION:ACTION_COST_BPS.
 
     Example:
         base:0.50:0.25:0.50
-    """
-    parts = value.split(":")
+    '''
+    parts = value.split(':')
     if len(parts) != 4:
         raise argparse.ArgumentTypeError(
-            "scenario must be NAME:MITIGATION:INTERNALIZATION:ACTION_COST_BPS"
+            'scenario must be NAME:MITIGATION:INTERNALIZATION:ACTION_COST_BPS'
         )
     name, mitigation, internalization, action_cost = parts
     try:
@@ -131,7 +110,7 @@ def parse_scenario(value: str) -> BusinessScenario:
         raise argparse.ArgumentTypeError(str(exc)) from exc
 
 
-def default_scenarios() -> tuple[BusinessScenario, ...]:
+def default_scenarios():
     return tuple(
         BusinessScenario(
             name=name,
@@ -143,41 +122,41 @@ def default_scenarios() -> tuple[BusinessScenario, ...]:
     )
 
 
-def parse_capacity(value: str) -> float:
+def parse_capacity(value: str):
     fraction = float(value)
     if not 0.0 < fraction <= 1.0:
-        raise argparse.ArgumentTypeError("capacity must be in (0, 1]")
+        raise argparse.ArgumentTypeError('capacity must be in (0, 1]')
     return fraction
 
 
-def sha256_file(path: str | Path) -> str:
+def sha256_file(path: str | Path):
     digest = hashlib.sha256()
-    with Path(path).open("rb") as stream:
-        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+    with Path(path).open('rb') as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b''):
             digest.update(chunk)
     return digest.hexdigest()
 
 
-def read_frozen_result(path: str | Path) -> dict[str, Any]:
-    with Path(path).open("r", encoding="utf-8") as stream:
+def read_frozen_result(path: str | Path):
+    with Path(path).open('r', encoding='utf-8') as stream:
         payload = json.load(stream)
     if not isinstance(payload, dict):
-        raise ValueError("frozen result root must be an object")
-    required = {"configuration", "targets"}
+        raise ValueError('frozen result root must be an object')
+    required = {'configuration', 'targets'}
     missing = required - payload.keys()
     if missing:
-        raise ValueError(f"frozen result misses keys: {sorted(missing)}")
+        raise ValueError(f'''frozen result misses keys: {sorted(missing)}''')
     return payload
 
 
 def exact_top_fraction_mask(
     scores: np.ndarray,
     fraction: float,
-) -> np.ndarray:
+):
     if scores.ndim != 1 or scores.size == 0:
-        raise ValueError("scores must be a non-empty vector")
+        raise ValueError('scores must be a non-empty vector')
     if not 0.0 < fraction <= 1.0:
-        raise ValueError("fraction must be in (0, 1]")
+        raise ValueError('fraction must be in (0, 1]')
 
     selected_count = max(1, int(np.ceil(scores.size * fraction)))
     selected_indices = np.argpartition(
@@ -193,16 +172,16 @@ def exact_top_fraction_mask(
 def adverse_loss_usdt(
     notional_usdt: np.ndarray,
     markout_bps: np.ndarray,
-) -> np.ndarray:
+):
     if notional_usdt.shape == markout_bps.shape:
         if np.any(notional_usdt <= 0.0):
-            raise ValueError("notional must be positive")
+            raise ValueError('notional must be positive')
         return (
             notional_usdt
             * np.maximum(markout_bps, 0.0)
             / 10_000.0
         )
-    raise ValueError("notional and markout shapes differ")
+    raise ValueError('notional and markout shapes differ')
 
 
 def calculate_business_metrics(
@@ -212,15 +191,15 @@ def calculate_business_metrics(
     notional_usdt: np.ndarray,
     capacity_fraction: float,
     scenario: BusinessScenario,
-) -> BusinessMetrics:
+):
     if not (scores.shape == losses_usdt.shape == notional_usdt.shape):
-        raise ValueError("scores, losses and notional shapes differ")
+        raise ValueError('scores, losses and notional shapes differ')
     if scores.ndim != 1 or scores.size == 0:
-        raise ValueError("business arrays must be non-empty vectors")
+        raise ValueError('business arrays must be non-empty vectors')
     if np.any(losses_usdt < 0.0):
-        raise ValueError("losses cannot be negative")
+        raise ValueError('losses cannot be negative')
     if np.any(notional_usdt <= 0.0):
-        raise ValueError("notional must be positive")
+        raise ValueError('notional must be positive')
 
     selected = exact_top_fraction_mask(scores, capacity_fraction)
 
@@ -241,12 +220,12 @@ def calculate_business_metrics(
     capture_rate = (
         captured_loss / total_loss
         if total_loss > 0.0
-        else float("nan")
+        else float('nan')
     )
     risk_concentration = (
         capture_rate / selected_notional_fraction
         if selected_notional_fraction > 0.0 and np.isfinite(capture_rate)
-        else float("nan")
+        else float('nan')
     )
 
     gross_protected_value = (
@@ -270,15 +249,15 @@ def calculate_business_metrics(
     break_even_cost_bps = (
         10_000.0 * gross_protected_value / selected_notional
         if selected_notional > 0.0
-        else float("nan")
+        else float('nan')
     )
     benefit_cost_ratio = (
         gross_protected_value / action_cost
         if action_cost > 0.0
         else (
-            float("inf")
+            float('inf')
             if gross_protected_value > 0.0
-            else float("nan")
+            else float('nan')
         )
     )
 
@@ -311,9 +290,9 @@ def aggregate_business_metrics(
     daily_metrics: list[BusinessMetrics],
     *,
     scenario: BusinessScenario,
-) -> BusinessMetrics:
+):
     if not daily_metrics:
-        raise ValueError("daily_metrics cannot be empty")
+        raise ValueError('daily_metrics cannot be empty')
 
     observations = sum(item.observations for item in daily_metrics)
     selected_observations = sum(
@@ -337,12 +316,12 @@ def aggregate_business_metrics(
     capture_rate = (
         captured_loss / total_loss
         if total_loss > 0.0
-        else float("nan")
+        else float('nan')
     )
     risk_concentration = (
         capture_rate / selected_notional_fraction
         if selected_notional_fraction > 0.0 and np.isfinite(capture_rate)
-        else float("nan")
+        else float('nan')
     )
 
     gross_protected_value = (
@@ -384,9 +363,9 @@ def aggregate_business_metrics(
             gross_protected_value / action_cost
             if action_cost > 0.0
             else (
-                float("inf")
+                float('inf')
                 if gross_protected_value > 0.0
-                else float("nan")
+                else float('nan')
             )
         ),
     )
@@ -397,13 +376,13 @@ def paired_day_bootstrap(
     *,
     samples: int,
     seed: int,
-) -> dict[str, float | int]:
+):
     finite = np.asarray(
         [value for value in values if np.isfinite(value)],
         dtype=np.float64,
     )
     if finite.size == 0:
-        raise ValueError("no finite values for bootstrap")
+        raise ValueError('no finite values for bootstrap')
 
     rng = np.random.default_rng(seed)
     sampled_indices = rng.integers(
@@ -414,11 +393,11 @@ def paired_day_bootstrap(
     sampled_means = np.mean(finite[sampled_indices], axis=1)
 
     return {
-        "days": int(finite.size),
-        "mean": float(np.mean(finite)),
-        "ci_025": float(np.quantile(sampled_means, 0.025)),
-        "ci_975": float(np.quantile(sampled_means, 0.975)),
-        "positive_day_fraction": float(np.mean(finite > 0.0)),
+        'days': int(finite.size),
+        'mean': float(np.mean(finite)),
+        'ci_025': float(np.quantile(sampled_means, 0.025)),
+        'ci_975': float(np.quantile(sampled_means, 0.975)),
+        'positive_day_fraction': float(np.mean(finite > 0.0)),
     }
 
 
@@ -427,7 +406,7 @@ def valid_observation_indices(
     *,
     target_symbol: str,
     horizon_seconds: int,
-) -> np.ndarray:
+):
     target_index = coupled.SYMBOLS.index(target_symbol)
     seconds = np.arange(coupled.SECONDS_PER_DAY, dtype=np.int64)
     future_seconds = seconds + horizon_seconds
@@ -456,13 +435,13 @@ def valid_observation_indices(
 def load_second_notional(
     clickhouse: Any,
     trade_date: date,
-) -> np.ndarray:
+):
     rows = clickhouse.execute(
         SECONDLY_NOTIONAL_SQL,
         {
-            "trade_date": trade_date,
-            "day_start_us": coupled.utc_midnight_us(trade_date),
-            "symbols": coupled.TARGET_SYMBOLS,
+            'trade_date': trade_date,
+            'day_start_us': coupled.utc_midnight_us(trade_date),
+            'symbols': coupled.TARGET_SYMBOLS,
         },
     )
     matrix = np.zeros(
@@ -478,12 +457,12 @@ def load_second_notional(
         second = int(second_index)
         symbol_text = str(symbol)
         if symbol_text not in symbol_index:
-            raise ValueError(f"unexpected symbol: {symbol_text}")
+            raise ValueError(f'''unexpected symbol: {symbol_text}''')
         if not 0 <= second < coupled.SECONDS_PER_DAY:
-            raise ValueError(f"invalid second index: {second}")
+            raise ValueError(f'''invalid second index: {second}''')
         value = float(quote_notional)
         if value < 0.0:
-            raise ValueError("negative quote notional")
+            raise ValueError('negative quote notional')
         matrix[second, symbol_index[symbol_text]] = value
 
     return matrix
@@ -495,12 +474,12 @@ def build_business_day_dataset(
     *,
     target_symbol: str,
     horizon_seconds: int,
-) -> BusinessDayDataset:
+):
     if second_notional.shape != (
         coupled.SECONDS_PER_DAY,
         len(coupled.SYMBOLS),
     ):
-        raise ValueError("invalid second_notional matrix shape")
+        raise ValueError('invalid second_notional matrix shape')
 
     model_dataset = coupled.build_feature_matrices(
         day,
@@ -515,7 +494,7 @@ def build_business_day_dataset(
 
     if indices.size != model_dataset.markout_bps.size:
         raise RuntimeError(
-            "business observation mapping differs from model feature mapping"
+            'business observation mapping differs from model feature mapping'
         )
 
     target_index = coupled.SYMBOLS.index(target_symbol)
@@ -545,7 +524,7 @@ def build_business_day_dataset(
 
 def comparison_values(
     model_metrics: dict[str, BusinessMetrics],
-) -> dict[str, dict[str, float]]:
+):
     output: dict[str, dict[str, float]] = {}
     for comparison, first_model, second_model in COMPARISONS:
         first = model_metrics[first_model]
@@ -570,12 +549,12 @@ def evaluate_business_value(
     capacity_fractions: tuple[float, ...],
     scenarios: tuple[BusinessScenario, ...],
     bootstrap_samples: int,
-) -> dict[str, Any]:
+):
     daily: list[dict[str, Any]] = []
 
     for trade_date in final_dates:
         print(
-            f"{target_symbol}: business scoring {trade_date}",
+            f'''{target_symbol}: business scoring {trade_date}''',
             flush=True,
         )
         second_notional = load_second_notional(
@@ -601,7 +580,7 @@ def evaluate_business_value(
 
         capacity_payload: dict[str, Any] = {}
         for capacity in capacity_fractions:
-            capacity_key = f"{capacity:.6f}"
+            capacity_key = f'''{capacity:.6f}'''
             scenario_payload: dict[str, Any] = {}
 
             for scenario in scenarios:
@@ -616,23 +595,23 @@ def evaluate_business_value(
                     for model_name in coupled.MODEL_NAMES
                 }
                 scenario_payload[scenario.name] = {
-                    "scenario": asdict(scenario),
-                    "models": {
+                    'scenario': asdict(scenario),
+                    'models': {
                         name: asdict(metrics)
                         for name, metrics in model_metrics.items()
                     },
-                    "comparisons": comparison_values(model_metrics),
+                    'comparisons': comparison_values(model_metrics),
                 }
 
             capacity_payload[capacity_key] = {
-                "capacity_fraction": capacity,
-                "scenarios": scenario_payload,
+                'capacity_fraction': capacity,
+                'scenarios': scenario_payload,
             }
 
         daily.append(
             {
-                "date": trade_date.isoformat(),
-                "capacities": capacity_payload,
+                'date': trade_date.isoformat(),
+                'capacities': capacity_payload,
             }
         )
 
@@ -640,7 +619,7 @@ def evaluate_business_value(
     bootstrap: dict[str, Any] = {}
 
     for capacity in capacity_fractions:
-        capacity_key = f"{capacity:.6f}"
+        capacity_key = f'''{capacity:.6f}'''
         aggregate[capacity_key] = {}
         bootstrap[capacity_key] = {}
 
@@ -649,9 +628,9 @@ def evaluate_business_value(
             for model_name in coupled.MODEL_NAMES:
                 daily_metrics = [
                     BusinessMetrics(
-                        **day["capacities"][capacity_key]["scenarios"][
+                        **day['capacities'][capacity_key]['scenarios'][
                             scenario.name
-                        ]["models"][model_name]
+                        ]['models'][model_name]
                     )
                     for day in daily
                 ]
@@ -661,12 +640,12 @@ def evaluate_business_value(
                 )
 
             aggregate[capacity_key][scenario.name] = {
-                "scenario": asdict(scenario),
-                "models": {
+                'scenario': asdict(scenario),
+                'models': {
                     name: asdict(metrics)
                     for name, metrics in aggregate_models.items()
                 },
-                "comparisons": comparison_values(aggregate_models),
+                'comparisons': comparison_values(aggregate_models),
             }
 
             scenario_bootstrap: dict[str, Any] = {}
@@ -674,9 +653,9 @@ def evaluate_business_value(
                 scenario_bootstrap[comparison] = {}
                 for metric in BOOTSTRAP_METRICS:
                     values = [
-                        day["capacities"][capacity_key]["scenarios"][
+                        day['capacities'][capacity_key]['scenarios'][
                             scenario.name
-                        ]["comparisons"][comparison][metric]
+                        ]['comparisons'][comparison][metric]
                         for day in daily
                     ]
                     scenario_bootstrap[comparison][metric] = (
@@ -696,84 +675,84 @@ def evaluate_business_value(
             bootstrap[capacity_key][scenario.name] = scenario_bootstrap
 
     return {
-        "daily": daily,
-        "aggregate": aggregate,
-        "bootstrap": bootstrap,
+        'daily': daily,
+        'aggregate': aggregate,
+        'bootstrap': bootstrap,
     }
 
 
-def write_json(path: str | Path, payload: dict[str, Any]) -> None:
+def write_json(path: str | Path, payload: dict[str, Any]):
     output = Path(path)
     output.parent.mkdir(parents=True, exist_ok=True)
-    temporary = output.with_suffix(output.suffix + ".part")
-    with temporary.open("w", encoding="utf-8") as stream:
+    temporary = output.with_suffix(output.suffix + '.part')
+    with temporary.open('w', encoding='utf-8') as stream:
         json.dump(payload, stream, ensure_ascii=False, indent=2)
-        stream.write("\n")
+        stream.write('\n')
     os.replace(temporary, output)
 
 
-def main() -> None:
+def main():
     parser = argparse.ArgumentParser(
         description=(
-            "Evaluate scenario-adjusted business value of the frozen "
-            "cross-market models without retuning the final holdout."
+            'Evaluate scenario-adjusted business value of the frozen '
+            'cross-market models without retuning the final holdout.'
         )
     )
     parser.add_argument(
-        "--frozen-result",
+        '--frozen-result',
         required=True,
-        help="Path to the already evaluated coupled_rg_final.json.",
+        help='Path to the already evaluated coupled_rg_final.json.',
     )
     parser.add_argument(
-        "--target-symbols",
-        nargs="+",
+        '--target-symbols',
+        nargs='+',
         choices=coupled.TARGET_SYMBOLS,
         default=list(coupled.TARGET_SYMBOLS),
     )
     parser.add_argument(
-        "--capacity-fractions",
-        nargs="+",
+        '--capacity-fractions',
+        nargs='+',
         type=parse_capacity,
         default=list(DEFAULT_CAPACITY_FRACTIONS),
     )
     parser.add_argument(
-        "--scenario",
-        action="append",
+        '--scenario',
+        action='append',
         type=parse_scenario,
         help=(
-            "NAME:MITIGATION:INTERNALIZATION:ACTION_COST_BPS. "
-            "Repeat for multiple scenarios. Defaults to conservative, "
-            "base and optimistic."
+            'NAME:MITIGATION:INTERNALIZATION:ACTION_COST_BPS. '
+            'Repeat for multiple scenarios. Defaults to conservative, '
+            'base and optimistic.'
         ),
     )
     parser.add_argument(
-        "--bootstrap-samples",
+        '--bootstrap-samples',
         type=int,
         default=5000,
     )
-    parser.add_argument("--output", required=True)
+    parser.add_argument('--output', required=True)
     arguments = parser.parse_args()
 
     frozen = read_frozen_result(arguments.frozen_result)
-    configuration = frozen["configuration"]
+    configuration = frozen['configuration']
 
-    horizon_seconds = int(configuration["horizon_seconds"])
+    horizon_seconds = int(configuration['horizon_seconds'])
     train_dates = [
         date.fromisoformat(value)
-        for value in configuration["train_dates"]
+        for value in configuration['train_dates']
     ]
     development_dates = [
         date.fromisoformat(value)
-        for value in configuration["development_dates"]
+        for value in configuration['development_dates']
     ]
     final_dates = [
         date.fromisoformat(value)
-        for value in configuration["final_test_dates"]
+        for value in configuration['final_test_dates']
     ]
     fit_dates = train_dates + development_dates
 
     if len(set(fit_dates + final_dates)) != len(fit_dates + final_dates):
-        raise ValueError("frozen date ranges overlap")
+        raise ValueError('frozen date ranges overlap')
 
     capacity_fractions = tuple(
         sorted(set(arguments.capacity_fractions))
@@ -784,16 +763,16 @@ def main() -> None:
         else default_scenarios()
     )
     if len({scenario.name for scenario in scenarios}) != len(scenarios):
-        raise ValueError("scenario names must be unique")
+        raise ValueError('scenario names must be unique')
 
     target_symbols = tuple(dict.fromkeys(arguments.target_symbols))
     missing_targets = [
         symbol for symbol in target_symbols
-        if symbol not in frozen["targets"]
+        if symbol not in frozen['targets']
     ]
     if missing_targets:
         raise ValueError(
-            f"frozen result misses targets: {missing_targets}"
+            f'''frozen result misses targets: {missing_targets}'''
         )
 
     clickhouse = coupled.create_client()
@@ -801,71 +780,71 @@ def main() -> None:
     cache: dict[date, coupled.MarketDay] = {}
 
     for trade_date in all_dates:
-        print(f"Loading synchronized day {trade_date}", flush=True)
+        print(f'''Loading synchronized day {trade_date}''', flush=True)
         cache[trade_date] = coupled.load_market_day(
             clickhouse,
             trade_date,
         )
 
     output: dict[str, Any] = {
-        "configuration": {
-            "source_frozen_result": str(arguments.frozen_result),
-            "source_sha256": sha256_file(arguments.frozen_result),
-            "target_symbols": list(target_symbols),
-            "horizon_seconds": horizon_seconds,
-            "capacity_fractions": list(capacity_fractions),
-            "scenarios": [asdict(item) for item in scenarios],
-            "train_dates": [
+        'configuration': {
+            'source_frozen_result': str(arguments.frozen_result),
+            'source_sha256': sha256_file(arguments.frozen_result),
+            'target_symbols': list(target_symbols),
+            'horizon_seconds': horizon_seconds,
+            'capacity_fractions': list(capacity_fractions),
+            'scenarios': [asdict(item) for item in scenarios],
+            'train_dates': [
                 value.isoformat() for value in train_dates
             ],
-            "development_dates": [
+            'development_dates': [
                 value.isoformat() for value in development_dates
             ],
-            "final_test_dates": [
+            'final_test_dates': [
                 value.isoformat() for value in final_dates
             ],
-            "loss_definition": (
-                "current_second_quote_notional * "
-                "max(aggressor_aligned_future_markout_bps, 0) / 10000"
+            'loss_definition': (
+                'current_second_quote_notional * '
+                'max(aggressor_aligned_future_markout_bps, 0) / 10000'
             ),
-            "gross_value_definition": (
-                "internalization_rate * mitigation_efficiency * "
-                "captured_adverse_loss"
+            'gross_value_definition': (
+                'internalization_rate * mitigation_efficiency * '
+                'captured_adverse_loss'
             ),
-            "action_cost_definition": (
-                "selected_notional * action_cost_bps / 10000"
+            'action_cost_definition': (
+                'selected_notional * action_cost_bps / 10000'
             ),
-            "net_value_definition": (
-                "gross_protected_value - action_cost"
+            'net_value_definition': (
+                'gross_protected_value - action_cost'
             ),
-            "interpretation": (
-                "scenario-adjusted potential value; not realized PnL"
+            'interpretation': (
+                'scenario-adjusted potential value; not realized PnL'
             ),
-            "model_selection_policy": (
-                "selected alphas are read from the frozen result; "
-                "the final holdout is not used for retuning"
+            'model_selection_policy': (
+                'selected alphas are read from the frozen result; '
+                'the final holdout is not used for retuning'
             ),
         },
-        "targets": {},
+        'targets': {},
     }
 
     for target_symbol in target_symbols:
         selected_alphas = {
             name: float(value)
-            for name, value in frozen["targets"][target_symbol][
-                "selected_alphas"
+            for name, value in frozen['targets'][target_symbol][
+                'selected_alphas'
             ].items()
         }
         missing_models = set(coupled.MODEL_NAMES) - selected_alphas.keys()
         if missing_models:
             raise ValueError(
-                f"{target_symbol}: selected alphas miss "
-                f"{sorted(missing_models)}"
+                f'''{target_symbol}: selected alphas miss '''
+                f'''{sorted(missing_models)}'''
             )
 
         print(
-            f"{target_symbol}: refitting frozen specification "
-            f"{selected_alphas}",
+            f'''{target_symbol}: refitting frozen specification '''
+            f'''{selected_alphas}''',
             flush=True,
         )
         states = coupled.fit_final_states(
@@ -887,8 +866,8 @@ def main() -> None:
             scenarios=scenarios,
             bootstrap_samples=arguments.bootstrap_samples,
         )
-        output["targets"][target_symbol] = {
-            "selected_alphas": selected_alphas,
+        output['targets'][target_symbol] = {
+            'selected_alphas': selected_alphas,
             **evaluation,
         }
 
@@ -896,24 +875,24 @@ def main() -> None:
             (
                 scenario
                 for scenario in scenarios
-                if scenario.name == "base"
+                if scenario.name == 'base'
             ),
             scenarios[0],
         )
         for capacity in capacity_fractions:
-            key = f"{capacity:.6f}"
-            delta = evaluation["bootstrap"][key][
+            key = f'''{capacity:.6f}'''
+            delta = evaluation['bootstrap'][key][
                 base_scenario.name
-            ]["rg_no_j_minus_m1"][
-                "net_protected_value_per_million_total_notional"
+            ]['rg_no_j_minus_m1'][
+                'net_protected_value_per_million_total_notional'
             ]
             print(
-                f"{target_symbol} q={capacity:.0%} "
-                f"scenario={base_scenario.name} "
-                f"RG-noJ minus M1 net value per $1m="
-                f"{delta['mean']:+.4f} "
-                f"CI=[{delta['ci_025']:+.4f},"
-                f"{delta['ci_975']:+.4f}]",
+                f'''{target_symbol} q={capacity:.0%} '''
+                f'''scenario={base_scenario.name} '''
+                f'''RG-noJ minus M1 net value per $1m='''
+                f'''{delta['mean']:+.4f} '''
+                f'''CI=[{delta['ci_025']:+.4f},'''
+                f'''{delta['ci_975']:+.4f}]''',
                 flush=True,
             )
 
@@ -922,5 +901,5 @@ def main() -> None:
     write_json(arguments.output, output)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

@@ -135,7 +135,7 @@ BANK_NAMES = [
 
 INITIAL_MERCHANTS = [
     'Starbucks', 'Amazon', 'Apple', 'Uber', 'Netflix',
-    'Tesco', "Sainsbury's", "McDonald's", 'Zara',
+    'Tesco', 'Sainsbury\'s', 'McDonald\'s', 'Zara',
 ]
 
 ACCOUNTS_DB_FIELDS = [

@@ -22,7 +22,7 @@ class TransactionService:
     def ingest(
             self,
             event: TransactionEventRequest
-    ) -> TransactionIngestionResponse:
+    ):
         existing_event = self.repository.find_by_idempotency_key(
             event.idempotency_key
         )

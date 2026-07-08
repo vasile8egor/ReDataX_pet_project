@@ -22,14 +22,14 @@ def test_block_size_one_preserves_mean_hamiltonian():
 
     pressure_values = [
         {
-            "EUR": 0.2,
-            "GBP": -0.1,
-            "USD": 0.3,
+            'EUR': 0.2,
+            'GBP': -0.1,
+            'USD': 0.3,
         },
         {
-            "EUR": 0.4,
-            "GBP": -0.2,
-            "USD": 0.1,
+            'EUR': 0.4,
+            'GBP': -0.2,
+            'USD': 0.1,
         },
     ]
 
@@ -51,7 +51,7 @@ def test_block_size_one_preserves_mean_hamiltonian():
     ]
 
     result = analyze_multiscale_trajectory(
-        trajectory_id="run-1",
+        trajectory_id='run-1',
         frames=frames,
         parameters=(
             MultiscaleAnalysisParameters(
@@ -79,16 +79,16 @@ def test_second_moment_decomposition_is_exact():
     frames = [
         PressureFrame(
             event_index=1,
-            pressures={"EUR": 1.0},
+            pressures={'EUR': 1.0},
         ),
         PressureFrame(
             event_index=2,
-            pressures={"EUR": 3.0},
+            pressures={'EUR': 3.0},
         ),
     ]
 
     result = analyze_multiscale_trajectory(
-        trajectory_id="run-1",
+        trajectory_id='run-1',
         frames=frames,
         parameters=(
             MultiscaleAnalysisParameters(
@@ -98,7 +98,7 @@ def test_second_moment_decomposition_is_exact():
     )
 
     eur = result.scales[0].currencies[
-        "EUR"
+        'EUR'
     ]
 
     assert eur.mean_micro_second_moment == (
@@ -124,7 +124,7 @@ def test_alternating_signal_is_removed_by_blocking():
         PressureFrame(
             event_index=index,
             pressures={
-                "EUR": value,
+                'EUR': value,
             },
         )
         for index, value in enumerate(
@@ -134,7 +134,7 @@ def test_alternating_signal_is_removed_by_blocking():
     ]
 
     result = analyze_multiscale_trajectory(
-        trajectory_id="alternating",
+        trajectory_id='alternating',
         frames=frames,
         parameters=(
             MultiscaleAnalysisParameters(
@@ -147,21 +147,21 @@ def test_alternating_signal_is_removed_by_blocking():
 
     assert (
         scale_1
-        .currencies["EUR"]
+        .currencies['EUR']
         .coarse_variance
         == pytest.approx(1.0)
     )
 
     assert (
         scale_2
-        .currencies["EUR"]
+        .currencies['EUR']
         .coarse_variance
         == pytest.approx(0.0)
     )
 
     assert (
         scale_2
-        .currencies["EUR"]
+        .currencies['EUR']
         .mean_internal_variance
         == pytest.approx(1.0)
     )
@@ -172,7 +172,7 @@ def test_coarse_stress_fraction_uses_block_field():
         PressureFrame(
             event_index=index,
             pressures={
-                "EUR": value,
+                'EUR': value,
             },
         )
         for index, value in enumerate(
@@ -182,7 +182,7 @@ def test_coarse_stress_fraction_uses_block_field():
     ]
 
     result = analyze_multiscale_trajectory(
-        trajectory_id="stress-test",
+        trajectory_id='stress-test',
         frames=frames,
         parameters=(
             MultiscaleAnalysisParameters(
@@ -209,7 +209,7 @@ def test_variance_scaling_exponent():
     frames = [
         PressureFrame(
             event_index=index,
-            pressures={"EUR": value},
+            pressures={'EUR': value},
         )
         for index, value in enumerate(
             [3.0, 1.0, -1.0, -3.0],
@@ -218,7 +218,7 @@ def test_variance_scaling_exponent():
     ]
 
     result = analyze_multiscale_trajectory(
-        trajectory_id="scaling-test",
+        trajectory_id='scaling-test',
         frames=frames,
         parameters=(
             MultiscaleAnalysisParameters(
@@ -230,7 +230,7 @@ def test_variance_scaling_exponent():
     eur_scaling = next(
         item
         for item in result.variance_scaling
-        if item.dimension == "EUR"
+        if item.dimension == 'EUR'
     )
 
     expected = -log(4.0 / 5.0) / log(2.0)
@@ -245,21 +245,21 @@ def test_trace_covariance_is_sum_of_currency_variances():
         PressureFrame(
             event_index=1,
             pressures={
-                "EUR": 1.0,
-                "USD": 2.0,
+                'EUR': 1.0,
+                'USD': 2.0,
             },
         ),
         PressureFrame(
             event_index=2,
             pressures={
-                "EUR": -1.0,
-                "USD": -2.0,
+                'EUR': -1.0,
+                'USD': -2.0,
             },
         ),
     ]
 
     result = analyze_multiscale_trajectory(
-        trajectory_id="run-1",
+        trajectory_id='run-1',
         frames=frames,
         parameters=(
             MultiscaleAnalysisParameters(
@@ -285,13 +285,13 @@ def test_reports_dropped_frames():
     frames = [
         PressureFrame(
             event_index=index,
-            pressures={"EUR": float(index)},
+            pressures={'EUR': float(index)},
         )
         for index in range(1, 6)
     ]
 
     result = analyze_multiscale_trajectory(
-        trajectory_id="run-1",
+        trajectory_id='run-1',
         frames=frames,
         parameters=(
             MultiscaleAnalysisParameters(
@@ -311,16 +311,16 @@ def test_rejects_block_size_larger_than_trajectory():
     frames = [
         PressureFrame(
             event_index=1,
-            pressures={"EUR": 0.1},
+            pressures={'EUR': 0.1},
         )
     ]
 
     with pytest.raises(
         ValueError,
-        match="larger than",
+        match='larger than',
     ):
         analyze_multiscale_trajectory(
-            trajectory_id="run-1",
+            trajectory_id='run-1',
             frames=frames,
             parameters=(
                 MultiscaleAnalysisParameters(
@@ -333,8 +333,8 @@ def test_rejects_block_size_larger_than_trajectory():
 def test_rejects_non_finite_stress_threshold():
     with pytest.raises(
         ValueError,
-        match="stress_pressure_threshold",
+        match='stress_pressure_threshold',
     ):
         MultiscaleAnalysisParameters(
-            stress_pressure_threshold=float("nan"),
+            stress_pressure_threshold=float('nan'),
         )

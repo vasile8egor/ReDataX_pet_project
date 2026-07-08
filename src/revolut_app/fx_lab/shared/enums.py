@@ -2,7 +2,7 @@ from enum import Enum
 
 
 class ScaleAwareDiagnosticPreset(str, Enum):
-    RG_LOCAL_B16_V1 = "rg-local-b16-v1"
+    RG_LOCAL_B16_V1 = 'rg-local-b16-v1'
 
 
 class HamiltonianControllerPreset(str, Enum):

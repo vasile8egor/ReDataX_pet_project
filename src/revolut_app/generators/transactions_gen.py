@@ -11,31 +11,31 @@ from revolut_app.core.constants import (
 
 
 TRANSACTION_TYPES = {
-    "card_payment": 0.45,
-    "internal_transfer": 0.20,
-    "bank_transfer_out": 0.12,
-    "bank_transfer_in": 0.10,
-    "salary": 0.05,
-    "cash_withdrawal": 0.04,
-    "fee": 0.02,
-    "refund": 0.02,
+    'card_payment': 0.45,
+    'internal_transfer': 0.20,
+    'bank_transfer_out': 0.12,
+    'bank_transfer_in': 0.10,
+    'salary': 0.05,
+    'cash_withdrawal': 0.04,
+    'fee': 0.02,
+    'refund': 0.02,
 }
 
 TRANSACTION_TYPE_NAMES = list(TRANSACTION_TYPES.keys())
 TRANSACTION_TYPE_PROBABILITIES = list(TRANSACTION_TYPES.values())
 
 CARD_CATEGORIES = [
-    "groceries",
-    "transport",
-    "restaurants",
-    "online",
-    "subscriptions",
-    "entertainment",
-    "health",
+    'groceries',
+    'transport',
+    'restaurants',
+    'online',
+    'subscriptions',
+    'entertainment',
+    'health',
 ]
 
 
-def _sample_minute(hour: int) -> int:
+def _sample_minute(hour: int):
     if hour == 18:
         return random.randint(30, 59)
     return random.randint(0, 59)
@@ -71,7 +71,7 @@ class MetropolisTransactionGenerator:
         self,
         account_ids: list[str],
         contacts_per_account: int = 5
-    ) -> None:
+    ):
         account_ids = [str(account_id) for account_id in account_ids]
 
         for account_id in account_ids:
@@ -94,7 +94,7 @@ class MetropolisTransactionGenerator:
         self,
         source_account_id: str,
         account_ids: list[str]
-    ) -> str | None:
+    ):
         source_account_id = str(source_account_id)
         candidates = [
             str(candidate)
@@ -115,24 +115,24 @@ class MetropolisTransactionGenerator:
 
         return random.choice(candidates)
 
-    def generate_amount(self, transaction_type: str) -> float:
+    def generate_amount(self, transaction_type: str):
         params = {
-            "card_payment": {"mean": 35, "sigma": 0.75},
-            "internal_transfer": {"mean": 120, "sigma": 0.90},
-            "bank_transfer_out": {"mean": 250, "sigma": 1.10},
-            "bank_transfer_in": {"mean": 300, "sigma": 1.00},
-            "salary": {"mean": 2500, "sigma": 0.25},
-            "cash_withdrawal": {"mean": 80, "sigma": 0.45},
-            "fee": {"mean": 7, "sigma": 0.20},
-            "refund": {"mean": 25, "sigma": 0.70},
+            'card_payment': {'mean': 35, 'sigma': 0.75},
+            'internal_transfer': {'mean': 120, 'sigma': 0.90},
+            'bank_transfer_out': {'mean': 250, 'sigma': 1.10},
+            'bank_transfer_in': {'mean': 300, 'sigma': 1.00},
+            'salary': {'mean': 2500, 'sigma': 0.25},
+            'cash_withdrawal': {'mean': 80, 'sigma': 0.45},
+            'fee': {'mean': 7, 'sigma': 0.20},
+            'refund': {'mean': 25, 'sigma': 0.70},
         }
 
         cfg = params[transaction_type]
         return float(
             round(
                 np.random.lognormal(
-                    mean=np.log(cfg["mean"]),
-                    sigma=cfg["sigma"],
+                    mean=np.log(cfg['mean']),
+                    sigma=cfg['sigma'],
                 ),
                 2,
             )
@@ -188,64 +188,64 @@ class MetropolisTransactionGenerator:
         target_date,
         tx_time: datetime,
         index: int,
-    ) -> dict:
+    ):
         source_account_id = account_id
         target_account_id = None
         external_counterparty_id = None
         counterparty_type = None
-        direction = "outgoing"
+        direction = 'outgoing'
         merchant_name = None
         category = None
-        counterparty_suffix = f"{random.getrandbits(64):016x}"
+        counterparty_suffix = f'''{random.getrandbits(64):016x}'''
 
-        if transaction_type == "internal_transfer":
+        if transaction_type == 'internal_transfer':
             target_account_id = self.choose_internal_target(
                 account_id,
                 all_account_ids
             )
-            counterparty_type = "internal_account"
-        elif transaction_type == "card_payment":
-            external_counterparty_id = f"merchant_{counterparty_suffix}"
-            counterparty_type = "merchant"
+            counterparty_type = 'internal_account'
+        elif transaction_type == 'card_payment':
+            external_counterparty_id = f'''merchant_{counterparty_suffix}'''
+            counterparty_type = 'merchant'
             merchant_name = random.choice(INITIAL_MERCHANTS)
             category = random.choice(CARD_CATEGORIES)
-        elif transaction_type == "bank_transfer_out":
-            external_counterparty_id = f"external_bank_{counterparty_suffix}"
-            counterparty_type = "external_bank_account"
-        elif transaction_type == "bank_transfer_in":
+        elif transaction_type == 'bank_transfer_out':
+            external_counterparty_id = f'''external_bank_{counterparty_suffix}'''
+            counterparty_type = 'external_bank_account'
+        elif transaction_type == 'bank_transfer_in':
             source_account_id = None
             target_account_id = account_id
-            external_counterparty_id = f"external_bank_{counterparty_suffix}"
-            counterparty_type = "external_bank_account"
-            direction = "incoming"
-        elif transaction_type == "salary":
+            external_counterparty_id = f'''external_bank_{counterparty_suffix}'''
+            counterparty_type = 'external_bank_account'
+            direction = 'incoming'
+        elif transaction_type == 'salary':
             source_account_id = None
             target_account_id = account_id
-            external_counterparty_id = f"employer_{counterparty_suffix}"
-            counterparty_type = "employer"
-            direction = "incoming"
-            category = "salary"
-            merchant_name = "Revolut Payroll"
-        elif transaction_type == "cash_withdrawal":
-            external_counterparty_id = f"atm_{counterparty_suffix}"
-            counterparty_type = "atm"
-            category = "cash"
-        elif transaction_type == "fee":
-            external_counterparty_id = "bank_fee_account"
-            counterparty_type = "bank"
-            category = "fee"
-        elif transaction_type == "refund":
+            external_counterparty_id = f'''employer_{counterparty_suffix}'''
+            counterparty_type = 'employer'
+            direction = 'incoming'
+            category = 'salary'
+            merchant_name = 'Revolut Payroll'
+        elif transaction_type == 'cash_withdrawal':
+            external_counterparty_id = f'''atm_{counterparty_suffix}'''
+            counterparty_type = 'atm'
+            category = 'cash'
+        elif transaction_type == 'fee':
+            external_counterparty_id = 'bank_fee_account'
+            counterparty_type = 'bank'
+            category = 'fee'
+        elif transaction_type == 'refund':
             source_account_id = None
             target_account_id = account_id
-            external_counterparty_id = f"merchant_{counterparty_suffix}"
-            counterparty_type = "merchant"
-            direction = "incoming"
-            category = "refund"
+            external_counterparty_id = f'''merchant_{counterparty_suffix}'''
+            counterparty_type = 'merchant'
+            direction = 'incoming'
+            category = 'refund'
         else:
-            raise ValueError(f"Unsupported transaction type: {transaction_type}")
+            raise ValueError(f'''Unsupported transaction type: {transaction_type}''')
 
         credit_debit_indicator = (
-            "Credit" if direction == "incoming" else "Debit"
+            'Credit' if direction == 'incoming' else 'Debit'
         )
         transaction_information = self._transaction_information(
             transaction_type=transaction_type,
@@ -255,25 +255,25 @@ class MetropolisTransactionGenerator:
         )
 
         return {
-            "transaction_id": (
-                f"{account_id}_{target_date.strftime('%Y%m%d')}_"
-                f"{index + 1:06d}"
+            'transaction_id': (
+                f'''{account_id}_{target_date.strftime('%Y%m%d')}_'''
+                f'''{index + 1:06d}'''
             ),
-            "account_id": str(account_id),
-            "source_account_id": source_account_id,
-            "target_account_id": target_account_id,
-            "external_counterparty_id": external_counterparty_id,
-            "counterparty_type": counterparty_type,
-            "amount": self.generate_amount(transaction_type),
-            "currency": "GBP",
-            "direction": direction,
-            "credit_debit_indicator": credit_debit_indicator,
-            "transaction_type": transaction_type,
-            "transaction_information": transaction_information,
-            "status": "completed",
-            "created_at": tx_time.isoformat(),
-            "merchant_name": merchant_name,
-            "category": category,
+            'account_id': str(account_id),
+            'source_account_id': source_account_id,
+            'target_account_id': target_account_id,
+            'external_counterparty_id': external_counterparty_id,
+            'counterparty_type': counterparty_type,
+            'amount': self.generate_amount(transaction_type),
+            'currency': 'GBP',
+            'direction': direction,
+            'credit_debit_indicator': credit_debit_indicator,
+            'transaction_type': transaction_type,
+            'transaction_information': transaction_information,
+            'status': 'completed',
+            'created_at': tx_time.isoformat(),
+            'merchant_name': merchant_name,
+            'category': category,
         }
 
     @staticmethod
@@ -283,17 +283,17 @@ class MetropolisTransactionGenerator:
         merchant_name: str | None,
         category: str | None,
         external_counterparty_id: str | None,
-    ) -> str:
+    ):
         if merchant_name:
             return merchant_name
 
         if category:
-            return category.replace("_", " ").title()
+            return category.replace('_', ' ').title()
 
         if external_counterparty_id:
             return external_counterparty_id
 
-        return transaction_type.replace("_", " ").title()
+        return transaction_type.replace('_', ' ').title()
 
     def generate_all(self, account_ids: list[str], target_date):
         account_ids = [str(account_id) for account_id in account_ids]

@@ -23,11 +23,11 @@ REVOLUT_VARIABLE_NAMES = (
 )
 
 
-def _get_airflow_or_env_value(name: str) -> Optional[str]:
+def _get_airflow_or_env_value(name: str):
     return Variable.get(name, default_var=os.getenv(name))
 
 
-def _build_client() -> RevolutClient:
+def _build_client():
     values = {
         name: _get_airflow_or_env_value(name)
         for name in REVOLUT_VARIABLE_NAMES
@@ -45,27 +45,27 @@ def _build_client() -> RevolutClient:
     return client
 
 
-def _extract_accounts_from_response(response: Dict[str, Any]) -> List[Dict[str, Any]]:
+def _extract_accounts_from_response(response: Dict[str, Any]):
     return response.get('Data', {}).get('Account', [])
 
 
 def _extract_transactions_from_response(
     response: Dict[str, Any]
-) -> List[Dict[str, Any]]:
+):
     return response.get('Data', {}).get('Transaction', [])
 
 
 def _with_source_account_id(
     transactions: List[Dict[str, Any]],
     account_id: str
-) -> List[Dict[str, Any]]:
+):
     return [
         {**transaction, 'source_account_id': account_id}
         for transaction in transactions
     ]
 
 
-def run_accounts_extract_pipeline(target_date_str: str) -> List[str]:
+def run_accounts_extract_pipeline(target_date_str: str):
     run_db_bootstrap_pipeline()
 
     client = _build_client()
@@ -91,7 +91,7 @@ def run_accounts_extract_pipeline(target_date_str: str) -> List[str]:
 def run_transactions_extract_pipeline(
     account_ids: List[str],
     target_date_str: str
-) -> int:
+):
     run_db_bootstrap_pipeline()
 
     client = _build_client()

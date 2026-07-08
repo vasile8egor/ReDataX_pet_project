@@ -24,14 +24,14 @@ def test_snapshot_contains_transition_diagnostics():
     transition = (
         hamiltonian_engine.evaluate_transition(
             pressures_before={
-                "EUR": 0.20,
-                "GBP": 0.10,
-                "USD": -0.05,
+                'EUR': 0.20,
+                'GBP': 0.10,
+                'USD': -0.05,
             },
             pressures_after={
-                "EUR": 0.25,
-                "GBP": 0.08,
-                "USD": -0.10,
+                'EUR': 0.25,
+                'GBP': 0.08,
+                'USD': -0.10,
             },
         )
     )
@@ -43,9 +43,9 @@ def test_snapshot_contains_transition_diagnostics():
         snapshot_ts=datetime(2026, 1, 1, tzinfo=timezone.utc),
         ledger=InventoryLedger(),
         pressures={
-            "EUR": 0.25,
-            "GBP": 0.08,
-            "USD": -0.10,
+            'EUR': 0.25,
+            'GBP': 0.08,
+            'USD': -0.10,
         },
         regime=StressRegime.calm,
         event_accepted=True,

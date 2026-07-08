@@ -100,8 +100,7 @@ def verify_sha256(archive_path: Path, checksum_path: Path):
 
 
 def download_binance_agg_trades_archive(
-    *,
-    spec: BinanceAggTradeArchiveSpec,
+    *, spec: BinanceAggTradeArchiveSpec,
     output_directory: Path,
     timeout_seconds: int = DEFAULT_DOWNLOAD_TIMEOUT_SECONDS,
     download_attempts: int = DEFAULT_DOWNLOAD_ATTEMPTS,

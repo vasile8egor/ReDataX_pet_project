@@ -125,7 +125,7 @@ def _persist_event_dataset(
     loader: FXExperimentClickHouseLoader,
     event_dataset: FXEventDataset,
     event_records: list[FXEventRecord],
-) -> tuple[int, int, int, int]:
+):
     comparison_id = uuid4()
     return loader.load_comparison(
         event_dataset=EventDatasetRecord(
@@ -187,7 +187,7 @@ def _persist_event_dataset(
 
 def _event_records_from_dataset(
     event_dataset: FXEventDataset,
-) -> list[FXEventRecord]:
+):
     return [
         FXEventRecord(
             event_dataset_id=event_dataset.event_dataset_id,

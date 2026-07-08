@@ -14,13 +14,17 @@ from revolut_app.real_market.models import (
 )
 
 
-def _timestamp_us(year: int, month: int, day: int, hour: int = 0) -> int:
+def _timestamp_us(year: int, month: int, day: int, hour: int = 0):
     value = datetime(year, month, day, hour, tzinfo=timezone.utc)
 
     return int(value.timestamp() * 1_000_000)
 
 
-def _write_zip(*, path: Path, rows: list[list[object]]) -> None:
+def _write_zip(
+    *,
+    path: Path,
+    rows: list[list[object]],
+):
     csv_path = path.with_suffix('.csv')
 
     with csv_path.open(
@@ -39,7 +43,7 @@ def _write_zip(*, path: Path, rows: list[list[object]]) -> None:
         archive.write(csv_path, arcname=csv_path.name)
 
 
-def test_parses_microsecond_spot_archive(tmp_path: Path) -> None:
+def test_parses_microsecond_spot_archive(tmp_path: Path):
     timestamp = _timestamp_us(2025, 1, 6)
 
     archive_path = (tmp_path / 'BTCUSDT.zip')
@@ -85,7 +89,7 @@ def test_parses_microsecond_spot_archive(tmp_path: Path) -> None:
     )
 
 
-def test_skips_supported_header(tmp_path: Path) -> None:
+def test_skips_supported_header(tmp_path: Path):
     timestamp = _timestamp_us(2025, 1, 6)
 
     archive_path = tmp_path / 'data.zip'
@@ -131,7 +135,7 @@ def test_skips_supported_header(tmp_path: Path) -> None:
     assert len(trades) == 1
 
 
-def test_rejects_duplicate_aggregate_trade_id(tmp_path: Path) -> None:
+def test_rejects_duplicate_aggregate_trade_id(tmp_path: Path):
     timestamp = _timestamp_us(2025, 1, 6)
 
     archive_path = tmp_path / 'data.zip'
@@ -179,7 +183,7 @@ def test_rejects_duplicate_aggregate_trade_id(tmp_path: Path) -> None:
         )
 
 
-def test_rejects_timestamp_from_another_date(tmp_path: Path) -> None:
+def test_rejects_timestamp_from_another_date(tmp_path: Path):
     timestamp = _timestamp_us(2025, 1, 7)
 
     archive_path = tmp_path / 'data.zip'
@@ -217,7 +221,7 @@ def test_rejects_timestamp_from_another_date(tmp_path: Path) -> None:
         )
 
 
-def test_rejects_millisecond_timestamp_after_2025(tmp_path: Path) -> None:
+def test_rejects_millisecond_timestamp_after_2025(tmp_path: Path):
     timestamp_ms = _timestamp_us(2025, 1, 6) // 1_000
 
     archive_path = tmp_path / 'data.zip'

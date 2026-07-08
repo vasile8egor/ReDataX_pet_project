@@ -135,20 +135,20 @@ class FXExperimentClickHouseLoader:
         port: int | None = None,
         user: str | None = None,
         password: str | None = None,
-    ) -> None:
+    ):
         self.client = Client(
-            host=host or os.getenv("CLICKHOUSE_HOST", "clickhouse"),
-            port=port or int(os.getenv("CLICKHOUSE_PORT", "9000")),
-            user=user or os.getenv("CLICKHOUSE_USER", "default"),
+            host=host or os.getenv('CLICKHOUSE_HOST', 'clickhouse'),
+            port=port or int(os.getenv('CLICKHOUSE_PORT', '9000')),
+            user=user or os.getenv('CLICKHOUSE_USER', 'default'),
             password=(
                 password
                 if password is not None
-                else os.getenv("CLICKHOUSE_PASSWORD", "default")
+                else os.getenv('CLICKHOUSE_PASSWORD', 'default')
             ),
-            database=os.getenv("CLICKHOUSE_DATABASE", "gold"),
+            database=os.getenv('CLICKHOUSE_DATABASE', 'gold'),
         )
 
-    def ensure_schema(self) -> None:
+    def ensure_schema(self):
         self.client.execute(
             '''create database if not exists gold'''
         )
@@ -168,7 +168,7 @@ class FXExperimentClickHouseLoader:
         rows: list[tuple],
         *,
         size: int,
-    ) -> Iterator[list[tuple]]:
+    ):
         if size <= ZERO_INT:
             raise ValueError('Chunk size must be positive')
 
@@ -178,7 +178,7 @@ class FXExperimentClickHouseLoader:
     def _ensure_event_dataset_not_persisted(
         self,
         event_dataset_id: UUID,
-    ) -> None:
+    ):
         dataset_rows, event_rows = self.client.execute(
             SELECT_EXISTING_EVENT_DATASET_Q,
             {'event_dataset_id': event_dataset_id},
@@ -194,7 +194,7 @@ class FXExperimentClickHouseLoader:
     def _ensure_comparison_not_persisted(
         self,
         comparison_id: UUID,
-    ) -> None:
+    ):
         run_rows, snapshot_rows = self.client.execute(
             SELECT_EXISTING_COMPARISON_Q,
             {'comparison_id': comparison_id},
@@ -214,7 +214,7 @@ class FXExperimentClickHouseLoader:
         snapshots: list[InventorySnapshotRecord],
         events: list[FXEventRecord],
         persist_event_dataset: bool,
-    ) -> tuple[int, int, int, int]:
+    ):
         if not runs:
             raise ValueError(
                 'At least one simulation run is required'
@@ -366,7 +366,7 @@ class FXExperimentClickHouseLoader:
     def load_event_dataset(
         self, *,
         event_dataset_id: UUID,
-    ) -> list[FXEventRecord]:
+    ):
         self.ensure_schema()
         rows = self.client.execute(
             SELECT_ALL_FX_EVENTS_Q,
@@ -398,7 +398,7 @@ class FXExperimentClickHouseLoader:
         ]
 
     @staticmethod
-    def _event_rows(events: list[FXEventRecord]) -> list[tuple]:
+    def _event_rows(events: list[FXEventRecord]):
         return [
             (
                 item.event_dataset_id,
@@ -417,7 +417,7 @@ class FXExperimentClickHouseLoader:
             for item in events
         ]
 
-    def _persist_event_rows(self, rows: list[tuple]) -> None:
+    def _persist_event_rows(self, rows: list[tuple]):
         for batch in self._chunks(
             rows,
             size=CLICKHOUSE_SNAPSHOT_INSERT_BATCH_SIZE,

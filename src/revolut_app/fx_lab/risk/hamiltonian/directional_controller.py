@@ -18,7 +18,7 @@ class DirectionalHamiltonianController:
     def evaluate(
         self, *,
         transition: HamiltonianTransitionEvaluation,
-    ) -> DirectionalHamiltonianControlDecision:
+    ):
         delta_h = transition.delta_total
 
         if delta_h <= self.parameters.delta_h_epsilon:

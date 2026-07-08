@@ -11,7 +11,7 @@ class MinioRawLoader:
         self.hook = S3Hook(aws_conn_id=conn_id)
         self.bucket_name = bucket_name
 
-    def load_json(self, key: str, payload: Any) -> str:
+    def load_json(self, key: str, payload: Any):
         if not self.hook.check_for_bucket(self.bucket_name):
             self.hook.create_bucket(bucket_name=self.bucket_name)
 

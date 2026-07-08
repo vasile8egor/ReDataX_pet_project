@@ -30,7 +30,7 @@ def analyze_multiscale_trajectory(
     frames: list[PressureFrame],
     parameters: MultiscaleAnalysisParameters,
     hamiltonian_engine: HamiltonianEngine | None = None,
-) -> MultiscaleTrajectoryObservables:
+):
     if not trajectory_id:
         raise ValueError(
             'trajectory_id cannot be empty'
@@ -100,7 +100,7 @@ def _calculate_scale_observables(
     block_size: int,
     stress_pressure_threshold: float,
     hamiltonian_engine: HamiltonianEngine | None,
-) -> ScaleObservables:
+):
     currencies = tuple(
         sorted(blocks[0].mean_pressures)
     )
@@ -283,7 +283,7 @@ def _calculate_scale_observables(
 
 def _mean_micro_h(
     blocks: list[CoarsePressureBlock],
-) -> float | None:
+):
     values = [
         block.mean_h_total
         for block in blocks
@@ -315,7 +315,7 @@ def _mean_coarse_h(
     *,
     blocks: list[CoarsePressureBlock],
     hamiltonian_engine: HamiltonianEngine | None,
-) -> float | None:
+):
     if hamiltonian_engine is None:
         return None
 
@@ -330,7 +330,7 @@ def _mean_coarse_h(
 def _calculate_variance_scaling(
     *,
     scales: list[ScaleObservables],
-) -> list[VarianceScalingExponent]:
+):
     results: list[
         VarianceScalingExponent
     ] = []
@@ -390,7 +390,7 @@ def _variance_for_dimension(
     *,
     scale: ScaleObservables,
     dimension: str,
-) -> float:
+):
     if dimension == TRACE_DIMENSION:
         return scale.trace_coarse_covariance
 

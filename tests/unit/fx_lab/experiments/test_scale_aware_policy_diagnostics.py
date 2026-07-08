@@ -172,7 +172,7 @@ def _expected_ready_coarse_h_before(
     fx_event_dataset,
     policy_name: QuotePolicyName,
     amount_multiplier: float,
-) -> dict[int, float]:
+):
     ledger = InventoryLedger()
     stress_detect = StressRegimeDetect()
     quote_engine = QuoteEngine(
@@ -207,7 +207,7 @@ def _expected_ready_coarse_h_before(
                     for frame in actual_history
                 )
                 / 16
-                for currency in ("EUR", "GBP", "USD")
+                for currency in ('EUR', 'GBP', 'USD')
             }
             expected[event.event_sequence] = (
                 hamiltonian.evaluate(coarse_before)

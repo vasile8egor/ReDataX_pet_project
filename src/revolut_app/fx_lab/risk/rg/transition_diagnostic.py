@@ -9,10 +9,10 @@ def classify_transition_sign(
     value: float,
     *,
     epsilon: float,
-) -> TransitionRiskSign:
+):
     if epsilon < 0.0:
         raise ValueError(
-            "epsilon must be non-negative"
+            'epsilon must be non-negative'
         )
 
     if value > epsilon:
@@ -32,10 +32,10 @@ def build_scale_aware_transition_diagnostic(
     local_projected_h_after: float,
     coarse_transition: ScaleAwareTransition,
     epsilon: float = 1e-6,
-) -> ScaleAwareTransitionDiagnostic:
+):
     if event_index <= 0:
         raise ValueError(
-            "event_index must be positive"
+            'event_index must be positive'
         )
 
     local_delta_h = (

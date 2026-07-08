@@ -34,7 +34,7 @@ class AcceptanceModel:
     def __init__(self, seed: int | None = None):
         self.rng = np.random.default_rng(seed=seed)
 
-    def decide(self, quote: FXQuote) -> AcceptanceDecision:
+    def decide(self, quote: FXQuote):
         probability = self.acceptance_probability(quote)
         accepted = bool(self.rng.random() < probability)
 
@@ -48,7 +48,7 @@ class AcceptanceModel:
             reason=reason,
         )
 
-    def acceptance_probability(self, quote: FXQuote) -> float:
+    def acceptance_probability(self, quote: FXQuote):
         spread_bps = quote.components.total_spread_bps
         segment_sensitivity = self._segment_sensitivity(quote.request.segment)
         regime_multiplier = self._regime_multiplier(quote.regime)
@@ -67,7 +67,7 @@ class AcceptanceModel:
         )
 
     @staticmethod
-    def _amount_multiplier(amount: float) -> float:
+    def _amount_multiplier(amount: float):
         if amount >= LARGE_AMOUNT_THRESHOLD:
             return LARGE_AMOUNT_ACCEPTANCE_MULTIPLIER
         if amount >= MEDIUM_AMOUNT_THRESHOLD:
@@ -75,7 +75,7 @@ class AcceptanceModel:
         return DEFAULT_AMOUNT_ACCEPTANCE_MULTIPLIER
 
     @staticmethod
-    def _regime_multiplier(regime: StressRegime) -> float:
+    def _regime_multiplier(regime: StressRegime):
         if regime == StressRegime.elevated:
             return ELEVATED_ACCEPTANCE_MULTIPLIER
         if regime == StressRegime.stress:
@@ -83,7 +83,7 @@ class AcceptanceModel:
         return DEFAULT_REGIME_ACCEPTANCE_MULTIPLIER
 
     @staticmethod
-    def _segment_sensitivity(segment: CustomerSegment) -> float:
+    def _segment_sensitivity(segment: CustomerSegment):
         if segment == CustomerSegment.premium:
             return PREMIUM_SEGMENT_SENSITIVITY
         if segment == CustomerSegment.business:

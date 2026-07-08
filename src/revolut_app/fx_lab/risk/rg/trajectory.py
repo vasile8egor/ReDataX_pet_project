@@ -13,7 +13,7 @@ def extract_pressure_trajectories(
     *,
     observations: Iterable[PressureObservation],
     parameters: TrajectoryExtractionParameters,
-) -> dict[str, list[PressureFrame]]:
+):
     grouped: dict[
         str,
         dict[int, list[PressureObservation]],
@@ -49,25 +49,25 @@ def extract_pressure_trajectories(
 
 def _validate_observation(
     observation: PressureObservation,
-) -> None:
+):
     if not observation.trajectory_id:
         raise ValueError(
-            "trajectory_id cannot be empty"
+            'trajectory_id cannot be empty'
         )
 
     if observation.event_index < 0:
         raise ValueError(
-            "event_index cannot be negative"
+            'event_index cannot be negative'
         )
 
     if not observation.currency:
         raise ValueError(
-            "currency cannot be empty"
+            'currency cannot be empty'
         )
 
     if not isfinite(observation.pressure):
         raise ValueError(
-            "pressure must be finite"
+            'pressure must be finite'
         )
 
     if (
@@ -75,7 +75,7 @@ def _validate_observation(
         and not isfinite(observation.h_total)
     ):
         raise ValueError(
-            "h_total must be finite"
+            'h_total must be finite'
         )
 
 
@@ -87,7 +87,7 @@ def _extract_single_trajectory(
         list[PressureObservation],
     ],
     parameters: TrajectoryExtractionParameters,
-) -> list[PressureFrame]:
+):
     event_indices = sorted(event_groups)
 
     if not parameters.include_initial_frame:
@@ -133,7 +133,7 @@ def _resolve_expected_currencies(
     *,
     observations: list[PressureObservation],
     parameters: TrajectoryExtractionParameters,
-) -> tuple[str, ...]:
+):
     if parameters.expected_currencies is not None:
         return parameters.expected_currencies
 
@@ -146,8 +146,8 @@ def _resolve_expected_currencies(
 
     if not currencies:
         raise ValueError(
-            "Cannot infer pressure dimensions "
-            "from an empty event"
+            'Cannot infer pressure dimensions '
+            'from an empty event'
         )
 
     return currencies
@@ -157,17 +157,17 @@ def _validate_contiguous_indices(
     *,
     trajectory_id: str,
     event_indices: list[int],
-) -> None:
+):
     for previous, current in zip(
         event_indices,
         event_indices[1:],
     ):
         if current != previous + 1:
             raise ValueError(
-                "Trajectory contains missing event indices: "
-                f"trajectory_id={trajectory_id}, "
-                f"previous={previous}, "
-                f"current={current}"
+                'Trajectory contains missing event indices: '
+                f'''trajectory_id={trajectory_id}, '''
+                f'''previous={previous}, '''
+                f'''current={current}'''
             )
 
 
@@ -178,7 +178,7 @@ def _build_pressure_frame(
     observations: list[PressureObservation],
     expected_currencies: tuple[str, ...],
     hamiltonian_tolerance: float,
-) -> PressureFrame:
+):
     observed_currencies = [
         observation.currency
         for observation in observations
@@ -188,9 +188,9 @@ def _build_pressure_frame(
         set(observed_currencies)
     ):
         raise ValueError(
-            "Duplicate currency observation: "
-            f"trajectory_id={trajectory_id}, "
-            f"event_index={event_index}"
+            'Duplicate currency observation: '
+            f'''trajectory_id={trajectory_id}, '''
+            f'''event_index={event_index}'''
         )
 
     observed_set = set(observed_currencies)
@@ -205,11 +205,11 @@ def _build_pressure_frame(
         )
 
         raise ValueError(
-            "Pressure dimensions do not match: "
-            f"trajectory_id={trajectory_id}, "
-            f"event_index={event_index}, "
-            f"missing={missing}, "
-            f"unexpected={unexpected}"
+            'Pressure dimensions do not match: '
+            f'''trajectory_id={trajectory_id}, '''
+            f'''event_index={event_index}, '''
+            f'''missing={missing}, '''
+            f'''unexpected={unexpected}'''
         )
 
     pressures = {
@@ -238,7 +238,7 @@ def _resolve_h_total(
     event_index: int,
     observations: list[PressureObservation],
     tolerance: float,
-) -> float | None:
+):
     h_values = [
         observation.h_total
         for observation in observations
@@ -253,10 +253,10 @@ def _resolve_h_total(
         has_hamiltonian
     ):
         raise ValueError(
-            "Hamiltonian data must be present "
-            "for every currency or absent for all: "
-            f"trajectory_id={trajectory_id}, "
-            f"event_index={event_index}"
+            'Hamiltonian data must be present '
+            'for every currency or absent for all: '
+            f'''trajectory_id={trajectory_id}, '''
+            f'''event_index={event_index}'''
         )
 
     if not any(has_hamiltonian):
@@ -278,11 +278,11 @@ def _resolve_h_total(
             abs_tol=tolerance,
         ):
             raise ValueError(
-                "Inconsistent Hamiltonian values "
-                "inside one event: "
-                f"trajectory_id={trajectory_id}, "
-                f"event_index={event_index}, "
-                f"values={resolved_values}"
+                'Inconsistent Hamiltonian values '
+                'inside one event: '
+                f'''trajectory_id={trajectory_id}, '''
+                f'''event_index={event_index}, '''
+                f'''values={resolved_values}'''
             )
 
     return reference

@@ -225,7 +225,7 @@ class RGFlowRequest(BaseModel):
 
     @field_validator('window_sizes')
     @classmethod
-    def validate_window_sizes(cls, value: list[int]) -> list[int]:
+    def validate_window_sizes(cls, value: list[int]):
         invalid = [
             window_size
             for window_size in value

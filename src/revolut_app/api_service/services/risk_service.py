@@ -6,7 +6,7 @@ from revolut_app.api_service.schemas.transactions import (
 
 class RiskService:
 
-    def score(self, event: TransactionEventRequest) -> tuple[float, str]:
+    def score(self, event: TransactionEventRequest):
 
         score = 0.05
 

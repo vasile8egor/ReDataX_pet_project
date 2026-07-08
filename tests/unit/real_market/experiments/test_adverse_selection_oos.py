@@ -11,7 +11,7 @@ from revolut_app.real_market.experiments.adverse_selection_oos import (
 )
 
 
-def make_data() -> DayData:
+def make_data():
     return DayData(
         timestamp_us=np.array(
             [0, 1_000_000, 2_000_000, 3_000_000, 4_000_000],
@@ -24,7 +24,7 @@ def make_data() -> DayData:
     )
 
 
-def test_causal_feature_does_not_use_current_event() -> None:
+def test_causal_feature_does_not_use_current_event():
     data = make_data()
     changed = DayData(
         timestamp_us=data.timestamp_us,
@@ -42,7 +42,7 @@ def test_causal_feature_does_not_use_current_event() -> None:
     assert original_phi[2, scale_index] == changed_phi[2, scale_index]
 
 
-def test_future_vwap_markout_uses_requested_future_window() -> None:
+def test_future_vwap_markout_uses_requested_future_window():
     data = make_data()
     markout = future_vwap_markout(
         data,
@@ -54,7 +54,7 @@ def test_future_vwap_markout_uses_requested_future_window() -> None:
     assert markout[0] == 150.0
 
 
-def test_feature_hierarchy_has_increasing_dimension() -> None:
+def test_feature_hierarchy_has_increasing_dimension():
     data = make_data()
     phi = np.tile(
         np.linspace(-0.5, 0.5, len(SCALES)),
@@ -62,5 +62,5 @@ def test_feature_hierarchy_has_increasing_dimension() -> None:
     )
     features = feature_matrices(data, phi)
 
-    assert features["m0_single_scale"].shape[1] < features["m1_multiscale"].shape[1]
-    assert features["m1_multiscale"].shape[1] < features["m2_rg_flow"].shape[1]
+    assert features['m0_single_scale'].shape[1] < features['m1_multiscale'].shape[1]
+    assert features['m1_multiscale'].shape[1] < features['m2_rg_flow'].shape[1]

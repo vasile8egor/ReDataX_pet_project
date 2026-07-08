@@ -18,11 +18,11 @@ from .queries import SELECT_EVENTS_Q
 
 
 REPLAY_MODEL_VERSION = (
-    "passive-market-maker-unhedged-v1"
+    'passive-market-maker-unhedged-v1'
 )
 
 
-def main() -> None:
+def main():
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
@@ -87,7 +87,7 @@ def main() -> None:
     print(f'inserted={inserted}')
 
 
-def _build_clickhouse_client() -> Client:
+def _build_clickhouse_client():
     return Client(
         host=os.getenv(
             'CLICKHOUSE_HOST',
@@ -101,7 +101,7 @@ def _build_clickhouse_client() -> Client:
         ),
         user=os.getenv(
             'CLICKHOUSE_USER',
-            "default",
+            'default',
         ),
         password=os.getenv(
             'CLICKHOUSE_PASSWORD',
@@ -110,7 +110,7 @@ def _build_clickhouse_client() -> Client:
     )
 
 
-def _row_to_event(row: tuple[object, ...]) -> UnifiedMarketEvent:
+def _row_to_event(row: tuple[object, ...]):
     (
         trade_date,
         event_index,

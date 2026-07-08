@@ -5,7 +5,7 @@ from revolut_app.generators.accounts_gen import AccountGenerator
 from revolut_app.loaders.postgres_loader import PostgresLoader
 
 
-def run_accounts_generation_pipeline(target_date_str: str) -> int:
+def run_accounts_generation_pipeline(target_date_str: str):
     run_db_bootstrap_pipeline()
 
     target_date = datetime.strptime(target_date_str, '%Y-%m-%d').date()

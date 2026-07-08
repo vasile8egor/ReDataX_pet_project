@@ -14,7 +14,7 @@ def summarize_binance_agg_trades(
     trades: Iterable[BinanceAggTrade],
     spec: BinanceAggTradeArchiveSpec,
     archive_sha256: str,
-) -> BinanceAggTradeArchiveSummary:
+):
     row_count = 0
 
     first_id: int | None = None

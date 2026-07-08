@@ -19,14 +19,14 @@ from revolut_app.real_market.experiments.oracle_horizon_scan import (
 )
 
 
-def test_break_even_markout() -> None:
-    scenario = OracleScenario("base", 0.50, 0.25, 0.50)
+def test_break_even_markout():
+    scenario = OracleScenario('base', 0.50, 0.25, 0.50)
     assert scenario.protection_fraction == pytest.approx(0.125)
     assert scenario.break_even_markout_bps == pytest.approx(4.0)
 
 
-def test_oracle_partial_budget_is_exact_and_profitable() -> None:
-    scenario = OracleScenario("base", 0.50, 0.25, 0.50)
+def test_oracle_partial_budget_is_exact_and_profitable():
+    scenario = OracleScenario('base', 0.50, 0.25, 0.50)
     data = OracleDayData(
         markout_bps=np.array([12.0, 8.0, 1.0]),
         notional_usdt=np.array([60.0, 60.0, 60.0]),
@@ -53,8 +53,8 @@ def test_oracle_partial_budget_is_exact_and_profitable() -> None:
     assert metrics.profitable
 
 
-def test_oracle_does_not_act_below_break_even() -> None:
-    scenario = OracleScenario("base", 0.50, 0.25, 0.50)
+def test_oracle_does_not_act_below_break_even():
+    scenario = OracleScenario('base', 0.50, 0.25, 0.50)
     data = OracleDayData(
         markout_bps=np.array([1.0, 2.0, 4.0]),
         notional_usdt=np.array([100.0, 100.0, 100.0]),
@@ -71,7 +71,7 @@ def test_oracle_does_not_act_below_break_even() -> None:
     assert metrics.net_value_per_million_usdt == 0.0
 
 
-def test_distribution_uses_strict_break_even_threshold() -> None:
+def test_distribution_uses_strict_break_even_threshold():
     data = OracleDayData(
         markout_bps=np.array([-1.0, 0.0, 4.0, 5.0]),
         notional_usdt=np.array([10.0, 10.0, 10.0, 70.0]),
@@ -93,14 +93,14 @@ def test_distribution_uses_strict_break_even_threshold() -> None:
     )
 
 
-def test_build_oracle_day_data_matches_markout_definition() -> None:
+def test_build_oracle_day_data_matches_markout_definition():
     shape = (coupled.SECONDS_PER_DAY, len(coupled.SYMBOLS))
     phi = np.zeros(shape, dtype=np.float32)
     vwap = np.full(shape, np.nan, dtype=np.float64)
     active = np.zeros(shape, dtype=bool)
     notional = np.zeros(shape, dtype=np.float64)
 
-    target_index = coupled.SYMBOLS.index("BTCUSDT")
+    target_index = coupled.SYMBOLS.index('BTCUSDT')
     current_second = max(coupled.SCALES_SECONDS)
     future_second = current_second + 10
 
@@ -129,7 +129,7 @@ def test_build_oracle_day_data_matches_markout_definition() -> None:
     result = build_oracle_day_data(
         day,
         notional,
-        target_symbol="BTCUSDT",
+        target_symbol='BTCUSDT',
         horizon_seconds=10,
     )
 
@@ -138,7 +138,7 @@ def test_build_oracle_day_data_matches_markout_definition() -> None:
     assert result.adverse_loss_usdt.tolist() == pytest.approx([1.0])
 
 
-def test_stability_and_recommendation() -> None:
+def test_stability_and_recommendation():
     template = dict(
         observations=100,
         acted_observations=1,
@@ -176,23 +176,23 @@ def test_stability_and_recommendation() -> None:
     assert stability.strictly_feasible
 
     candidate = {
-        "horizon_seconds": 30,
-        "notional_budget_fraction": 0.01,
-        "robust_score": stability.robust_score,
-        "mean_daily_net_value_per_million_usdt": (
+        'horizon_seconds': 30,
+        'notional_budget_fraction': 0.01,
+        'robust_score': stability.robust_score,
+        'mean_daily_net_value_per_million_usdt': (
             stability.mean_daily_net_value_per_million_usdt
         ),
-        "strictly_feasible": True,
+        'strictly_feasible': True,
     }
     recommendation = select_recommendations([candidate])
     assert (
-        recommendation["status"]
-        == "strictly_feasible_oracle_candidates_found"
+        recommendation['status']
+        == 'strictly_feasible_oracle_candidates_found'
     )
 
 
-def test_aggregate_recomputes_from_sums() -> None:
-    scenario = OracleScenario("base", 0.50, 0.25, 0.50)
+def test_aggregate_recomputes_from_sums():
+    scenario = OracleScenario('base', 0.50, 0.25, 0.50)
     data = OracleDayData(
         markout_bps=np.array([10.0, 0.0]),
         notional_usdt=np.array([100.0, 100.0]),

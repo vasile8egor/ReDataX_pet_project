@@ -14,7 +14,11 @@ class HamiltonianController:
         self.engine = engine
         self.parameters = parameters
 
-    def evaluate(self, *, pressures: dict[str, float],):
+    def evaluate(
+        self,
+        *,
+        pressures: dict[str, float],
+    ):
         breakdown = self.engine.evaluate(pressures)
         excess_energy = max(
             0.0, (

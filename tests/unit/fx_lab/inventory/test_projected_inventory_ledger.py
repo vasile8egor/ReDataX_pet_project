@@ -21,7 +21,7 @@ def test_projected_inventory_can_be_evaluated_as_transition():
     ledger = InventoryLedger()
 
     request = QuoteRequest(
-        customer_id="transition-test",
+        customer_id='transition-test',
         base_currency=Currency.EUR,
         quote_currency=Currency.USD,
         side=FXSide.buy,
@@ -65,14 +65,14 @@ def test_transition_supports_coupled_hamiltonian():
 
     transition = engine.evaluate_transition(
         pressures_before={
-            "EUR": 0.20,
-            "GBP": 0.10,
-            "USD": -0.10,
+            'EUR': 0.20,
+            'GBP': 0.10,
+            'USD': -0.10,
         },
         pressures_after={
-            "EUR": 0.30,
-            "GBP": 0.05,
-            "USD": -0.20,
+            'EUR': 0.30,
+            'GBP': 0.05,
+            'USD': -0.20,
         },
     )
 

@@ -19,9 +19,9 @@ from revolut_app.fx_lab.shared.enums import (
 
 
 CURRENCIES = (
-    "EUR",
-    "GBP",
-    "USD",
+    'EUR',
+    'GBP',
+    'USD',
 )
 
 
@@ -31,70 +31,70 @@ def test_recovers_exact_effective_coefficients():
     )
 
     pressure_trajectories = {
-        "run-1": (
+        'run-1': (
             {
-                "EUR": 0.10,
-                "GBP": -0.20,
-                "USD": 0.30,
+                'EUR': 0.10,
+                'GBP': -0.20,
+                'USD': 0.30,
             },
             {
-                "EUR": 0.25,
-                "GBP": 0.05,
-                "USD": -0.35,
+                'EUR': 0.25,
+                'GBP': 0.05,
+                'USD': -0.35,
             },
             {
-                "EUR": -0.15,
-                "GBP": 0.40,
-                "USD": 0.10,
+                'EUR': -0.15,
+                'GBP': 0.40,
+                'USD': 0.10,
             },
             {
-                "EUR": 0.50,
-                "GBP": -0.10,
-                "USD": -0.20,
-            },
-        ),
-        "run-2": (
-            {
-                "EUR": -0.30,
-                "GBP": 0.15,
-                "USD": 0.25,
-            },
-            {
-                "EUR": 0.45,
-                "GBP": 0.20,
-                "USD": -0.05,
-            },
-            {
-                "EUR": -0.05,
-                "GBP": -0.35,
-                "USD": 0.30,
-            },
-            {
-                "EUR": 0.20,
-                "GBP": 0.55,
-                "USD": -0.25,
+                'EUR': 0.50,
+                'GBP': -0.10,
+                'USD': -0.20,
             },
         ),
-        "run-3": (
+        'run-2': (
             {
-                "EUR": 0.35,
-                "GBP": -0.25,
-                "USD": 0.05,
+                'EUR': -0.30,
+                'GBP': 0.15,
+                'USD': 0.25,
             },
             {
-                "EUR": -0.40,
-                "GBP": 0.10,
-                "USD": 0.45,
+                'EUR': 0.45,
+                'GBP': 0.20,
+                'USD': -0.05,
             },
             {
-                "EUR": 0.15,
-                "GBP": 0.30,
-                "USD": -0.50,
+                'EUR': -0.05,
+                'GBP': -0.35,
+                'USD': 0.30,
             },
             {
-                "EUR": -0.25,
-                "GBP": -0.45,
-                "USD": 0.20,
+                'EUR': 0.20,
+                'GBP': 0.55,
+                'USD': -0.25,
+            },
+        ),
+        'run-3': (
+            {
+                'EUR': 0.35,
+                'GBP': -0.25,
+                'USD': 0.05,
+            },
+            {
+                'EUR': -0.40,
+                'GBP': 0.10,
+                'USD': 0.45,
+            },
+            {
+                'EUR': 0.15,
+                'GBP': 0.30,
+                'USD': -0.50,
+            },
+            {
+                'EUR': -0.25,
+                'GBP': -0.45,
+                'USD': 0.20,
             },
         ),
     }
@@ -189,14 +189,14 @@ def test_recovers_exact_effective_coefficients():
 def test_rejects_mixed_block_sizes():
     observations = [
         EffectiveHamiltonianObservation(
-            trajectory_id="run-1",
+            trajectory_id='run-1',
             block_size=1,
             quadratic_invariant=0.1,
             quartic_invariant=0.01,
             target_mean_h=0.2,
         ),
         EffectiveHamiltonianObservation(
-            trajectory_id="run-2",
+            trajectory_id='run-2',
             block_size=2,
             quadratic_invariant=0.2,
             quartic_invariant=0.04,
@@ -206,7 +206,7 @@ def test_rejects_mixed_block_sizes():
 
     with pytest.raises(
         ValueError,
-        match="same block_size",
+        match='same block_size',
     ):
         fit_effective_hamiltonian(
             observations=observations

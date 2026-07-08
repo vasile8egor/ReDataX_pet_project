@@ -51,7 +51,7 @@ class HamiltonianParameters:
         stress_pressure: float = 0.9,
         elevated_energy: float = 1.0,
         stress_energy: float = 3.0,
-    ) -> 'HamiltonianParameters':
+    ):
         elevated_squared = elevated_pressure**2
         elevated_fourth = elevated_pressure**4
 
@@ -113,7 +113,7 @@ class HamiltonianParameters:
         stress_energy: float = 3.0,
         coupling_strength: float = 0.2,
         relation_signs: dict[tuple[Currency, Currency], int] | None = None,
-    ) -> 'HamiltonianParameters':
+    ):
         if relation_signs is None:
             relation_signs = {
                 (Currency.EUR, Currency.GBP): 1,
@@ -278,14 +278,14 @@ class DirectionalHamiltonianControllerParameters:
 
         if self.max_adjustment_bps < 0.0:
             raise ValueError(
-                "max_adjustment_bps "
-                "must be non-negative"
+                'max_adjustment_bps '
+                'must be non-negative'
             )
 
         if self.delta_h_epsilon < 0.0:
             raise ValueError(
-                "delta_h_epsilon "
-                "must be non-negative"
+                'delta_h_epsilon '
+                'must be non-negative'
             )
 
 

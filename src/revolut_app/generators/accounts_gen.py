@@ -23,18 +23,18 @@ class AccountGenerator:
     def __init__(self):
         self.fake = Faker(random.choice(LOCATIONS))
 
-    def get_daily_count(self, target_date) -> int:
+    def get_daily_count(self, target_date):
         is_weekend = target_date.weekday() >= 5
         return np.random.poisson(5 if is_weekend else 10)
 
-    def _weighted_choice(self, choices: Dict[str, float]) -> str:
+    def _weighted_choice(self, choices: Dict[str, float]):
         return random.choices(
             list(choices.keys()),
             weights=list(choices.values()),
             k=1
         )[0]
 
-    def _registration_timestamp(self, target_date) -> datetime:
+    def _registration_timestamp(self, target_date):
         return datetime(
             target_date.year,
             target_date.month,
@@ -47,7 +47,7 @@ class AccountGenerator:
     def generate_account(
         self,
         target_date: Optional[Any] = None
-    ) -> Dict[str, Any]:
+    ):
         target_date = target_date or datetime.utcnow().date()
         registration_time = self._registration_timestamp(target_date)
 
@@ -137,13 +137,13 @@ class AccountGenerator:
         self,
         num_accounts: int = NUM_ACCOUNTS_STARTPACK,
         target_date: Optional[Any] = None
-    ) -> List[Dict[str, Any]]:
+    ):
         return [
             self.generate_account(target_date)
             for _ in range(num_accounts)
         ]
 
-    def generate_daily_batch(self, target_date) -> List[Dict[str, Any]]:
+    def generate_daily_batch(self, target_date):
         return self.generate_batch(
             num_accounts=self.get_daily_count(target_date),
             target_date=target_date

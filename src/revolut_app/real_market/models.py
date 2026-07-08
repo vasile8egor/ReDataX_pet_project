@@ -8,8 +8,8 @@ from pathlib import Path
 
 
 class AggressorSide(str, Enum):
-    BUY_BASE = "buy_base"
-    SELL_BASE = "sell_base"
+    BUY_BASE = 'buy_base'
+    SELL_BASE = 'sell_base'
 
 
 @dataclass(frozen=True, slots=True)
@@ -17,42 +17,42 @@ class BinanceAggTradeArchiveSpec:
     symbol: str
     trade_date: date
 
-    def __post_init__(self) -> None:
+    def __post_init__(self):
         normalized_symbol = self.symbol.upper()
 
         if not normalized_symbol:
             raise ValueError(
-                "symbol cannot be empty"
+                'symbol cannot be empty'
             )
 
         if not normalized_symbol.isalnum():
             raise ValueError(
-                "symbol must contain only "
-                "letters and digits"
+                'symbol must contain only '
+                'letters and digits'
             )
 
         object.__setattr__(
             self,
-            "symbol",
+            'symbol',
             normalized_symbol,
         )
 
     @property
-    def filename(self) -> str:
+    def filename(self):
         return (
-            f"{self.symbol}-aggTrades-"
-            f"{self.trade_date.isoformat()}.zip"
+            f'''{self.symbol}-aggTrades-'''
+            f'''{self.trade_date.isoformat()}.zip'''
         )
 
     @property
-    def checksum_filename(self) -> str:
-        return f"{self.filename}.CHECKSUM"
+    def checksum_filename(self):
+        return f'''{self.filename}.CHECKSUM'''
 
     @property
-    def relative_path(self) -> str:
+    def relative_path(self):
         return (
-            "data/spot/daily/aggTrades/"
-            f"{self.symbol}/{self.filename}"
+            'data/spot/daily/aggTrades/'
+            f'''{self.symbol}/{self.filename}'''
         )
 
 
@@ -87,7 +87,7 @@ class BinanceAggTrade:
     aggressor_side: AggressorSide
 
     @property
-    def quote_quantity(self) -> Decimal:
+    def quote_quantity(self):
         return self.price * self.quantity
 
 

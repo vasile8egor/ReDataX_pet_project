@@ -12,7 +12,7 @@ from revolut_app.loaders.rg_analysis_loader import (
 )
 
 
-def main() -> None:
+def main():
     loader = RgAnalysisClickHouseLoader()
 
     runner = RgMultiscaleAnalysisRunner(
@@ -22,11 +22,11 @@ def main() -> None:
     summary = runner.run(
         parameters=RgAnalysisParameters(
             analysis_version=(
-                "rg-multiscale-observables-v1"
+                'rg-multiscale-observables-v1'
             ),
             source_model_version=(
-                "hamiltonian-observer-v1-"
-                "rg-event-level"
+                'hamiltonian-observer-v1-'
+                'rg-event-level'
             ),
             hamiltonian_preset=(
                 HamiltonianPreset.local_v1
@@ -38,23 +38,23 @@ def main() -> None:
     )
 
     print()
-    print("RG multiscale analysis completed")
-    print(f"analysis_id={summary.analysis_id}")
-    print(f"source_runs={summary.source_runs}")
+    print('RG multiscale analysis completed')
+    print(f'''analysis_id={summary.analysis_id}''')
+    print(f'''source_runs={summary.source_runs}''')
     print(
-        f"source_frames="
-        f"{summary.source_frames}"
+        f'''source_frames='''
+        f'''{summary.source_frames}'''
     )
-    print(f"scale_rows={summary.scale_rows}")
+    print(f'''scale_rows={summary.scale_rows}''')
     print(
-        f"currency_rows="
-        f"{summary.currency_rows}"
+        f'''currency_rows='''
+        f'''{summary.currency_rows}'''
     )
     print(
-        f"scaling_rows="
-        f"{summary.scaling_rows}"
+        f'''scaling_rows='''
+        f'''{summary.scaling_rows}'''
     )
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

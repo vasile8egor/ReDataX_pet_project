@@ -1,3 +1,58 @@
+CREATE_GOLD_DATABASE_Q = '''
+CREATE DATABASE IF NOT EXISTS gold
+'''
+
+SELECT_SILVER_ACCOUNT_IDS_Q = '''
+SELECT account_id FROM silver.v_accounts
+'''
+
+INSERT_JSONB_PAYLOAD_Q_TEMPLATE = '''
+INSERT INTO {table} (payload) VALUES %s
+'''
+
+CREATE_GOLD_FACT_TRANSACTIONS_Q = '''
+CREATE TABLE IF NOT EXISTS gold.fact_transactions (
+    transaction_id String,
+    account_id String,
+    tx_timestamp DateTime64(3, 'UTC'),
+    amount Decimal(18, 4),
+    currency String,
+    merchant_name Nullable(String),
+    bronze_loaded_at DateTime64(3, 'UTC'),
+    gold_loaded_at DateTime DEFAULT now()
+)
+ENGINE = ReplacingMergeTree(gold_loaded_at)
+ORDER BY (tx_timestamp, transaction_id)
+'''
+
+TRUNCATE_GOLD_FACT_TRANSACTIONS_Q = '''
+TRUNCATE TABLE gold.fact_transactions
+'''
+
+DELETE_GOLD_FACT_TRANSACTIONS_FOR_DATE_Q = '''
+ALTER TABLE gold.fact_transactions
+DELETE WHERE toDate(tx_timestamp) = toDate(%(target_date)s)
+SETTINGS mutations_sync = 1
+'''
+
+INSERT_GOLD_FACT_TRANSACTIONS_Q = '''
+INSERT INTO gold.fact_transactions (
+    transaction_id,
+    account_id,
+    tx_timestamp,
+    amount,
+    currency,
+    merchant_name,
+    bronze_loaded_at
+)
+VALUES
+'''
+
+ADD_RG_TRANSITION_DIAGNOSTIC_COLUMN_Q_TEMPLATE = '''
+ALTER TABLE gold.fact_rg_transition_diagnostics
+ADD COLUMN IF NOT EXISTS {column_name} Float64
+'''
+
 DIM_EVENT_DATASET_Q = '''
 CREATE TABLE IF NOT EXISTS gold.dim_event_datasets(
     event_dataset_id UUID,
@@ -307,7 +362,7 @@ SELECT
     ) AS snapshot_rows
 '''
 
-FACT_FX_EVENTS_Q = """
+FACT_FX_EVENTS_Q = '''
 CREATE TABLE IF NOT EXISTS gold.fact_fx_events(
     event_dataset_id UUID,
     event_id UUID,
@@ -335,9 +390,9 @@ ORDER BY (
     event_dataset_id,
     event_sequence
 )
-"""
+'''
 
-INSERT_INTO_FACT_FX_EVENTS_Q = """
+INSERT_INTO_FACT_FX_EVENTS_Q = '''
 INSERT INTO gold.fact_fx_events(
     event_dataset_id,
     event_id,
@@ -353,7 +408,7 @@ INSERT INTO gold.fact_fx_events(
     channel
 )
 VALUES
-"""
+'''
 
 SELECT_ALL_FX_EVENTS_Q = '''
 SELECT
@@ -383,7 +438,7 @@ WHERE events.event_dataset_id = %(event_dataset_id)s
 ORDER BY events.event_sequence
 '''
 
-FX_POLICY_RUN_SUMMARY_VIEW_Q = """
+FX_POLICY_RUN_SUMMARY_VIEW_Q = '''
 CREATE VIEW IF NOT EXISTS gold.v_fx_policy_run_summary AS
 SELECT
     run_id,
@@ -423,9 +478,9 @@ SELECT
     finished_at,
     loaded_at
 FROM gold.fact_simulation_runs
-"""
+'''
 
-FX_INVENTORY_TRAJECTORY_VIEW_Q = """
+FX_INVENTORY_TRAJECTORY_VIEW_Q = '''
 CREATE VIEW IF NOT EXISTS gold.v_fx_inventory_trajectory AS
 SELECT
     run_id,
@@ -466,9 +521,9 @@ SELECT
     h_coupling,
     h_external
 FROM gold.fact_inventory_snapshots
-"""
+'''
 
-FX_REGIME_DISTRIBUTION_VIEW_Q = """
+FX_REGIME_DISTRIBUTION_VIEW_Q = '''
 CREATE VIEW IF NOT EXISTS gold.v_fx_regime_distribution AS
 SELECT
     run_id,
@@ -496,9 +551,9 @@ GROUP BY
     physics_mode,
     pricing_policy,
     regime
-"""
+'''
 
-FX_HAMILTONIAN_STATE_VIEW_Q = """
+FX_HAMILTONIAN_STATE_VIEW_Q = '''
 CREATE VIEW IF NOT EXISTS gold.v_fx_hamiltonian_state AS
 SELECT
     s.run_id,
@@ -534,9 +589,9 @@ GROUP BY
     s.pricing_policy,
     s.event_index,
     s.snapshot_ts
-"""
+'''
 
-RG_ANALYSIS_RUNS_Q = """
+RG_ANALYSIS_RUNS_Q = '''
 CREATE TABLE IF NOT EXISTS gold.fact_rg_analysis_runs
 (
     analysis_id UUID,
@@ -567,9 +622,9 @@ ORDER BY
     started_at,
     analysis_id
 )
-"""
+'''
 
-RG_SCALE_OBSERVABLES_Q = """
+RG_SCALE_OBSERVABLES_Q = '''
 CREATE TABLE IF NOT EXISTS gold.fact_rg_scale_observables
 (
     analysis_id UUID,
@@ -608,9 +663,9 @@ ORDER BY
     source_run_id,
     block_size
 )
-"""
+'''
 
-RG_CURRENCY_OBSERVABLES_Q = """
+RG_CURRENCY_OBSERVABLES_Q = '''
 CREATE TABLE IF NOT EXISTS gold.fact_rg_currency_observables
 (
     analysis_id UUID,
@@ -646,9 +701,9 @@ ORDER BY
     block_size,
     currency
 )
-"""
+'''
 
-RG_VARIANCE_SCALING_Q = """
+RG_VARIANCE_SCALING_Q = '''
 CREATE TABLE IF NOT EXISTS gold.fact_rg_variance_scaling
 (
     analysis_id UUID,
@@ -681,9 +736,9 @@ ORDER BY
     dimension,
     from_block_size
 )
-"""
+'''
 
-SELECT_RG_SOURCE_RUNS_Q = """
+SELECT_RG_SOURCE_RUNS_Q = '''
 SELECT
     argMax(
         run_id,
@@ -710,9 +765,9 @@ GROUP BY
 ORDER BY
     pricing_policy,
     event_dataset_id
-"""
+'''
 
-SELECT_RG_PRESSURE_OBSERVATIONS_Q = """
+SELECT_RG_PRESSURE_OBSERVATIONS_Q = '''
 SELECT
     event_index,
     currency,
@@ -727,9 +782,9 @@ WHERE run_id = %(run_id)s
 ORDER BY
     event_index,
     currency
-"""
+'''
 
-SELECT_EXISTING_RG_ANALYSIS_Q = """
+SELECT_EXISTING_RG_ANALYSIS_Q = '''
 SELECT
     (
         SELECT count()
@@ -754,9 +809,9 @@ SELECT
         FROM gold.fact_rg_variance_scaling
         WHERE analysis_id = %(analysis_id)s
     ) AS scaling_rows
-"""
+'''
 
-INSERT_RG_ANALYSIS_RUN_Q = """
+INSERT_RG_ANALYSIS_RUN_Q = '''
 INSERT INTO gold.fact_rg_analysis_runs
 (
     analysis_id,
@@ -772,9 +827,9 @@ INSERT INTO gold.fact_rg_analysis_runs
     finished_at
 )
 VALUES
-"""
+'''
 
-INSERT_RG_SCALE_OBSERVABLES_Q = """
+INSERT_RG_SCALE_OBSERVABLES_Q = '''
 INSERT INTO gold.fact_rg_scale_observables
 (
     analysis_id,
@@ -797,9 +852,9 @@ INSERT INTO gold.fact_rg_scale_observables
     mean_unresolved_h_total
 )
 VALUES
-"""
+'''
 
-INSERT_RG_CURRENCY_OBSERVABLES_Q = """
+INSERT_RG_CURRENCY_OBSERVABLES_Q = '''
 INSERT INTO gold.fact_rg_currency_observables
 (
     analysis_id,
@@ -819,9 +874,9 @@ INSERT INTO gold.fact_rg_currency_observables
     second_moment_decomposition_error
 )
 VALUES
-"""
+'''
 
-INSERT_RG_VARIANCE_SCALING_Q = """
+INSERT_RG_VARIANCE_SCALING_Q = '''
 INSERT INTO gold.fact_rg_variance_scaling
 (
     analysis_id,
@@ -838,9 +893,9 @@ INSERT INTO gold.fact_rg_variance_scaling
     scaling_exponent
 )
 VALUES
-"""
+'''
 
-RG_EFFECTIVE_HAMILTONIAN_FITS_Q = """
+RG_EFFECTIVE_HAMILTONIAN_FITS_Q = '''
 CREATE TABLE IF NOT EXISTS gold.fact_rg_effective_hamiltonian_fits
 (
     fit_analysis_id UUID,
@@ -884,9 +939,9 @@ ORDER BY
     pricing_policy,
     block_size
 )
-"""
+'''
 
-SELECT_RG_SOURCE_ANALYSIS_Q = """
+SELECT_RG_SOURCE_ANALYSIS_Q = '''
 SELECT
     analysis_id,
     block_sizes,
@@ -905,16 +960,16 @@ WHERE analysis_version =
 ORDER BY loaded_at DESC
 
 LIMIT 1
-"""
+'''
 
-SELECT_EXISTING_RG_EFFECTIVE_FITS_Q = """
+SELECT_EXISTING_RG_EFFECTIVE_FITS_Q = '''
 SELECT count()
 FROM gold.fact_rg_effective_hamiltonian_fits
 WHERE fit_analysis_id =
     %(fit_analysis_id)s
-"""
+'''
 
-INSERT_RG_EFFECTIVE_HAMILTONIAN_FITS_Q = """
+INSERT_RG_EFFECTIVE_HAMILTONIAN_FITS_Q = '''
 INSERT INTO gold.fact_rg_effective_hamiltonian_fits
 (
     fit_analysis_id,
@@ -940,9 +995,9 @@ INSERT INTO gold.fact_rg_effective_hamiltonian_fits
     parameters_json
 )
 VALUES
-"""
+'''
 
-RG_TRANSITION_DIAGNOSTICS_Q = """
+RG_TRANSITION_DIAGNOSTICS_Q = '''
 CREATE TABLE IF NOT EXISTS gold.fact_rg_transition_diagnostics
 (
     run_id UUID,
@@ -987,9 +1042,9 @@ ORDER BY
     run_id,
     event_index
 )
-"""
+'''
 
-INSERT_RG_TRANSITION_DIAGNOSTICS_Q = """
+INSERT_RG_TRANSITION_DIAGNOSTICS_Q = '''
 INSERT INTO gold.fact_rg_transition_diagnostics
 (
     run_id,
@@ -1015,4 +1070,4 @@ INSERT INTO gold.fact_rg_transition_diagnostics
     sign_agreement
 )
 VALUES
-"""
+'''

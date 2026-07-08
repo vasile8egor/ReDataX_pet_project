@@ -48,7 +48,7 @@ class PolicyComparisonEngine:
             ScaleAwareDiagnosticPreset | None
         ) = None,
         scale_aware_diagnostic_epsilon: float = 1e-6,
-    ) -> PolicyComparisonResult:
+    ):
         if (
             hamiltonian_engine is not None
             and hamiltonian_controller is not None
@@ -124,7 +124,7 @@ class PolicyComparisonEngine:
     def _spread_revenue_usd(
         request: QuoteRequest,
         spread_bps: float,
-    ) -> float:
+    ):
         return spread_revenue_usd(
             request=request,
             spread_bps=spread_bps,

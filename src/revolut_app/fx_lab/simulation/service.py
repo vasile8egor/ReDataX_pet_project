@@ -85,7 +85,7 @@ class DaySimulationEngine:
         seed: int | None = DEFAULT_SIMULATION_SEED,
         amount_multiplier: float = DEFAULT_AMOUNT_MULTIPLIER,
         max_snapshots: int = DEFAULT_MAX_SNAPSHOTS,
-    ) -> DaySimulationResult:
+    ):
         started_at = datetime.now(timezone.utc)
         generator = HawkesLikeFXEventGenerator(seed=seed)
         acceptance_model = AcceptanceModel(seed=seed)
@@ -267,7 +267,7 @@ class DaySimulationEngine:
         *,
         snapshots: list[InventorySnapshotPoint],
         max_snapshots: int,
-    ) -> list[InventorySnapshotPoint]:
+    ):
         if max_snapshots <= ZERO_INT:
             return []
         if len(snapshots) <= max_snapshots:
@@ -281,7 +281,7 @@ class DaySimulationEngine:
         return sampled[:max_snapshots]
 
     @staticmethod
-    def _synthetic_spread_revenue_usd(quote: FXQuote) -> float:
+    def _synthetic_spread_revenue_usd(quote: FXQuote):
         base_usd_mark = StaticMidRateProvider.USD_MARKS[
             quote.request.base_currency.value
         ]
@@ -294,7 +294,7 @@ class DaySimulationEngine:
     def _scale_request_amount(
         request: QuoteRequest,
         amount_multiplier: float,
-    ) -> QuoteRequest:
+    ):
         return replace(
             request,
             amount=request.amount * amount_multiplier,

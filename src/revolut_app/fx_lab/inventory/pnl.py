@@ -33,7 +33,7 @@ class PnLEvent:
         amount_usd: float,
         description: str,
         metadata: dict[str, str | float | int] | None = None,
-    ) -> 'PnLEvent':
+    ):
         return cls(
             event_id=str(uuid4()),
             event_type=event_type,
@@ -56,7 +56,7 @@ class PnLSnapshot:
 
 
 class PnLLedger:
-    def __init__(self) -> None:
+    def __init__(self):
         self.events: list[PnLEvent] = []
 
     def record_spread_revenue(
@@ -66,7 +66,7 @@ class PnLLedger:
         notional_usd: float,
         spread_bps: float,
         revenue_usd: float,
-    ) -> PnLEvent:
+    ):
         event = PnLEvent.new(
             event_type=PnLEventType.spread_revenue,
             amount_usd=revenue_usd,
@@ -91,22 +91,22 @@ class PnLLedger:
         notional_usd: float,
         hedge_cost_bps: float,
         hedge_cost_usd: float,
-    ) -> PnLEvent:
+    ):
         event = PnLEvent.new(
             event_type=PnLEventType.hedge_cost,
             amount_usd=hedge_cost_usd,
             description=(
-                f"Hedge execution cost for {hedge_action} {currency}"
+                f'''Hedge execution cost for {hedge_action} {currency}'''
             ),
             metadata={
-                "currency": currency,
-                "hedge_action": hedge_action,
-                "executed_amount": round(
+                'currency': currency,
+                'hedge_action': hedge_action,
+                'executed_amount': round(
                     executed_amount,
                     PNL_PRECISION,
                 ),
-                "notional_usd": round(notional_usd, PNL_PRECISION),
-                "hedge_cost_bps": round(hedge_cost_bps, PNL_PRECISION),
+                'notional_usd': round(notional_usd, PNL_PRECISION),
+                'hedge_cost_bps': round(hedge_cost_bps, PNL_PRECISION),
             },
         )
         self.events.append(event)
@@ -116,7 +116,7 @@ class PnLLedger:
         self, *,
         funding_cost_usd: float = DEFAULT_PNL_FUNDING_COST_USD,
         last_events_limit: int = DEFAULT_PNL_LAST_EVENTS_LIMIT,
-    ) -> PnLSnapshot:
+    ):
         spread_revenue_usd = sum(
             event.amount_usd
             for event in self.events

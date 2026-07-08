@@ -29,13 +29,13 @@ class CurrencyState:
     )
 
     @property
-    def limit_utilization(self) -> float:
+    def limit_utilization(self):
         if self.position_limit <= ZERO_FLOAT:
             return ZERO_FLOAT
         return abs(self.position) / self.position_limit
 
     @property
-    def hedge_capacity_used_ratio(self) -> float:
+    def hedge_capacity_used_ratio(self):
         if self.max_hedge_capacity <= ZERO_FLOAT:
             return ONE_FLOAT
         used = self.max_hedge_capacity - self.hedge_capacity

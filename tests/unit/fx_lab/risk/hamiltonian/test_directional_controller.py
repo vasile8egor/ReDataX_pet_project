@@ -15,7 +15,7 @@ from revolut_app.fx_lab.shared.enums import (
 )
 
 
-def build_breakdown(total: float) -> HamiltonianBreakdown:
+def build_breakdown(total: float):
     return HamiltonianBreakdown(
         total=total,
         quadratic=total,
@@ -41,14 +41,14 @@ def test_directional_controller_penalizes_positive_delta_h():
 
     transition = controller.engine.evaluate_transition(
         pressures_before={
-            "EUR": 0.20,
-            "GBP": 0.00,
-            "USD": 0.00,
+            'EUR': 0.20,
+            'GBP': 0.00,
+            'USD': 0.00,
         },
         pressures_after={
-            "EUR": 0.50,
-            "GBP": 0.00,
-            "USD": 0.00,
+            'EUR': 0.50,
+            'GBP': 0.00,
+            'USD': 0.00,
         },
     )
 
@@ -68,14 +68,14 @@ def test_directional_controller_does_not_penalize_reducing_trade():
 
     transition = controller.engine.evaluate_transition(
         pressures_before={
-            "EUR": 0.70,
-            "GBP": 0.00,
-            "USD": 0.00,
+            'EUR': 0.70,
+            'GBP': 0.00,
+            'USD': 0.00,
         },
         pressures_after={
-            "EUR": 0.30,
-            "GBP": 0.00,
-            "USD": 0.00,
+            'EUR': 0.30,
+            'GBP': 0.00,
+            'USD': 0.00,
         },
     )
 

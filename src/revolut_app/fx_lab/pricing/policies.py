@@ -190,7 +190,7 @@ class PlatformQuotePolicy(RiskAwareQuotePolicy):
 def build_quote_policy(
     name: QuotePolicyName,
     stress_detect: StressRegimeDetect
-) -> QuotePolicy:
+):
     if name == QuotePolicyName.naive:
         return NaiveQuotePolicy()
     if name == QuotePolicyName.platform:

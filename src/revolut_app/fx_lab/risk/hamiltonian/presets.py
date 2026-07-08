@@ -67,14 +67,14 @@ def build_selected_hamiltonian_controller(
         )
 
     raise ValueError(
-        "Unsupported Hamiltonian controller preset: "
-        f"{controller_preset}"
+        'Unsupported Hamiltonian controller preset: '
+        f'''{controller_preset}'''
     )
 
 
 def build_hamiltonian_parameters(
     preset: HamiltonianPreset,
-) -> HamiltonianParameters:
+):
     if preset == HamiltonianPreset.local_v1:
         return HamiltonianParameters.threshold_v1()
     if preset == HamiltonianPreset.coupled_v1:
@@ -87,7 +87,7 @@ def build_hamiltonian_parameters(
 
 def build_hamiltonian_engine(
     preset: HamiltonianPreset,
-) -> HamiltonianEngine:
+):
     return HamiltonianEngine(
         parameters=build_hamiltonian_parameters(preset)
     )
@@ -95,7 +95,7 @@ def build_hamiltonian_engine(
 
 def build_hamiltonian_controller(
     preset: HamiltonianPreset,
-) -> HamiltonianController:
+):
     if preset != HamiltonianPreset.local_v1:
         raise ValueError(
             'Controller v1 supports only local_v1'

@@ -9,7 +9,7 @@ from revolut_app.fx_lab.risk.rg import (
 
 
 @pytest.mark.parametrize(
-    ("value", "expected"),
+    ('value', 'expected'),
     [
         (0.2, TransitionRiskSign.POSITIVE),
         (-0.2, TransitionRiskSign.NEGATIVE),
@@ -33,13 +33,13 @@ def test_builds_agreeing_positive_diagnostic():
         block_size=16,
         history_ready=True,
         coarse_pressure_before={
-            "EUR": 0.1,
+            'EUR': 0.1,
         },
         coarse_pressure_after_if_rejected={
-            "EUR": 0.1,
+            'EUR': 0.1,
         },
         coarse_pressure_after_if_accepted={
-            "EUR": 0.2,
+            'EUR': 0.2,
         },
         coarse_h_before=0.1,
         coarse_h_after_if_rejected=0.11,
@@ -117,13 +117,13 @@ def test_coarse_sign_uses_request_specific_signal():
         block_size=16,
         history_ready=True,
         coarse_pressure_before={
-            "EUR": 0.2,
+            'EUR': 0.2,
         },
         coarse_pressure_after_if_rejected={
-            "EUR": 0.4,
+            'EUR': 0.4,
         },
         coarse_pressure_after_if_accepted={
-            "EUR": 0.3,
+            'EUR': 0.3,
         },
         coarse_h_before=0.1,
         coarse_h_after_if_rejected=0.5,

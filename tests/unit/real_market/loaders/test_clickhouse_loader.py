@@ -16,7 +16,7 @@ from revolut_app.real_market.models import (
 )
 
 
-def test_builds_clickhouse_record() -> None:
+def test_builds_clickhouse_record():
     trade = BinanceAggTrade(
         symbol='BTCUSDT',
         aggregate_trade_id=100,
@@ -62,14 +62,14 @@ def test_builds_clickhouse_record() -> None:
 
 
 class _FakeClickHouseClient:
-    def __init__(self) -> None:
+    def __init__(self):
         self.calls: list[tuple[object, ...]] = []
 
-    def execute(self, *args: object, **kwargs: object) -> None:
+    def execute(self, *args: object, **kwargs: object):
         self.calls.append((*args, kwargs))
 
 
-def test_delete_day_ensures_schema_before_mutation() -> None:
+def test_delete_day_ensures_schema_before_mutation():
     client = _FakeClickHouseClient()
 
     loader = RealMarketAggTradesLoader(

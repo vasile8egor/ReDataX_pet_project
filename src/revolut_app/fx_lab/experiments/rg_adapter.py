@@ -12,7 +12,7 @@ def inventory_snapshots_to_rg_observations(
     snapshots: Iterable[PolicyInventorySnapshot],
     *,
     trajectory_id: str = 'policy-run',
-) -> list[PressureObservation]:
+):
     observations: list[
         PressureObservation
     ] = []
@@ -26,7 +26,7 @@ def inventory_snapshots_to_rg_observations(
                     snapshot.currency.value
                     if hasattr(
                         snapshot.currency,
-                        "value",
+                        'value',
                     )
                     else str(snapshot.currency)
                 ),

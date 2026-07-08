@@ -13,7 +13,7 @@ from revolut_app.real_market.binance.downloader import (
 )
 
 
-def test_verifies_sha256(tmp_path: Path) -> None:
+def test_verifies_sha256(tmp_path: Path):
     archive_path = tmp_path / 'data.zip'
     checksum_path = (
         tmp_path / 'data.zip.CHECKSUM'
@@ -45,7 +45,7 @@ def test_verifies_sha256(tmp_path: Path) -> None:
 
 def test_rejects_checksum_mismatch(
     tmp_path: Path,
-) -> None:
+):
     archive_path = tmp_path / 'data.zip'
     checksum_path = (
         tmp_path / 'data.zip.CHECKSUM'
@@ -75,7 +75,7 @@ def test_rejects_checksum_mismatch(
 def test_download_atomic_retries_transient_url_error(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
-) -> None:
+):
     destination = tmp_path / 'archive.zip'
     calls = []
     sleeps = []
@@ -130,7 +130,7 @@ def test_download_atomic_retries_transient_url_error(
     assert sleeps == [0.25]
 
 
-def test_http_not_found_is_not_retryable() -> None:
+def test_http_not_found_is_not_retryable():
     error = HTTPError(
         url='https://data.binance.vision/missing.zip',
         code=404,

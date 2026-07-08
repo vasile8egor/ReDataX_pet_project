@@ -29,7 +29,7 @@ DEFAULT_SYMBOLS = (
 )
 
 
-def main() -> None:
+def main():
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
@@ -116,7 +116,7 @@ def main() -> None:
 
 def _json_default(
     value: object,
-) -> str:
+):
     if isinstance(value, Decimal):
         return format(value, 'f')
 

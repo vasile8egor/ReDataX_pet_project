@@ -18,15 +18,15 @@ def build_effective_hamiltonian_observations(
     trajectory_id: str,
     block_size: int,
     blocks: Iterable[CoarsePressureBlock],
-) -> list[EffectiveHamiltonianObservation]:
+):
     if not trajectory_id:
         raise ValueError(
-            "trajectory_id cannot be empty"
+            'trajectory_id cannot be empty'
         )
 
     if block_size <= 0:
         raise ValueError(
-            "block_size must be positive"
+            'block_size must be positive'
         )
 
     observations: list[
@@ -36,8 +36,8 @@ def build_effective_hamiltonian_observations(
     for block in blocks:
         if block.mean_h_total is None:
             raise ValueError(
-                "Effective Hamiltonian fitting "
-                "requires mean_h_total"
+                'Effective Hamiltonian fitting '
+                'requires mean_h_total'
             )
 
         quadratic_invariant = sum(
@@ -70,7 +70,7 @@ def build_effective_hamiltonian_observations(
 
     if not observations:
         raise ValueError(
-            "No coarse blocks provided"
+            'No coarse blocks provided'
         )
 
     return observations
@@ -84,12 +84,12 @@ def fit_effective_hamiltonian(
     parameters: EffectiveHamiltonianFitParameters = (
         EffectiveHamiltonianFitParameters()
     ),
-) -> EffectiveHamiltonianFitResult:
+):
     resolved = list(observations)
 
     if not resolved:
         raise ValueError(
-            "observations cannot be empty"
+            'observations cannot be empty'
         )
 
     block_sizes = {
@@ -99,8 +99,8 @@ def fit_effective_hamiltonian(
 
     if len(block_sizes) != 1:
         raise ValueError(
-            "All observations must have "
-            "the same block_size"
+            'All observations must have '
+            'the same block_size'
         )
 
     block_size = next(iter(block_sizes))
@@ -116,8 +116,8 @@ def fit_effective_hamiltonian(
         parameters.minimum_trajectories_for_cv
     ):
         raise ValueError(
-            "Not enough trajectories for "
-            "leave-one-trajectory-out validation"
+            'Not enough trajectories for '
+            'leave-one-trajectory-out validation'
         )
 
     design, targets = _build_design(
@@ -134,10 +134,10 @@ def fit_effective_hamiltonian(
         and rank != design.shape[1]
     ):
         raise ValueError(
-            "Effective Hamiltonian design "
-            "matrix is rank deficient: "
-            f"rank={rank}, "
-            f"columns={design.shape[1]}"
+            'Effective Hamiltonian design '
+            'matrix is rank deficient: '
+            f'''rank={rank}, '''
+            f'''columns={design.shape[1]}'''
         )
 
     predictions = design @ coefficients
@@ -188,10 +188,10 @@ def fit_effective_hamiltonian(
             != train_design.shape[1]
         ):
             raise ValueError(
-                "Cross-validation design "
-                "matrix is rank deficient: "
-                f"held_out={held_out_id}, "
-                f"rank={fold_rank}"
+                'Cross-validation design '
+                'matrix is rank deficient: '
+                f'''held_out={held_out_id}, '''
+                f'''rank={fold_rank}'''
             )
 
         fold_predictions = (
@@ -251,7 +251,7 @@ def _build_design(
     observations: list[
         EffectiveHamiltonianObservation
     ],
-) -> tuple[np.ndarray, np.ndarray]:
+):
     design = np.asarray(
         [
             [
@@ -279,7 +279,7 @@ def _fit_linear_model(
     *,
     design: np.ndarray,
     targets: np.ndarray,
-) -> tuple[np.ndarray, int]:
+):
     coefficients, _, rank, _ = (
         np.linalg.lstsq(
             design,
@@ -295,7 +295,7 @@ def _calculate_metrics(
     *,
     targets: np.ndarray,
     predictions: np.ndarray,
-) -> tuple[float, float, float | None]:
+):
     residuals = (
         targets - predictions
     )
@@ -337,7 +337,7 @@ def _standardized_condition_number(
     observations: list[
         EffectiveHamiltonianObservation
     ],
-) -> float:
+):
     features = np.asarray(
         [
             [
@@ -362,7 +362,7 @@ def _standardized_condition_number(
     if np.any(
         standard_deviations <= 1e-15
     ):
-        return float("inf")
+        return float('inf')
 
     standardized = (
         features - means

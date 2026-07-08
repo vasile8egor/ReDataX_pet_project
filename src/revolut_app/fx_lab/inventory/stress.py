@@ -20,7 +20,7 @@ class StressRegimeDetect:
         *,
         pressures: dict[str, float],
         states: dict[str, CurrencyState],
-    ) -> StressRegime:
+    ):
         max_abs_pressure = max(
             (abs(value) for value in pressures.values()),
             default=ZERO_FLOAT,
@@ -51,7 +51,7 @@ class StressRegimeDetect:
         return StressRegime.calm
 
     @staticmethod
-    def regime_penalty_bps(regime: StressRegime) -> float:
+    def regime_penalty_bps(regime: StressRegime):
         if regime == StressRegime.calm:
             return CALM_REGIME_PENALTY_BPS
         if regime == StressRegime.elevated:

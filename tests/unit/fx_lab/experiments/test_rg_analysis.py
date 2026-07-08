@@ -60,10 +60,10 @@ class FakeRgLoader:
         scaling,
     ):
         self.persisted = {
-            "analysis": analysis,
-            "scales": scales,
-            "currencies": currencies,
-            "scaling": scaling,
+            'analysis': analysis,
+            'scales': scales,
+            'currencies': currencies,
+            'scaling': scaling,
         }
 
 
@@ -74,16 +74,16 @@ def test_rg_analysis_runner_persists_multiscale_rows():
     source_run = RgSourceRun(
         run_id=run_id,
         event_dataset_id=event_dataset_id,
-        pricing_policy="inventory_aware",
+        pricing_policy='inventory_aware',
         generated_requests=2,
     )
 
     observations = []
     for event_index in (1, 2):
         for currency, pressure in {
-            "EUR": 0.1 * event_index,
-            "GBP": -0.1 * event_index,
-            "USD": 0.05 * event_index,
+            'EUR': 0.1 * event_index,
+            'GBP': -0.1 * event_index,
+            'USD': 0.05 * event_index,
         }.items():
             observations.append(
                 PressureObservation(
@@ -108,8 +108,8 @@ def test_rg_analysis_runner_persists_multiscale_rows():
 
     summary = runner.run(
         parameters=RgAnalysisParameters(
-            analysis_version="test-rg-v1",
-            source_model_version="source-v1",
+            analysis_version='test-rg-v1',
+            source_model_version='source-v1',
             hamiltonian_preset=(
                 HamiltonianPreset.local_v1
             ),
@@ -127,6 +127,6 @@ def test_rg_analysis_runner_persists_multiscale_rows():
 
     assert loader.persisted is not None
     assert (
-        loader.persisted["analysis"].analysis_id
+        loader.persisted['analysis'].analysis_id
         == summary.analysis_id
     )

@@ -25,7 +25,7 @@ from revolut_app.loaders.rg_analysis_loader import (
 
 
 RG_ANALYSIS_NAMESPACE = UUID(
-    "3a2da11a-f173-4724-b809-7395be0d3794"
+    '3a2da11a-f173-4724-b809-7395be0d3794'
 )
 
 
@@ -58,27 +58,27 @@ def build_rg_analysis_id(
     *,
     parameters: RgAnalysisParameters,
     source_run_ids: list[UUID],
-) -> UUID:
+):
     payload = json.dumps(
         {
-            "analysis_version":
+            'analysis_version':
                 parameters.analysis_version,
-            "source_model_version":
+            'source_model_version':
                 parameters.source_model_version,
-            "hamiltonian_preset":
+            'hamiltonian_preset':
                 parameters.hamiltonian_preset.value,
-            "block_sizes":
+            'block_sizes':
                 list(parameters.block_sizes),
-            "stress_pressure_threshold":
+            'stress_pressure_threshold':
                 parameters.stress_pressure_threshold,
-            "source_run_ids":
+            'source_run_ids':
                 sorted(
                     str(run_id)
                     for run_id in source_run_ids
                 ),
         },
         sort_keys=True,
-        separators=(",", ":"),
+        separators=(',', ':'),
     )
 
     return uuid5(
@@ -92,13 +92,13 @@ class RgMultiscaleAnalysisRunner:
         self,
         *,
         loader: RgAnalysisClickHouseLoader,
-    ) -> None:
+    ):
         self.loader = loader
 
     def run(
         self, *,
         parameters: RgAnalysisParameters,
-    ) -> RgAnalysisSummary:
+    ):
         started_at = datetime.now(
             timezone.utc
         )
@@ -114,7 +114,7 @@ class RgMultiscaleAnalysisRunner:
 
         if not source_runs:
             raise ValueError(
-                "No RG source runs found"
+                'No RG source runs found'
             )
 
         if (
@@ -124,10 +124,10 @@ class RgMultiscaleAnalysisRunner:
             != parameters.expected_source_runs
         ):
             raise ValueError(
-                "Unexpected RG source run count: "
-                f"expected="
-                f"{parameters.expected_source_runs}, "
-                f"actual={len(source_runs)}"
+                'Unexpected RG source run count: '
+                f'''expected='''
+                f'''{parameters.expected_source_runs}, '''
+                f'''actual={len(source_runs)}'''
             )
 
         analysis_id = build_rg_analysis_id(
@@ -161,9 +161,9 @@ class RgMultiscaleAnalysisRunner:
         extraction_parameters = (
             TrajectoryExtractionParameters(
                 expected_currencies=(
-                    "EUR",
-                    "GBP",
-                    "USD",
+                    'EUR',
+                    'GBP',
+                    'USD',
                 ),
                 include_initial_frame=False,
                 require_contiguous_event_indices=True,
@@ -181,9 +181,9 @@ class RgMultiscaleAnalysisRunner:
             start=1,
         ):
             print(
-                f"[{index}/{len(source_runs)}] "
-                f"policy={source_run.pricing_policy} "
-                f"run={source_run.run_id}"
+                f'''[{index}/{len(source_runs)}] '''
+                f'''policy={source_run.pricing_policy} '''
+                f'''run={source_run.run_id}'''
             )
 
             observations = (
@@ -210,10 +210,10 @@ class RgMultiscaleAnalysisRunner:
                 trajectory_id
             }:
                 raise ValueError(
-                    "Unexpected trajectory IDs: "
-                    f"expected={trajectory_id}, "
-                    f"actual="
-                    f"{sorted(trajectories)}"
+                    'Unexpected trajectory IDs: '
+                    f'''expected={trajectory_id}, '''
+                    f'''actual='''
+                    f'''{sorted(trajectories)}'''
                 )
 
             frames = trajectories[
@@ -224,12 +224,12 @@ class RgMultiscaleAnalysisRunner:
                 source_run.generated_requests
             ):
                 raise ValueError(
-                    "Event-level trajectory size "
-                    "does not match generated requests: "
-                    f"run_id={source_run.run_id}, "
-                    f"frames={len(frames)}, "
-                    f"requests="
-                    f"{source_run.generated_requests}"
+                    'Event-level trajectory size '
+                    'does not match generated requests: '
+                    f'''run_id={source_run.run_id}, '''
+                    f'''frames={len(frames)}, '''
+                    f'''requests='''
+                    f'''{source_run.generated_requests}'''
                 )
 
             source_frame_count += len(frames)
@@ -424,16 +424,16 @@ class RgMultiscaleAnalysisRunner:
 
         parameters_json = json.dumps(
             {
-                "analysis_version":
+                'analysis_version':
                     parameters.analysis_version,
-                "source_model_version":
+                'source_model_version':
                     parameters.source_model_version,
-                "hamiltonian_preset":
+                'hamiltonian_preset':
                     parameters
                     .hamiltonian_preset.value,
-                "block_sizes":
+                'block_sizes':
                     list(parameters.block_sizes),
-                "stress_pressure_threshold":
+                'stress_pressure_threshold':
                     parameters
                     .stress_pressure_threshold,
             },
@@ -499,7 +499,7 @@ class RgMultiscaleAnalysisRunner:
         self,
         *,
         result,
-    ) -> None:
+    ):
         decomposition_tolerance = 1e-10
         identity_tolerance = 1e-9
 
@@ -510,15 +510,15 @@ class RgMultiscaleAnalysisRunner:
                     .second_moment_decomposition_error
                 ) > decomposition_tolerance:
                     raise ValueError(
-                        "Second-moment decomposition "
-                        "failed: "
-                        f"trajectory="
-                        f"{result.trajectory_id}, "
-                        f"block_size="
-                        f"{scale.block_size}, "
-                        f"currency={item.currency}, "
-                        f"error="
-                        f"{item.second_moment_decomposition_error}"
+                        'Second-moment decomposition '
+                        'failed: '
+                        f'''trajectory='''
+                        f'''{result.trajectory_id}, '''
+                        f'''block_size='''
+                        f'''{scale.block_size}, '''
+                        f'''currency={item.currency}, '''
+                        f'''error='''
+                        f'''{item.second_moment_decomposition_error}'''
                     )
 
             if scale.block_size == 1:
@@ -532,9 +532,9 @@ class RgMultiscaleAnalysisRunner:
                     > identity_tolerance
                 ):
                     raise ValueError(
-                        "Hamiltonian identity failed "
-                        "at block_size=1: "
-                        f"trajectory="
-                        f"{result.trajectory_id}, "
-                        f"unresolved={unresolved}"
+                        'Hamiltonian identity failed '
+                        'at block_size=1: '
+                        f'''trajectory='''
+                        f'''{result.trajectory_id}, '''
+                        f'''unresolved={unresolved}'''
                     )

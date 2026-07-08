@@ -67,7 +67,7 @@ class PolicyExperimentRunner:
             ScaleAwareTransitionEvaluator | None
         ) = None,
         scale_aware_diagnostic_epsilon: float = 1e-6,
-    ) -> PolicyRunResult:
+    ):
         ledger = InventoryLedger()
         stress_detect = StressRegimeDetect()
 

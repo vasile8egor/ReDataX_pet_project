@@ -30,7 +30,7 @@ class FXQuoteComponents:
     hamiltonian_penalty_bps: float = 0.0
 
     @property
-    def total_spread_bps(self) -> float:
+    def total_spread_bps(self):
         return (
             self.base_spread_bps
             + self.inventory_penalty_bps
@@ -63,7 +63,7 @@ class FXQuote:
         inventory_pressure: dict[str, float],
         regime: StressRegime,
         executed: bool = False,
-    ) -> 'FXQuote':
+    ):
         return cls(
             quote_id=str(uuid4()),
             timestamp=datetime.now(timezone.utc),

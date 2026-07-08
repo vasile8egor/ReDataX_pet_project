@@ -10,7 +10,7 @@ from revolut_app.loaders.rg_analysis_loader import (
 )
 
 
-def main() -> None:
+def main():
     loader = RgAnalysisClickHouseLoader()
 
     runner = RgEffectiveHamiltonianRunner(
@@ -21,14 +21,14 @@ def main() -> None:
         parameters=(
             RgEffectiveHamiltonianParameters(
                 fit_version=(
-                    "rg-effective-hamiltonian-v1"
+                    'rg-effective-hamiltonian-v1'
                 ),
                 source_analysis_version=(
-                    "rg-multiscale-observables-v1"
+                    'rg-multiscale-observables-v1'
                 ),
                 source_model_version=(
-                    "hamiltonian-observer-v1-"
-                    "rg-event-level"
+                    'hamiltonian-observer-v1-'
+                    'rg-event-level'
                 ),
                 hamiltonian_preset=(
                     HamiltonianPreset.local_v1
@@ -36,7 +36,7 @@ def main() -> None:
                 block_sizes=(1, 2, 4, 8, 16, 32, 64),
                 expected_trajectories_per_policy=10,
                 operator_basis=(
-                    "isotropic-local-q2-q4-v1"
+                    'isotropic-local-q2-q4-v1'
                 ),
             )
         )
@@ -44,23 +44,23 @@ def main() -> None:
 
     print()
     print(
-        "Effective Hamiltonian fitting completed"
+        'Effective Hamiltonian fitting completed'
     )
     print(
-        f"fit_analysis_id="
-        f"{summary.fit_analysis_id}"
+        f'''fit_analysis_id='''
+        f'''{summary.fit_analysis_id}'''
     )
-    print(f"policies={summary.policies}")
+    print(f'''policies={summary.policies}''')
     print(
-        f"block_sizes="
-        f"{summary.block_sizes}"
+        f'''block_sizes='''
+        f'''{summary.block_sizes}'''
     )
-    print(f"fit_rows={summary.fit_rows}")
+    print(f'''fit_rows={summary.fit_rows}''')
     print(
-        f"total_observations="
-        f"{summary.total_observations}"
+        f'''total_observations='''
+        f'''{summary.total_observations}'''
     )
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

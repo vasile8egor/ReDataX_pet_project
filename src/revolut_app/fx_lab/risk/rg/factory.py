@@ -11,7 +11,7 @@ from revolut_app.fx_lab.shared.enums import (
 
 def build_scale_aware_transition_evaluator(
     preset: ScaleAwareDiagnosticPreset,
-) -> ScaleAwareTransitionEvaluator:
+):
     if preset == (
         ScaleAwareDiagnosticPreset
         .RG_LOCAL_B16_V1
@@ -21,15 +21,15 @@ def build_scale_aware_transition_evaluator(
         )
     else:
         raise ValueError(
-            "Unsupported scale-aware "
-            f"diagnostic preset: {preset}"
+            'Unsupported scale-aware '
+            f'''diagnostic preset: {preset}'''
         )
 
     window = RollingPressureWindow(
         currencies=(
-            "EUR",
-            "GBP",
-            "USD",
+            'EUR',
+            'GBP',
+            'USD',
         ),
         block_size=(
             coefficients.block_size

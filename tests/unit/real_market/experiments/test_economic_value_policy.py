@@ -16,7 +16,7 @@ from revolut_app.real_market.experiments.economic_value_policy import (
 )
 
 
-def test_fractional_notional_allocation_respects_exact_budget() -> None:
+def test_fractional_notional_allocation_respects_exact_budget():
     score = np.array([4.0, 3.0, 2.0])
     notional = np.array([60.0, 60.0, 60.0])
 
@@ -30,8 +30,8 @@ def test_fractional_notional_allocation_respects_exact_budget() -> None:
     assert np.sum(allocation * notional) == pytest.approx(90.0)
 
 
-def test_economic_policy_does_not_act_below_cost() -> None:
-    scenario = EconomicScenario("base", 0.50, 0.25, 0.50)
+def test_economic_policy_does_not_act_below_cost():
+    scenario = EconomicScenario('base', 0.50, 0.25, 0.50)
     prediction = np.array([1.0, 3.0, 5.0])
     notional = np.array([100.0, 100.0, 100.0])
     policy = PolicySpec(1.0, 0.0)
@@ -49,8 +49,8 @@ def test_economic_policy_does_not_act_below_cost() -> None:
     assert allocation.tolist() == pytest.approx([0.0, 0.0, 1.0])
 
 
-def test_realized_policy_metrics_can_be_profitable() -> None:
-    scenario = EconomicScenario("base", 0.50, 0.25, 0.50)
+def test_realized_policy_metrics_can_be_profitable():
+    scenario = EconomicScenario('base', 0.50, 0.25, 0.50)
     action = np.array([1.0, 0.0])
     notional = np.array([1000.0, 1000.0])
     losses = np.array([1.0, 0.0])
@@ -69,8 +69,8 @@ def test_realized_policy_metrics_can_be_profitable() -> None:
     assert metrics.profitable
 
 
-def test_no_action_has_zero_value_not_negative_value() -> None:
-    scenario = EconomicScenario("base", 0.50, 0.25, 0.50)
+def test_no_action_has_zero_value_not_negative_value():
+    scenario = EconomicScenario('base', 0.50, 0.25, 0.50)
     metrics = calculate_policy_metrics(
         action_fraction=np.zeros(3),
         losses_usdt=np.array([1.0, 2.0, 3.0]),
@@ -83,8 +83,8 @@ def test_no_action_has_zero_value_not_negative_value() -> None:
     assert not metrics.profitable
 
 
-def test_candidate_summary_requires_robust_positive_days() -> None:
-    scenario = EconomicScenario("base", 0.50, 0.25, 0.50)
+def test_candidate_summary_requires_robust_positive_days():
+    scenario = EconomicScenario('base', 0.50, 0.25, 0.50)
     daily = []
     for net in (10.0, 9.0, 8.0, 7.0, 6.0, -1.0, -2.0):
         # Construct metrics with the desired normalized value.
@@ -110,7 +110,7 @@ def test_candidate_summary_requires_robust_positive_days() -> None:
     assert summary.development_profitable
 
 
-def test_select_candidate_returns_none_without_profitable_policy() -> None:
+def test_select_candidate_returns_none_without_profitable_policy():
     bad = CandidateSummary(
         model_spec=ValueModelSpec(1e-3, 10.0, 0.5),
         policy_spec=PolicySpec(0.01, 0.1),

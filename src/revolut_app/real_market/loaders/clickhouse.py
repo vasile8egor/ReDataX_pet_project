@@ -54,7 +54,7 @@ class RealMarketAggTradeRecord:
 
     def as_clickhouse_row(
         self,
-    ) -> tuple[object, ...]:
+    ):
         return (
             self.venue,
             self.market_type,
@@ -80,15 +80,15 @@ def build_real_market_record(
     trade: BinanceAggTrade,
     trade_date: date,
     archive_sha256: str,
-) -> RealMarketAggTradeRecord:
+):
     event_timestamp = datetime.fromtimestamp(
         trade.timestamp_us / 1_000_000,
         tz=timezone.utc,
     )
 
     return RealMarketAggTradeRecord(
-        venue="binance",
-        market_type="spot",
+        venue='binance',
+        market_type='spot',
         symbol=trade.symbol,
         trade_date=trade_date,
         aggregate_trade_id=(
@@ -126,7 +126,7 @@ class RealMarketAggTradesLoader:
         self._client = client
         self._batch_size = batch_size
 
-    def ensure_schema(self) -> None:
+    def ensure_schema(self):
         self._client.execute(
             CREATE_RAW_DATABASE_Q
         )
@@ -138,7 +138,7 @@ class RealMarketAggTradesLoader:
     def persist_records(
         self,
         records: Iterable[RealMarketAggTradeRecord],
-    ) -> int:
+    ):
         self.ensure_schema()
 
         inserted = 0
@@ -172,7 +172,7 @@ class RealMarketAggTradesLoader:
         self, *,
         trade_date: date,
         symbols: Sequence[str],
-    ) -> None:
+    ):
         if not symbols:
             return
 
@@ -264,7 +264,7 @@ class RealMarketInventoryLoader:
 
 def _aggressor_side_to_clickhouse_value(
     aggressor_side: str,
-) -> int:
+):
     if aggressor_side == AggressorSide.BUY_BASE.value:
         return 1
 

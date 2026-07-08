@@ -31,7 +31,7 @@ fx_quote_service = FXQuoteService()
     response_model=FXQuoteResponse,
     status_code=status.HTTP_200_OK,
 )
-def quote_fx(request: FXQuoteRequest) -> FXQuoteResponse:
+def quote_fx(request: FXQuoteRequest):
     return fx_quote_service.quote(request)
 
 
@@ -40,7 +40,7 @@ def quote_fx(request: FXQuoteRequest) -> FXQuoteResponse:
     response_model=RiskSnapshotResponse,
     status_code=status.HTTP_200_OK,
 )
-def run_stress(request: StressShockRequest) -> RiskSnapshotResponse:
+def run_stress(request: StressShockRequest):
     return fx_quote_service.apply_stress_shock(
         volatility_multiplier=request.volatility_multiplier,
         hedge_capacity_multiplier=request.hedge_capacity_multiplier,
@@ -52,7 +52,7 @@ def run_stress(request: StressShockRequest) -> RiskSnapshotResponse:
     response_model=DaySimulationResponse,
     status_code=status.HTTP_200_OK,
 )
-def simulate_day(request: DaySimulationRequest) -> DaySimulationResponse:
+def simulate_day(request: DaySimulationRequest):
     return fx_quote_service.simulate_day(request)
 
 
@@ -72,7 +72,7 @@ def rg_flow(request: RGFlowRequest):
 )
 def hedge_recommendation(
     request: HedgeRecommendationRequest,
-) -> HedgeRecommendationResponse:
+):
     return fx_quote_service.hedge_recommendation(request)
 
 
@@ -83,7 +83,7 @@ def hedge_recommendation(
 )
 def hedge_execution(
     request: HedgeExecutionRequest,
-) -> HedgeExecutionResponse:
+):
     return fx_quote_service.execute_hedge(request)
 
 
@@ -94,7 +94,7 @@ def hedge_execution(
 )
 def policy_comparison(
     request: PolicyComparisonRequest,
-) -> PolicyComparisonResponse:
+):
     return fx_quote_service.policy_comparison(request)
 
 
@@ -103,7 +103,7 @@ def policy_comparison(
     response_model=RiskSnapshotResponse,
     status_code=status.HTTP_200_OK,
 )
-def get_risk_snapshot() -> RiskSnapshotResponse:
+def get_risk_snapshot():
     return fx_quote_service.risk_snapshot()
 
 
@@ -112,5 +112,5 @@ def get_risk_snapshot() -> RiskSnapshotResponse:
     response_model=PnLSnapshotResponse,
     status_code=status.HTTP_200_OK,
 )
-def pnl_snapshot() -> PnLSnapshotResponse:
+def pnl_snapshot():
     return fx_quote_service.pnl_snapshot()

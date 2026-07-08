@@ -10,7 +10,7 @@ from revolut_app.loaders.gold_loader import GoldLayerLoader
 def run_gold_transactions_load(
     target_date_str: str | None = None,
     load_mode: str = 'full',
-) -> int:
+):
     run_db_bootstrap_pipeline()
 
     mode = (load_mode or 'full').lower()

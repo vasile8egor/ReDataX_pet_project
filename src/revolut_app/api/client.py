@@ -20,14 +20,14 @@ PROJECT_ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_REFRESH_TOKEN_FILE = PROJECT_ROOT / '.secrets' / 'revolut_refresh_token'
 
 
-def _env_flag(name: str, default: bool) -> bool:
+def _env_flag(name: str, default: bool):
     value = os.getenv(name)
     if value is None:
         return default
     return value.strip().lower() not in {'0', 'false', 'no', 'off'}
 
 
-def _refresh_token_from_file() -> Optional[str]:
+def _refresh_token_from_file():
     path = Path(
         os.getenv('REVOLUT_REFRESH_TOKEN_FILE', DEFAULT_REFRESH_TOKEN_FILE)
     ).expanduser()
@@ -38,7 +38,7 @@ def _refresh_token_from_file() -> Optional[str]:
     return token or None
 
 
-def _tls_verify_from_env() -> bool | str:
+def _tls_verify_from_env():
     ca_bundle = os.getenv('REVOLUT_CA_BUNDLE')
     if ca_bundle:
         return ca_bundle
@@ -84,7 +84,7 @@ class RevolutClient:
         )
 
     @classmethod
-    def from_env(cls) -> 'RevolutClient':
+    def from_env(cls):
         return cls(
             client_id=os.getenv('REVOLUT_CLIENT_ID'),
             financial_id=os.getenv('REVOLUT_FINANCIAL_ID'),
@@ -94,7 +94,7 @@ class RevolutClient:
             redirect_url=os.getenv('REVOLUT_REDIRECT_URL')
         )
 
-    def set_refresh_token(self, refresh_token: Optional[str]) -> None:
+    def set_refresh_token(self, refresh_token: Optional[str]):
         if refresh_token:
             self.refresh_token = refresh_token
 
@@ -104,7 +104,7 @@ class RevolutClient:
     def _get_signing_key(self):
         return self.private_key_path.read_bytes()
 
-    def _get_client_credentials_token(self) -> str:
+    def _get_client_credentials_token(self):
         resp = requests.post(
             self.auth_url,
             cert=self._cert(),
@@ -128,7 +128,7 @@ class RevolutClient:
             'Authorization': f'Bearer {self.access_token}',
             'x-fapi-financial-id': self.financial_id,
             'x-fapi-interaction-id': (
-                f"int-{datetime.datetime.utcnow().strftime('%Y%m%d%H%M%S%f')[:-3]}"
+                f'''int-{datetime.datetime.utcnow().strftime('%Y%m%d%H%M%S%f')[:-3]}'''
             ),
         }
 
@@ -207,7 +207,7 @@ class RevolutClient:
         }
         return self.ui_url + '?' + '&'.join(f'{k}={v}' for k, v in params.items())
 
-    def exchange_code(self, authorization_code: str) -> Dict:
+    def exchange_code(self, authorization_code: str):
         resp = requests.post(
             self.auth_url,
             cert=self._cert(),
@@ -244,7 +244,7 @@ class RevolutClient:
                 'client_id': self.client_id,
                 'refresh_token': self.refresh_token,
             },
-            headers={"Content-Type": "application/x-www-form-urlencoded"},
+            headers={'Content-Type': 'application/x-www-form-urlencoded'},
             verify=self.tls_verify,
         )
         resp.raise_for_status()
@@ -286,9 +286,9 @@ class RevolutClient:
         headers = self._build_headers()
         params = {}
         if from_date:
-            params["fromBookingDateTime"] = from_date
+            params['fromBookingDateTime'] = from_date
         if to_date:
-            params["toBookingDateTime"] = to_date
+            params['toBookingDateTime'] = to_date
 
         resp = requests.get(
             f'{self.base_api}/accounts/{account_id}/transactions',

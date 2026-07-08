@@ -1,1 +1,1 @@
-"""Pipeline entrypoints used by Airflow DAGs."""
+'''Pipeline entrypoints used by Airflow DAGs.'''

@@ -14,9 +14,9 @@ def test_equal_states_have_zero_delta_h():
     )
 
     pressures = {
-        "EUR": 0.40,
-        "GBP": -0.20,
-        "USD": 0.10,
+        'EUR': 0.40,
+        'GBP': -0.20,
+        'USD': 0.10,
     }
 
     transition = engine.evaluate_transition(
@@ -41,14 +41,14 @@ def test_moving_away_from_zero_increases_hamiltonian():
 
     transition = engine.evaluate_transition(
         pressures_before={
-            "EUR": 0.10,
-            "GBP": 0.00,
-            "USD": 0.00,
+            'EUR': 0.10,
+            'GBP': 0.00,
+            'USD': 0.00,
         },
         pressures_after={
-            "EUR": 0.60,
-            "GBP": 0.00,
-            "USD": 0.00,
+            'EUR': 0.60,
+            'GBP': 0.00,
+            'USD': 0.00,
         },
     )
 
@@ -64,14 +64,14 @@ def test_moving_toward_zero_reduces_hamiltonian():
 
     transition = engine.evaluate_transition(
         pressures_before={
-            "EUR": 0.70,
-            "GBP": 0.00,
-            "USD": 0.00,
+            'EUR': 0.70,
+            'GBP': 0.00,
+            'USD': 0.00,
         },
         pressures_after={
-            "EUR": 0.30,
-            "GBP": 0.00,
-            "USD": 0.00,
+            'EUR': 0.30,
+            'GBP': 0.00,
+            'USD': 0.00,
         },
     )
 
@@ -86,15 +86,15 @@ def test_transition_delta_matches_independent_evaluations():
     )
 
     before_pressures = {
-        "EUR": 0.30,
-        "GBP": -0.20,
-        "USD": 0.15,
+        'EUR': 0.30,
+        'GBP': -0.20,
+        'USD': 0.15,
     }
 
     after_pressures = {
-        "EUR": 0.45,
-        "GBP": -0.10,
-        "USD": 0.05,
+        'EUR': 0.45,
+        'GBP': -0.10,
+        'USD': 0.05,
     }
 
     before = engine.evaluate(before_pressures)
@@ -119,16 +119,16 @@ def test_transition_rejects_different_pressure_dimensions():
 
     with pytest.raises(
         ValueError,
-        match="Pressure dimensions do not match",
+        match='Pressure dimensions do not match',
     ):
         engine.evaluate_transition(
             pressures_before={
-                "EUR": 0.20,
-                "GBP": 0.10,
-                "USD": 0.00,
+                'EUR': 0.20,
+                'GBP': 0.10,
+                'USD': 0.00,
             },
             pressures_after={
-                "EUR": 0.30,
-                "GBP": 0.10,
+                'EUR': 0.30,
+                'GBP': 0.10,
             },
         )
