@@ -6,6 +6,9 @@ from decimal import Decimal
 from pathlib import Path
 
 from revolut_app.real_market.binance.downloader import (
+    DEFAULT_DOWNLOAD_ATTEMPTS,
+    DEFAULT_DOWNLOAD_TIMEOUT_SECONDS,
+    DEFAULT_RETRY_BACKOFF_SECONDS,
     download_binance_agg_trades_archive,
 )
 from revolut_app.real_market.binance.parser import (
@@ -47,6 +50,24 @@ def main() -> None:
         default=Path('data/real_market/binance'),
     )
 
+    parser.add_argument(
+        '--download-timeout-seconds',
+        type=int,
+        default=DEFAULT_DOWNLOAD_TIMEOUT_SECONDS,
+    )
+
+    parser.add_argument(
+        '--download-attempts',
+        type=int,
+        default=DEFAULT_DOWNLOAD_ATTEMPTS,
+    )
+
+    parser.add_argument(
+        '--retry-backoff-seconds',
+        type=float,
+        default=DEFAULT_RETRY_BACKOFF_SECONDS,
+    )
+
     arguments = parser.parse_args()
 
     for symbol in arguments.symbols:
@@ -66,6 +87,9 @@ def main() -> None:
             download_binance_agg_trades_archive(
                 spec=spec,
                 output_directory=arguments.data_directory,
+                timeout_seconds=arguments.download_timeout_seconds,
+                download_attempts=arguments.download_attempts,
+                retry_backoff_seconds=arguments.retry_backoff_seconds,
             )
         )
 

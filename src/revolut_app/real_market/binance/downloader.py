@@ -20,6 +20,12 @@ BINANCE_PUBLIC_DATA_BASE_URL = os.getenv(
 
 DOWNLOAD_CHUNK_SIZE = 1024 * 1024
 
+DEFAULT_DOWNLOAD_TIMEOUT_SECONDS = int(
+    os.getenv(
+        'BINANCE_DOWNLOAD_TIMEOUT_SECONDS',
+        '600',
+    )
+)
 DEFAULT_DOWNLOAD_ATTEMPTS = int(
     os.getenv(
         'BINANCE_DOWNLOAD_ATTEMPTS',
@@ -97,7 +103,7 @@ def download_binance_agg_trades_archive(
     *,
     spec: BinanceAggTradeArchiveSpec,
     output_directory: Path,
-    timeout_seconds: int = 180,
+    timeout_seconds: int = DEFAULT_DOWNLOAD_TIMEOUT_SECONDS,
     download_attempts: int = DEFAULT_DOWNLOAD_ATTEMPTS,
     retry_backoff_seconds: float = DEFAULT_RETRY_BACKOFF_SECONDS,
 ) -> DownloadedBinanceArchive:

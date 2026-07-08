@@ -1271,24 +1271,6 @@ docker compose --profile api logs -f --tail=100
 - метрики;
 - границы физической аналогии.
 
-# Безопасность и production hardening
-
-Текущее окружение содержит публично известные локальные credentials. Для любого удалённого развёртывания необходимо:
-
-- заменить все passwords;
-- вынести secrets из Compose;
-- включить TLS;
-- закрыть database ports от внешней сети;
-- добавить authentication и authorization в API;
-- убрать `--reload`;
-- зафиксировать image tags;
-- добавить migrations;
-- ограничить ресурсы контейнеров;
-- добавить metrics, tracing и alerts;
-- настроить backup PostgreSQL, ClickHouse и MinIO;
-- использовать отдельные service accounts;
-- провести dependency и container scanning.
-
 ---
 
 # Автор

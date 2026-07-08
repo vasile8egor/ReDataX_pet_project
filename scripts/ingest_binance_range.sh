@@ -14,6 +14,9 @@ fi
 data_directory="/opt/airflow/data/real_market/binance"
 day_attempts="${BINANCE_INGEST_DAY_ATTEMPTS:-6}"
 day_retry_sleep_seconds="${BINANCE_INGEST_DAY_RETRY_SLEEP_SECONDS:-60}"
+download_timeout_seconds="${BINANCE_DOWNLOAD_TIMEOUT_SECONDS:-600}"
+download_attempts="${BINANCE_DOWNLOAD_ATTEMPTS:-8}"
+retry_backoff_seconds="${BINANCE_RETRY_BACKOFF_SECONDS:-10}"
 
 run_day() {
   local trade_date="$1"
@@ -24,6 +27,9 @@ run_day() {
     --date "${trade_date}" \
     --symbols "${symbols[@]}" \
     --data-directory "${data_directory}" \
+    --download-timeout-seconds "${download_timeout_seconds}" \
+    --download-attempts "${download_attempts}" \
+    --retry-backoff-seconds "${retry_backoff_seconds}" \
     || return $?
 
   docker compose exec api \

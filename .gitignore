@@ -208,6 +208,8 @@ __marimo__/
 
 # Project
 data/
+!docs/data/
+!docs/data/**
 logs/
 .secrets/
 metabase-data/
