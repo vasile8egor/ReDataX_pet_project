@@ -2,7 +2,7 @@
 
 # ReDataX
 
-### Исследовательская платформа для оценки неблагоприятного отбора, рыночного потока и решений о вмешательстве
+### A research platform for market-flow intelligence and economically constrained risk decisions
 
 [![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Apache Airflow](https://img.shields.io/badge/Apache%20Airflow-2.10.5-017CEE?logo=apacheairflow&logoColor=white)](https://airflow.apache.org/)
@@ -11,108 +11,140 @@
 [![FastAPI](https://img.shields.io/badge/FastAPI-service-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-**Market flow · adverse selection · multiscale features · decision policies · ClickHouse analytics · Metabase reporting**
+**Market microstructure | multiscale flow | adverse selection | decision policies | reproducible analytics**
 
 </div>
 
 > [!IMPORTANT]
-> ReDataX is a research and educational project. It does not reproduce internal algorithms of Revolut, Binance, or any other financial institution. It is not a trading system and does not provide investment advice.
+> ReDataX is an independent research and educational project. It is not affiliated with Revolut or Binance, does not reproduce their internal algorithms, and is not a trading system or a source of investment advice.
 
----
+## Contents
 
-## 1. Project overview
+- [Why ReDataX](#why-redatax)
+- [Inspired by Revolut's operating principles](#inspired-by-revoluts-operating-principles)
+- [What the project contains](#what-the-project-contains)
+- [Models and decision policies](#models-and-decision-policies)
+- [Headline research snapshot](#headline-research-snapshot)
+- [Architecture](#architecture)
+- [Documentation](#documentation)
+- [Quick start](#quick-start)
+- [API examples](#api-examples)
+- [Data workflows](#data-workflows)
+- [Running experiments](#running-experiments)
+- [Analytics](#analytics)
+- [Testing](#testing)
+- [Reproducibility and claim discipline](#reproducibility-and-claim-discipline)
+- [Limitations](#limitations)
 
-**ReDataX** studies whether public market-flow data can be used to estimate short-horizon adverse-selection risk and support an economically constrained intervention policy.
+## Why ReDataX
 
-The project does **not** try to predict the full future price path. Instead, it asks a narrower question:
+A predictive score is not a decision.
 
-> Given the current state of market flow, is a future adverse move likely and large enough to justify an intervention after accounting for action cost and notional budget?
-
-The empirical part uses public Binance `aggTrades` data for:
-
-- `BTCUSDT`;
-- `ETHUSDT`.
-
-These data are treated as a public proxy for market flow. They do not contain bank client flow, internal inventory, routing logic, execution quality, or proprietary hedging decisions. For that reason, all monetary results are reported as **scenario-adjusted potential protected value**, not realized bank profit and loss.
-
----
-
-## 2. What the project demonstrates
-
-ReDataX combines several layers:
-
-| Layer | What it demonstrates |
-|---|---|
-| Research design | Adverse-selection problem statement, temporal validation, final holdout |
-| Market data processing | Binance aggregate trades ingestion and feature construction |
-| Machine learning | Model progression from baseline ranking to economic decision models |
-| Decision policies | Conversion of predictions into constrained actions |
-| Unit economics | Gross protected value, action cost, net value, break-even cost |
-| Data engineering | PostgreSQL, ClickHouse, MinIO, Airflow, Docker Compose |
-| Analytics | Gold-layer views and Metabase dashboards |
-| Backend | FastAPI service for synthetic FX and transaction workflows |
-
-The project is intentionally broader than a single notebook. It is structured as a small research platform: data ingestion, experiments, reporting tables, dashboards, documentation, and reproducibility flow are separated.
-
----
-
-## 3. Core research idea
-
-A financial platform may temporarily keep exposure after serving customer or market flow. If the price then moves against this exposure, the platform faces adverse-selection loss.
-
-ReDataX models this as a decision problem:
+In a financial system, a model matters only when its signal can be converted into an action whose expected benefit survives costs, capacity limits, and uncertainty. ReDataX explores that full path:
 
 ```text
-market flow state
-        -> adverse-selection probability
-        -> adverse-markout severity
-        -> intervention decision
-        -> scenario-adjusted protected value
+raw events
+    -> causal market-flow features
+    -> adverse-selection probability and severity
+    -> constrained intervention policy
+    -> scenario-adjusted economic value
 ```
 
-The project uses multiscale flow features inspired by the idea of coarse-graining from statistical physics. This is not presented as a strict physical renormalization-group calculation. The analogy is used more modestly: individual trades are treated as microscopic events, while rolling flow features at several horizons describe the effective state of the market.
+The main empirical question is deliberately narrow:
 
----
+> Can public, short-horizon order-flow structure identify adverse moves that are large enough to justify an intervention after action cost and notional budget are taken into account?
 
-## 4. Model and policy structure
+ReDataX answers this question through a model sequence from `M0` to `M5`, temporal validation, explicit policy rules, unit economics, and reproducible reporting. Alongside the real-market study, the repository includes a synthetic FX laboratory for inventory-aware pricing, risk, hedging, and transaction workflows.
 
-### 4.1 Models
+## Inspired by Revolut's operating principles
 
-| Model | Role | Status |
+The way the project is built is inspired by four of Revolut's [public operating principles](https://www.revolut.com/en-US/careers/team/engineering-data/):
+
+| Principle | How it appears in ReDataX |
+|---|---|
+| **Deliver WOW** | A coherent path from raw data and APIs to models, policy economics, and decision dashboards |
+| **Get It Done** | A runnable Docker stack, executable experiment scripts, tests, and reproducibility checks |
+| **Think Deeper** | Causal features, temporal holdouts, leakage controls, uncertainty, and economically meaningful metrics |
+| **Never Settle** | A documented progression from `M0` to `M5`, including rejected hypotheses and remaining limitations |
+
+This is inspiration from publicly stated principles, not a claim about Revolut's internal data, models, infrastructure, or decision processes.
+
+## What the project contains
+
+ReDataX has two connected research tracks.
+
+| Track | Data | Main purpose |
 |---|---|---|
-| `M0` | single-scale local baseline | baseline |
-| `M1` | local multiscale model | accepted |
-| `M1R` | local RG-flow diagnostic | diagnostic |
-| `M2` | cross-market model without explicit pairwise interactions | accepted |
-| `M3` | cross-market model with explicit pairwise interactions | rejected |
-| `M4` | direct expected adverse-markout regression | economic baseline |
-| `M5` | hurdle model: probability and conditional severity | final candidate |
+| Synthetic FX laboratory | Generated customer requests, transactions, inventory states, and clustered flow | Study pricing, inventory pressure, stress regimes, hedging, and policy behavior in a controlled environment |
+| Real-market microstructure study | Public Binance `aggTrades` for `BTCUSDT` and `ETHUSDT` | Test whether causal multiscale signed flow predicts short-horizon adverse selection and supports positive-value interventions |
 
-The model path is not only a leaderboard. It is an experimental sequence: each model tests a concrete hypothesis about scale, cross-market state, interaction terms, or economic decision quality.
+These tracks share the same engineering spine:
 
-### 4.2 Policies
+- FastAPI for transaction and synthetic FX workflows;
+- PostgreSQL for operational records;
+- ClickHouse for analytical and reporting tables;
+- Airflow for orchestration;
+- MinIO for object storage;
+- Python experiment runners for model and policy research;
+- Metabase for decision-oriented analytics.
 
-| Policy | Meaning | Deployable |
-|---|---|---|
-| `P0` | no action | yes |
-| `P1` | probability-based budget policy | yes |
-| `P2` | direct economic policy | yes |
-| `P3` | hurdle economic policy | yes |
-| `P4` | oracle upper bound using future information | no |
+The repository is a compact research platform, not a single notebook. Ingestion, feature construction, experiments, economic evaluation, reporting, and documentation are kept separate so that each claim can be traced to an explicit method or artifact.
 
-`P4` is used only as a diagnostic upper bound. It is not a real policy because it uses information that is known only after the forecast horizon.
+## Research scope and definitions
 
----
+The real-market study uses Binance aggregate trades as a public proxy for market flow. It does not observe bank client flow, internal inventory, routing, fill quality, or proprietary hedging decisions.
 
-## 5. Scenario assumptions
+| Term | Meaning in this project |
+|---|---|
+| Aggressive trade | An `aggTrades` event with buyer or seller aggression inferred from exchange fields |
+| Signed flow | Buy-minus-sell volume, normalized within a causal time bucket |
+| Multiscale state | A set of flow features computed over several backward-looking windows |
+| Markout | Future price movement measured after a fixed decision horizon |
+| Adverse markout | A future move against the side of the observed aggressive flow or retained exposure |
+| Decision policy | A rule that converts model output and economic assumptions into action or no action |
+| Protected value | Scenario-adjusted adverse-markout value that an intervention could mitigate |
+| Oracle policy | A non-deployable upper bound that uses future information |
 
-The current research version uses the following scenario:
+The multiscale construction is inspired by coarse-graining in statistical physics. It is an analogy for moving from microscopic trades to effective flow states across time scales, not a claim of implementing a strict Wilsonian renormalization-group procedure.
+
+## Models and decision policies
+
+### Model progression
+
+| ID | Model | Hypothesis tested | Current role |
+|---|---|---|---|
+| `M0` | Single-scale | A fixed local window contains useful adverse-selection signal | Baseline |
+| `M1` | Local multiscale | Several causal windows outperform a single scale | Supported |
+| `M2` | Cross-market RG no-J | Synchronized states across markets add information | Candidate / supported by experiment |
+| `M3` | Cross-market RG with-J | Explicit pairwise interactions add stable incremental value | Constrained / not supported as a stable improvement |
+| `M4` | Direct value regression | Expected adverse-markout magnitude can be predicted directly | Economic baseline |
+| `M5` | Hurdle economic | Separating event probability from conditional severity improves economic decisions | Final candidate |
+
+The sequence is an experimental record, not just a leaderboard. A model remains documented when its hypothesis is rejected because negative results constrain the next design.
+
+The canonical registry and per-model documentation are under [`docs/models/`](docs/models/), beginning with [`docs/models/MODEL_REGISTRY.md`](docs/models/MODEL_REGISTRY.md).
+
+### Policy progression
+
+| ID | Policy | Decision basis | Deployable |
+|---|---|---|---|
+| `P0` | No action | Reference outcome | Yes |
+| `P1` | Probability budget | Ranked adverse-event probability under a notional budget | Yes |
+| `P2` | Direct economic | Predicted value after intervention cost | Yes |
+| `P3` | Hurdle economic | Event probability multiplied by conditional severity, net of cost | Yes |
+| `P4` | Oracle upper bound | Realized future markout | No |
+
+Model output and policy logic are intentionally separate. A better ranking metric does not automatically imply a better economic policy.
+
+## Headline research snapshot
+
+The current research version evaluates a 600-second decision horizon under a fixed scenario:
 
 | Parameter | Value |
 |---|---:|
-| Markets | BTCUSDT, ETHUSDT |
+| Markets | `BTCUSDT`, `ETHUSDT` |
 | Decision stride | 10 seconds |
-| Candidate deployable horizons | 120, 300, 600 seconds |
+| Candidate horizons | 120, 300, 600 seconds |
 | Selected horizon | 600 seconds |
 | Internalization rate | 25% |
 | Mitigation efficiency | 50% |
@@ -120,257 +152,161 @@ The current research version uses the following scenario:
 | Break-even markout | 4.00 bps |
 | Final notional budget | 10% |
 
-These values are scenario assumptions. They are not estimates of any real financial institution.
+Under those assumptions, the final hurdle policy `P3` reports positive scenario-adjusted value on both final holdouts:
 
----
-
-## 6. Main research results
-
-The current research version reports that the final hurdle policy `P3` produces positive scenario-adjusted value on the final holdout for both markets.
-
-| Market | Final policy | Net value, USDT/$1M | Benefit/cost |
+| Market | Policy | Net value, USDT per $1M | Benefit / cost |
 |---|---|---:|---:|
-| BTCUSDT | `P3` | `+12.86` | `3.59` |
-| ETHUSDT | `P3` | `+24.76` | `5.95` |
+| `BTCUSDT` | `P3` | `+12.86` | `3.59` |
+| `ETHUSDT` | `P3` | `+24.76` | `5.95` |
 
-Interpretation:
+These figures are not realized bank PnL. They are conditional estimates for the selected markets, dates, horizon, notional budget, and manually specified unit-economics scenario. The oracle gap remains material, and the final holdout must not be reused for tuning.
 
-- `P3` is positive versus no action on both final holdouts.
-- `P3` is not claimed to dominate every alternative on every metric.
-- The oracle gap remains material, so the model captures only part of the available scenario headroom.
-- Results are conditional on the public market proxy, selected period, selected horizon, and scenario assumptions.
+See the [results](docs/research/03_results.md), [business interpretation](docs/research/04_business_interpretation.md), and [limitations](docs/research/05_limitations.md) before quoting these numbers.
 
-Detailed interpretation is provided in the research documentation and dashboards.
+## Architecture
 
----
+```text
+                               RESEARCH PLANE
 
-## 7. Dashboards
+  Binance archives      ingestion / features       model + policy runners
+     aggTrades       ->   causal flow states    ->   M0-M5 and P0-P4
+          |                       |                         |
+          v                       v                         v
+       local data              ClickHouse          reporting artifacts
+          ^                       |                         |
+          |                       +-------------> Metabase dashboards
+        MinIO
 
-The project includes four Metabase dashboards exported as research artifacts.
 
-| Dashboard | Main question |
+                              APPLICATION PLANE
+
+   client request  ->  FastAPI  ->  PostgreSQL
+                         |
+                         +-----> synthetic FX inventory, pricing,
+                                 stress, hedging, and PnL services
+
+
+                              ORCHESTRATION
+
+                  Airflow coordinates ETL and data generation
+```
+
+| Component | Responsibility |
 |---|---|
-| `ReDataX - FX Risk Decision Value` | Does the final policy generate positive decision value? |
-| `ReDataX - Model Evolution` | Which research hypotheses improved or failed? |
-| `ReDataX - Policy Economics and Capital Efficiency` | Where does net value come from? |
-| `ReDataX - Validation, Robustness and Reproducibility` | Is the result stable and reproducible? |
+| `src/revolut_app/real_market` | Binance ingestion, flow features, and real-market experiments |
+| `src/revolut_app/fx_lab` | Synthetic FX simulation, inventory, pricing, risk, and hedging |
+| `src/revolut_app/api_service` | Transaction ingestion and FX API |
+| `dags/` | Airflow workflows |
+| `sql/` | PostgreSQL bronze/silver/gold and ClickHouse schemas |
+| `scripts/` | Ingestion, experiments, reporting, and verification |
+| `docs/` | Research, model, ML, policy, analytics, data, and engineering documentation |
 
-Suggested artifact path:
+For the detailed design, see [`docs/engineering/system_architecture.md`](docs/engineering/system_architecture.md).
 
-```text
-artifacts/research_v1_0/dashboards/
-├── fx_risk_decision_value.pdf
-├── model_evolution.pdf
-├── policy_economics_and_capital_efficiency.pdf
-└── validation_robustness_and_reproducibility.pdf
-```
+## Documentation
 
----
+The root README is the entry point. The research argument and technical contracts live in `docs/`.
 
-## 8. Documentation map
+> [!NOTE]
+> The formal problem statement is in [`docs/research/00_problem_statement.md`](docs/research/00_problem_statement.md). Model documentation and the canonical `M0-M5` registry are in [`docs/models/`](docs/models/).
 
-Root `README.md` is only the landing page. Detailed explanations are split across the documentation tree.
+| Area | Start here | Contents |
+|---|---|---|
+| Research | [`00_problem_statement.md`](docs/research/00_problem_statement.md) | Problem, theory, experimental design, results, interpretation, limitations |
+| Models | [`MODEL_REGISTRY.md`](docs/models/MODEL_REGISTRY.md) | Canonical model IDs and per-model documentation |
+| ML protocol | [`docs/ml/README.md`](docs/ml/README.md) | Features, targets, temporal validation, calibration, selection, leakage |
+| Decision policies | [`docs/decision_policies/README.md`](docs/decision_policies/README.md) | `P0-P4` and unit economics |
+| Data | [`data_sources.md`](docs/data/data_sources.md) | Sources, contracts, lineage, Binance ingestion |
+| Analytics | [`docs/analytics/README.md`](docs/analytics/README.md) | Metrics, ClickHouse reporting model, dashboards |
+| Engineering | [`system_architecture.md`](docs/engineering/system_architecture.md) | Architecture, experiment runner, deployment, troubleshooting |
+| Reports | [`EXECUTIVE_SUMMARY.md`](docs/reports/EXECUTIVE_SUMMARY.md) | Executive and final research reports |
 
-```text
-docs/
-├── research/
-│   ├── 00_problem_statement.md
-│   ├── 01_theoretical_framework.md
-│   ├── 02_research_design.md
-│   ├── 03_experimental_results.md
-│   ├── 04_interpretation.md
-│   └── 05_limitations.md
-│
-├── models/
-│   ├── MODEL_REGISTRY.md
-│   ├── M0_single_scale/
-│   ├── M1_local_multiscale/
-│   ├── M2_cross_market_rg_no_j/
-│   ├── M3_cross_market_rg_with_j/
-│   ├── M4_direct_value_regression/
-│   └── M5_hurdle_economic_model/
-│
-├── ml/
-│   ├── feature_engineering.md
-│   ├── targets.md
-│   ├── temporal_validation.md
-│   ├── calibration.md
-│   ├── model_selection.md
-│   └── leakage_checklist.md
-│
-├── decision_policies/
-│   ├── P0_no_action.md
-│   ├── P1_probability_budget.md
-│   ├── P2_direct_economic.md
-│   ├── P3_hurdle_economic.md
-│   ├── P4_oracle.md
-│   └── unit_economics.md
-│
-├── analytics/
-│   ├── metric_dictionary.md
-│   ├── clickhouse_data_model.md
-│   ├── metabase_dashboards.md
-│   └── reporting_protocol.md
-│
-├── data/
-│   ├── data_sources.md
-│   ├── data_contracts.md
-│   ├── lineage.md
-│   └── binance_aggtrades.md
-│
-├── engineering/
-│   ├── system_architecture.md
-│   ├── experiment_runner.md
-│   ├── deployment.md
-│   └── troubleshooting.md
-│
-└── reports/
-    ├── EXECUTIVE_SUMMARY.md
-    └── FINAL_RESEARCH_REPORT.md
-```
+Recommended review path:
 
-Recommended reading order for a first review:
+1. [Problem statement](docs/research/00_problem_statement.md)
+2. [Theoretical framework](docs/research/01_theoretical_framework.md)
+3. [Experimental design](docs/research/02_experimental_design.md)
+4. [Model registry](docs/models/MODEL_REGISTRY.md)
+5. [Unit economics](docs/decision_policies/unit_economics.md)
+6. [Research results](docs/research/03_results.md)
+7. [Limitations](docs/research/05_limitations.md)
 
-1. [`docs/research/00_problem_statement.md`](docs/research/00_problem_statement.md)
-2. [`docs/research/02_research_design.md`](docs/research/02_research_design.md)
-3. [`docs/models/MODEL_REGISTRY.md`](docs/models/MODEL_REGISTRY.md)
-4. [`docs/decision_policies/unit_economics.md`](docs/decision_policies/unit_economics.md)
-5. [`docs/analytics/metabase_dashboards.md`](docs/analytics/metabase_dashboards.md)
-6. [`docs/engineering/system_architecture.md`](docs/engineering/system_architecture.md)
-
----
-
-## 9. System architecture
-
-ReDataX uses a multi-service local stack.
-
-```text
-                 ┌────────────────────┐
-                 │   Binance archives  │
-                 │      aggTrades      │
-                 └─────────┬──────────┘
-                           │
-                           ▼
-┌──────────────┐   ┌─────────────────┐   ┌──────────────────┐
-│   MinIO      │   │   Airflow        │   │   Python runners  │
-│ file layer   │◄──┤ orchestration    │──►│ experiments       │
-└──────────────┘   └─────────────────┘   └─────────┬────────┘
-                                                    │
-                                                    ▼
-                                            ┌──────────────┐
-                                            │ ClickHouse   │
-                                            │ analytics    │
-                                            └──────┬───────┘
-                                                   │
-                                                   ▼
-                                            ┌──────────────┐
-                                            │  Metabase    │
-                                            │ dashboards   │
-                                            └──────────────┘
-
-┌──────────────┐   ┌─────────────────┐
-│ PostgreSQL   │◄──┤ FastAPI service │
-│ operational  │   │ synthetic FX    │
-└──────────────┘   └─────────────────┘
-```
-
-Main services:
-
-| Service | Role |
-|---|---|
-| FastAPI | synthetic FX and transaction API |
-| PostgreSQL | operational storage |
-| ClickHouse | analytical storage and reporting layer |
-| MinIO | object/file storage |
-| Airflow | workflow orchestration |
-| Metabase | BI dashboards |
-| Python runners | research experiments and artifact generation |
-
-Detailed system design is documented in [`docs/engineering/system_architecture.md`](docs/engineering/system_architecture.md).
-
----
-
-## 10. Repository structure
+## Repository layout
 
 ```text
 ReDataX_pet_project/
-├── dags/                 # Airflow DAGs
-├── scripts/              # ingestion, experiments, reporting scripts
+├── dags/                    # Airflow DAGs
+├── scripts/                 # ingestion, experiments, reporting, verification
 ├── sql/
-│   ├── bronze/           # raw PostgreSQL tables
-│   ├── silver/           # typed views and transformations
-│   ├── gold/             # analytical SQL
-│   └── clickhouse/       # ClickHouse initialization
+│   ├── bronze/              # operational raw tables
+│   ├── silver/              # typed views and transformations
+│   ├── gold/                # analytical SQL
+│   └── clickhouse/          # ClickHouse initialization
 ├── src/revolut_app/
-│   ├── api_service/      # FastAPI application
-│   ├── core/             # shared constants and configuration
-│   ├── etl/              # ETL pipelines
-│   ├── experiments/      # synthetic experiment logic
-│   ├── fx_lab/           # FX simulation, pricing, risk, inventory
-│   ├── generators/       # synthetic data generators
-│   ├── loaders/          # database loaders
-│   └── real_market/      # Binance ingestion and market-flow models
-├── tests/                # unit and integration tests
-├── analytics/            # analytical assets
-├── artifacts/            # experiment outputs
-├── docs/                 # research and engineering documentation
-├── Dockerfile
+│   ├── api_service/         # FastAPI application
+│   ├── etl/                 # ETL pipelines
+│   ├── experiments/         # synthetic experiment logic
+│   ├── fx_lab/              # FX simulation and decision services
+│   ├── generators/          # synthetic data generators
+│   ├── loaders/             # database loaders
+│   └── real_market/         # market ingestion, features, models, policies
+├── tests/                   # unit and integration tests
+├── analytics/               # analytical assets
+├── artifacts/               # experiment outputs
+├── docs/                    # canonical project documentation
 ├── docker-compose.yaml
+├── Dockerfile
 ├── requirements.txt
-├── pyproject.toml
-└── README.md
+└── pyproject.toml
 ```
 
----
+## Quick start
 
-## 11. Quick start
-
-### Requirements
+### Prerequisites
 
 - Git;
 - Docker Engine;
-- Docker Compose v2.
-
-Recommended resources:
-
-- 4 CPU;
-- 8 GB RAM minimum;
+- Docker Compose v2;
+- 4 CPU and at least 8 GB RAM;
 - 12-16 GB RAM for heavier market experiments;
-- at least 20 GB free disk space.
+- at least 20 GB of free disk space.
 
-### Clone
+Linux, macOS, and Windows through WSL2 are the intended local environments.
+
+### 1. Clone and prepare the workspace
 
 ```bash
 git clone https://github.com/vasile8egor/ReDataX_pet_project.git
 cd ReDataX_pet_project
-```
 
-### Prepare local folders
-
-```bash
 mkdir -p data logs metabase/plugins
 ```
 
-On Linux:
+On Linux, map Airflow's container user to your local user:
 
 ```bash
 printf 'AIRFLOW_UID=%s\n' "$(id -u)" > .env
 ```
 
-### Build and initialize
+### 2. Build and initialize
 
 ```bash
 docker compose build
 docker compose up airflow-init
-```
-
-### Start the full local stack
-
-```bash
 docker compose --profile api up -d
 ```
 
-### Check services
+The API profile also starts PostgreSQL, ClickHouse, Airflow, MinIO, and Metabase.
+
+### 3. Initialize the transaction ingestion table
+
+```bash
+docker compose exec -T postgres_main \
+  psql -U airflow -d airflow \
+  < sql/bronze/transaction_events_raw.sql
+```
+
+### 4. Verify the stack
 
 ```bash
 docker compose --profile api ps
@@ -379,49 +315,239 @@ curl -fsS http://localhost:8123/ping
 docker compose exec postgres_main pg_isready -U airflow
 ```
 
-Expected API health response:
+Expected API response:
 
 ```json
 {"status":"ok"}
 ```
 
----
+### Local services
 
-## 12. Local service URLs
-
-| Service | URL | Credentials |
+| Service | URL or port | Local credentials |
 |---|---|---|
-| FastAPI Swagger | http://localhost:8000/docs | none |
-| Airflow | http://localhost:8080 | `airflow` / `airflow` |
-| Metabase | http://localhost:3001 | created on first login |
-| MinIO Console | http://localhost:9001 | `minioadmin` / `minioadmin` |
-| ClickHouse HTTP | http://localhost:8123 | `default` / `default` |
+| FastAPI Swagger UI | [http://localhost:8000/docs](http://localhost:8000/docs) | none |
+| Airflow | [http://localhost:8080](http://localhost:8080) | `airflow` / `airflow` |
+| Metabase | [http://localhost:3001](http://localhost:3001) | created at first login |
+| MinIO Console | [http://localhost:9001](http://localhost:9001) | `minioadmin` / `minioadmin` |
+| ClickHouse HTTP | `localhost:8123` | `default` / `default` |
 | PostgreSQL | `localhost:5432` | `airflow` / `airflow` |
 
-Detailed deployment notes are in [`docs/engineering/deployment.md`](docs/engineering/deployment.md).
+All listed credentials are local development defaults. Change them and add authentication, TLS, secret management, and network controls before adapting any component for a shared or production-like environment.
 
----
+## API examples
 
-## 13. Working with real market data
-
-The main ingestion script accepts a date range and symbols:
+Set a base URL once:
 
 ```bash
-scripts/ingest_binance_range.sh START_DATE END_DATE [SYMBOL ...]
+export REDATAX_API=http://localhost:8000
 ```
 
-Example:
+The complete interactive contract is available at `$REDATAX_API/docs`.
+
+### Endpoint overview
+
+| Method | Endpoint | Purpose |
+|---|---|---|
+| `GET` | `/health` | Service health |
+| `POST` | `/events/transactions` | Idempotent transaction ingestion |
+| `GET` | `/events/transactions/{transaction_id}` | Retrieve an ingested transaction |
+| `POST` | `/fx/quote` | Preview or execute a synthetic FX quote |
+| `POST` | `/fx/stress-shock` | Apply a volatility and hedge-capacity shock |
+| `POST` | `/fx/simulate-day` | Run a clustered-flow day simulation |
+| `POST` | `/fx/rg-flow` | Compute multiscale flow diagnostics |
+| `POST` | `/fx/hedge-recommendation` | Request a hedge recommendation |
+| `POST` | `/fx/execute-hedge` | Apply a synthetic hedge |
+| `POST` | `/fx/policy-comparison` | Compare synthetic quote policies |
+| `GET` | `/fx/risk-snapshot` | Inspect current inventory risk |
+| `GET` | `/fx/pnl-snapshot` | Inspect current synthetic PnL state |
+
+### Health
 
 ```bash
-chmod +x scripts/ingest_binance_range.sh
+curl -sS "$REDATAX_API/health"
+```
 
+```json
+{"status":"ok"}
+```
+
+### Ingest a transaction
+
+```bash
+curl -sS -X POST \
+  "$REDATAX_API/events/transactions" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "event_id": "evt-demo-0001",
+    "idempotency_key": "idem-demo-0001",
+    "transaction_id": "txn-demo-0001",
+    "account_id": "acc-demo-0001",
+    "amount": 125.50,
+    "currency": "EUR",
+    "transaction_type": "card_payment",
+    "category": "groceries",
+    "merchant_name": "Demo Market",
+    "created_at": "2026-06-30T10:00:00Z"
+  }' | python -m json.tool
+```
+
+The first request is accepted. Repeating the same request demonstrates idempotency and returns the transaction as a duplicate rather than inserting it again.
+
+```json
+{
+  "status": "duplicate",
+  "transaction_id": "txn-demo-0001",
+  "risk_score": 0.0,
+  "risk_level": "low",
+  "is_duplicate": true
+}
+```
+
+The exact risk fields depend on the active rule service.
+
+Retrieve the stored transaction:
+
+```bash
+curl -sS \
+  "$REDATAX_API/events/transactions/txn-demo-0001" \
+  | python -m json.tool
+```
+
+Supported transaction currencies are `EUR`, `GBP`, and `USD`. Transaction types are defined by the OpenAPI schema and include card payments, transfers, salary, cash withdrawal, fees, and refunds.
+
+### Preview an FX quote
+
+```bash
+curl -sS -X POST \
+  "$REDATAX_API/fx/quote" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "customer-demo-001",
+    "base_currency": "EUR",
+    "quote_currency": "USD",
+    "side": "buy",
+    "amount": 1000.0,
+    "segment": "retail",
+    "channel": "app",
+    "execute": false
+  }' | python -m json.tool
+```
+
+The response includes the mid-rate, client rate, spread components, inventory pressure, and detected stress regime. With `execute: false`, the quote does not mutate inventory.
+
+### Execute an FX quote
+
+```bash
+curl -sS -X POST \
+  "$REDATAX_API/fx/quote" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "customer-demo-002",
+    "base_currency": "GBP",
+    "quote_currency": "USD",
+    "side": "sell",
+    "amount": 2500.0,
+    "segment": "premium",
+    "channel": "app",
+    "execute": true
+  }' | python -m json.tool
+```
+
+Executed quotes update the synthetic inventory ledger. That ledger is held in the API process, so restarting the API resets it unless an experiment persists state through a separate path.
+
+Inspect the resulting risk and PnL state:
+
+```bash
+curl -sS "$REDATX_API/fx/risk-snapshot" | python -m json.tool
+curl -sS "$REDATAX_API/fx/pnl-snapshot" | python -m json.tool
+```
+
+### Apply a stress shock
+
+```bash
+curl -sS -X POST \
+  "$REDATAX_API/fx/stress-shock" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "volatility_multiplier": 2.0,
+    "hedge_capacity_multiplier": 0.7
+  }' | python -m json.tool
+```
+
+### Simulate a day of clustered FX flow
+
+Use service defaults:
+
+```bash
+curl -sS -X POST \
+  "$REDATAX_API/fx/simulate-day" \
+  -H "Content-Type: application/json" \
+  -d '{}' | python -m json.tool
+```
+
+Run a reproducible simulation:
+
+```bash
+curl -sS -X POST \
+  "$REDATAX_API/fx/simulate-day" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "seed": 42,
+    "reset_state": true,
+    "amount_multiplier": 1.0,
+    "max_snapshots": 200
+  }' | python -m json.tool
+```
+
+## Data workflows
+
+### Synthetic data with Airflow
+
+List available DAGs:
+
+```bash
+docker compose exec airflow-webserver airflow dags list
+```
+
+Bootstrap synthetic history:
+
+```bash
+docker compose exec airflow-webserver \
+  airflow dags trigger revolut_bootstrap_history
+```
+
+Run the master pipeline:
+
+```bash
+docker compose exec airflow-webserver \
+  airflow dags trigger revolut_master_pipeline
+```
+
+Inspect recent runs:
+
+```bash
+docker compose exec airflow-webserver \
+  airflow dags list-runs \
+  --dag-id revolut_master_pipeline \
+  --limit 10
+```
+
+The master DAG coordinates account generation, transaction generation, and the gold-layer load.
+
+### Public Binance aggregate trades
+
+The range-ingestion script accepts a start date, end date, and one or more symbols:
+
+```bash
 ./scripts/ingest_binance_range.sh \
   2025-01-06 \
   2025-01-06 \
   BTCUSDT ETHUSDT ETHBTC
 ```
 
-Check loaded rows in ClickHouse:
+Downloaded files are mounted into the stack under `/opt/airflow/data/real_market/binance` and remain in the host's local `data/` directory.
+
+Validate loaded rows in ClickHouse:
 
 ```bash
 docker compose exec clickhouse \
@@ -439,18 +565,16 @@ docker compose exec clickhouse \
   "
 ```
 
-> [!IMPORTANT]
-> Binance archives can be large. Do not commit the local `data/` directory.
+> [!WARNING]
+> Exchange archives can be large. The local `data/` directory is intentionally excluded from version control.
 
-More details are in [`docs/data/binance_aggtrades.md`](docs/data/binance_aggtrades.md).
+See [`docs/data/binance_aggtrades.md`](docs/data/binance_aggtrades.md) for source semantics and ingestion details.
 
----
+## Running experiments
 
-## 14. Running experiments
+Experiment entry points live in `scripts/`. Representative commands are grouped below.
 
-Experiment scripts are located in `scripts/`.
-
-Examples:
+### Baselines and observer studies
 
 ```bash
 bash scripts/run_baseline_experiments.sh
@@ -459,24 +583,49 @@ bash scripts/run_hamiltonian_observer_normal_load.sh
 bash scripts/run_hamiltonian_rg_diagnostic_b16.sh
 ```
 
-Before running any experiment script, inspect it:
+### Economic policies and horizon analysis
 
 ```bash
-sed -n '1,240p' scripts/<script_name>.sh
+bash scripts/run_hurdle_economic_policy.sh
+bash scripts/run_oracle_horizon_scan.sh
 ```
 
-Some scripts may assume preloaded data, a specific model version, or a specific artifact directory.
+### Reporting and verification
 
-Experiment methodology is documented in:
+```bash
+bash scripts/load_research_reporting.sh
+bash scripts/verify_research_reporting.sh
+```
 
-- [`docs/research/02_research_design.md`](docs/research/02_research_design.md)
-- [`docs/engineering/experiment_runner.md`](docs/engineering/experiment_runner.md)
+Some runners expect preloaded data, a particular artifact version, or an existing reporting schema. Read the script and [`docs/engineering/experiment_runner.md`](docs/engineering/experiment_runner.md) before running a long experiment.
 
----
+## Analytics
 
-## 15. Testing
+Research artifacts are loaded into ClickHouse and presented through Metabase. The reporting layer is organized around four questions:
 
-Unit tests can be run inside the API image:
+| View | Question |
+|---|---|
+| FX Risk Decision Value | Does the selected policy create positive scenario-adjusted value? |
+| Model Evolution | Which hypotheses improved the system, and which failed? |
+| Policy Economics and Capital Efficiency | Where do protected value, action cost, and net value come from? |
+| Validation, Robustness and Reproducibility | Is the result stable, temporally valid, and reproducible? |
+
+Dashboard exports and their supporting documentation are in [`docs/analytics/`](docs/analytics/). These artifacts are evidence and diagnostic aids; the canonical definitions remain in the research, model, policy, and metric documentation.
+
+For a local Metabase connection to ClickHouse, use:
+
+| Setting | Value |
+|---|---|
+| Host | `clickhouse` |
+| Port | `8123` |
+| Database | `gold` |
+| Username | `default` |
+| Password | `default` |
+| SSL | off |
+
+## Testing
+
+Run unit tests in the API image:
 
 ```bash
 docker compose --profile api run --rm \
@@ -485,7 +634,7 @@ docker compose --profile api run --rm \
   pytest -q /opt/airflow/tests
 ```
 
-Syntax check:
+Check Python syntax:
 
 ```bash
 docker compose --profile api run --rm \
@@ -493,7 +642,7 @@ docker compose --profile api run --rm \
   python -m compileall /opt/airflow/src
 ```
 
-Integration tests require the stack to be running:
+Run integration tests against a live stack:
 
 ```bash
 docker compose --profile api up -d
@@ -507,47 +656,82 @@ docker compose --profile api run --rm \
   /opt/airflow/tests
 ```
 
----
+## Reproducibility and claim discipline
 
-## 16. Known limitations
+The project follows several rules:
 
-1. Binance `aggTrades` are a public market-flow proxy, not bank client flow.
-2. The project does not observe real internal inventory, routing, hedging, or execution quality.
-3. Scenario assumptions are fixed manually and are not estimated from proprietary data.
-4. Reported values are not realized PnL.
-5. Oracle policy uses future information and is not deployable.
-6. Multiscale modeling is inspired by coarse-graining, but it is not a strict Wilsonian renormalization-group procedure.
-7. Results are limited to the tested markets, period, horizons, and scenario assumptions.
-8. The final holdout must not be reused for further tuning.
+- feature windows are backward-looking and causal;
+- model comparison uses temporally separated data;
+- the final holdout is separated from development and tuning;
+- model quality and policy value are reported separately;
+- economic results include action cost and a notional budget;
+- oracle results are labeled non-deployable;
+- supported, exploratory, rejected, and historical claims are distinguished;
+- each research run should record model version, feature set, symbols, horizons, data splits, calibration, policy thresholds, and metrics.
 
-A fuller discussion is in [`docs/research/05_limitations.md`](docs/research/05_limitations.md).
+The detailed protocol is in:
 
----
+- [`docs/ml/temporal_validation.md`](docs/ml/temporal_validation.md)
+- [`docs/ml/leakage_checklist.md`](docs/ml/leakage_checklist.md)
+- [`docs/analytics/reporting_protocol.md`](docs/analytics/reporting_protocol.md)
+- [`docs/results/experiment_registry.md`](docs/results/experiment_registry.md)
 
-## 17. Status
+## Limitations
 
-Research version `1.0` is suitable as a portfolio case study after the documentation tree is completed.
+- Binance `aggTrades` are a public market-flow proxy, not bank client flow.
+- The project does not observe real internal inventory, routing, hedging, or execution quality.
+- Scenario assumptions are manually specified rather than estimated from proprietary data.
+- Reported protected value is not realized PnL.
+- `P4` uses future information and cannot be deployed.
+- Multiscale flow is inspired by coarse-graining but is not a strict physical RG calculation.
+- Results are limited to the tested markets, periods, horizons, and cost assumptions.
+- Positive holdout performance does not establish causal impact or production readiness.
 
-Current focus:
+Read the full discussion in [`docs/research/05_limitations.md`](docs/research/05_limitations.md).
 
-- finalize research documentation;
-- align README, dashboards, and model cards;
-- improve reproducibility notes;
-- keep scenario assumptions and final holdout interpretation explicit.
+## Operations
 
----
+View service logs:
 
-## 18. Author
+```bash
+docker compose logs -f api
+docker compose logs -f airflow-scheduler
+docker compose logs -f clickhouse
+```
 
-**Егор Васильев**
+Stop the stack without deleting data volumes:
+
+```bash
+docker compose --profile api down
+```
+
+For deployment details and common failure modes, see:
+
+- [`docs/engineering/deployment.md`](docs/engineering/deployment.md)
+- [`docs/engineering/troubleshooting.md`](docs/engineering/troubleshooting.md)
+
+## Project status
+
+ReDataX is a portfolio research and engineering project under active development. The current repository supports:
+
+- a documented `M0-M5` research progression;
+- deployable and oracle decision-policy comparisons;
+- synthetic FX API and experiment workflows;
+- public Binance data ingestion;
+- ClickHouse reporting and Metabase analytics;
+- unit and integration testing.
+
+It should be treated as a reproducible case study, not a production trading or banking system.
+
+## Author
+
+**Egor Vasiliev**
 
 - GitHub: [@vasile8egor](https://github.com/vasile8egor)
 - Repository: [ReDataX_pet_project](https://github.com/vasile8egor/ReDataX_pet_project)
 
-The project was developed as an independent research and engineering case study combining data engineering, backend development, market-flow modeling, applied machine learning, analytics, and statistical-physics-inspired reasoning.
+ReDataX was developed as an independent case study combining data engineering, backend development, market microstructure, applied machine learning, decision economics, analytics, and statistical-physics-inspired reasoning.
 
----
+## License
 
-## 19. License
-
-This project is distributed under the MIT License. See [`LICENSE`](LICENSE).
+Distributed under the MIT License. See [`LICENSE`](LICENSE).
